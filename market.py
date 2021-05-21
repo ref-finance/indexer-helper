@@ -9,7 +9,6 @@ import decimal
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
-            # return float(o)
             return "%s" % o
         super(DecimalEncoder, self).default(o)
 
@@ -42,7 +41,6 @@ def get_actions(account_id):
     rows = cur.fetchall()
     conn.close()
 
-    # print(rows)
     json_ret = json.dumps(rows, cls=DecimalEncoder)
     return json_ret
     
@@ -75,11 +73,12 @@ def get_actions_testnet(account_id):
     rows = cur.fetchall()
     conn.close()
 
-    print(rows)
     json_ret = json.dumps(rows, cls=DecimalEncoder)
     return json_ret
     
 
 if __name__ == '__main__':
-    # get_actions("reffer.near")
-    get_actions_testnet("pika8.testnet")
+    print("#########MAINNET###########")
+    print(get_actions("reffer.near"))
+    print("#########TESTNET###########")
+    print(get_actions_testnet("pika8.testnet"))

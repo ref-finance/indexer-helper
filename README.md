@@ -1,5 +1,21 @@
 # ref-indexer-helper
 
+A light web server using Flask + Gunicorn + Nginx
+
+### Usage
+```shell
+# request ref-user's latest 10 actions on mainnet
+http://localhost:8000/latest-actions/<account_id>
+# request ref-user's latest 10 actions on testnet
+http://localhost:8000/latest-actions-testnet/<account_id>
+# response in json type
+[
+    ["<timestamp>", "<method>", "<args>", "<attached_deposit>"],
+    ["<timestamp>", "<method>", "<args>", "<attached_deposit>"],
+    ...
+]
+```
+
 ### Build
 ```
 # apt-get install libpq-dev
