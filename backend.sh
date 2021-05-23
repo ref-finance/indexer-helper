@@ -4,6 +4,7 @@
 pid=`ps -ef | grep "backend_update_farms.py" | grep -v grep | /usr/bin/awk '{print $2}'`
 
 # echo ${pid}
+date >> log_backend.log
 
 if [ ! ${pid} ]; then
         # echo "is null"
@@ -13,6 +14,6 @@ else
         kill -s 9 ${pid}
         echo "Warning: clean backend process of last round." >> log_backend.log
 fi
-source ./venv/bin/activate
+. ./venv/bin/activate
 python backend_update_farms.py >> log_backend.log
 echo 'OK'

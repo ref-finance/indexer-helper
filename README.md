@@ -34,17 +34,29 @@ http://localhost:8000/list-farms-testnet
 
 ### Build
 ```
+python3 -m venv venv
+source venv/bin/activate
 # apt-get install libpq-dev
 pip install flask
 pip install gunicorn
 pip install psycopg2
+pip install base58
+pip install redis
+pip install requests
 # Flask (2.0.0)
 # gunicorn (20.1.0)
 # psycopg2 (2.8.6)
 ```
+#### deploy backend
+Make ```backend.sh``` be periodically called.  
+There are several ways to do that:
+* crontab
+* flask_apscheduler
+* other third-party tools
+
 ### Start Service
 ```
-srouce start_server.sh
+source start_server.sh
 ```
 
 ### Stop Service
