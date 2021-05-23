@@ -3,6 +3,7 @@
 A light web server using Flask + Gunicorn + Nginx
 
 ### Usage
+Get user's action history of ref-finance
 ```shell
 # request ref-user's latest 10 actions on mainnet
 http://localhost:8000/latest-actions/<account_id>
@@ -13,6 +14,21 @@ http://localhost:8000/latest-actions-testnet/<account_id>
     ["<timestamp>", "<method>", "<args>", "<attached_deposit>"],
     ["<timestamp>", "<method>", "<args>", "<attached_deposit>"],
     ...
+]
+```
+
+Get all farms in ref-farming
+```shell
+# request for mainnet
+http://localhost:8000/list-farms
+# request for testnet
+http://localhost:8000/list-farms-testnet
+# response
+[
+    {...}, # FarmInfo
+    {...}, # FarmInfo
+    ...
+    {...}, # FarmInfo
 ]
 ```
 
