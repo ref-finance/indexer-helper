@@ -30,9 +30,9 @@ def list_top_pools(network_id):
     r=redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOP_POOL_KEY"])
     r.close()
-    pools = {}
+    pools = []
     for key, value in ret.items():
-        pools[key] = json.loads(value)
+        pools[] = json.loads(value)
     return pools
 
 
