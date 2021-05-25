@@ -28,7 +28,7 @@ def handle_latest_actions(account_id):
     """
     get user's latest actions
     """
-    ret = get_actions("MAINNET", account_id)
+    ret = get_actions(Cfg.NETWORK_ID, account_id)
     json_obj = json.loads(ret)
     return jsonify(json_obj)
 
@@ -37,7 +37,7 @@ def handle_list_farms():
     """
     list_farms
     """
-    ret = list_farms("MAINNET")
+    ret = list_farms(Cfg.NETWORK_ID)
     return jsonify(ret)
 
 @app.route('/list-top-pools', methods=['GET'])
@@ -45,7 +45,7 @@ def handle_list_top_pools():
     """
     list_farms
     """
-    ret = list_top_pools("MAINNET")
+    ret = list_top_pools(Cfg.NETWORK_ID)
     return jsonify(ret)
 
 @app.route('/list-pools', methods=['GET'])
@@ -53,7 +53,7 @@ def handle_list_pools():
     """
     list_farms
     """
-    ret = list_pools("MAINNET")
+    ret = list_pools(Cfg.NETWORK_ID)
     return jsonify(ret)
 
 # @app.route('/latest-actions-testnet/<account_id>', methods=['GET'])
