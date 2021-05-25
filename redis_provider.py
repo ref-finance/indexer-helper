@@ -32,7 +32,7 @@ def list_top_pools(network_id):
     r.close()
     pools = []
     for key, value in ret.items():
-        pools[] = json.loads(value)
+        pools.append(json.loads(value))
     return pools
 
 
