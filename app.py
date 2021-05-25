@@ -6,6 +6,7 @@ from http.client import responses
 from flask import Flask
 from flask import request
 from flask import jsonify
+import flask_cors 
 import json
 import logging
 from market import get_actions
@@ -24,6 +25,7 @@ def hello_world():
 
 
 @app.route('/latest-actions/<account_id>', methods=['GET'])
+@flask_cors.cross_origin()
 def handle_latest_actions(account_id):
     """
     get user's latest actions
@@ -33,6 +35,7 @@ def handle_latest_actions(account_id):
     return jsonify(json_obj)
 
 @app.route('/list-farms', methods=['GET'])
+@flask_cors.cross_origin()
 def handle_list_farms():
     """
     list_farms
@@ -41,6 +44,7 @@ def handle_list_farms():
     return jsonify(ret)
 
 @app.route('/list-top-pools', methods=['GET'])
+@flask_cors.cross_origin()
 def handle_list_top_pools():
     """
     list_farms
@@ -49,6 +53,7 @@ def handle_list_top_pools():
     return jsonify(ret)
 
 @app.route('/list-pools', methods=['GET'])
+@flask_cors.cross_origin()
 def handle_list_pools():
     """
     list_farms

@@ -38,6 +38,7 @@ python3 -m venv venv
 source venv/bin/activate
 # apt-get install libpq-dev
 pip install flask
+pip install flask-cors
 pip install gunicorn
 pip install psycopg2
 pip install base58
