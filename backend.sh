@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-pid=`ps -ef | grep "backend_update_farms.py" | grep -v grep | /usr/bin/awk '{print $2}'`
+pid=`ps -ef | grep "backend.py" | grep -v grep | /usr/bin/awk '{print $2}'`
 
 # echo ${pid}
 date >> log_backend.log
@@ -15,5 +15,5 @@ else
         echo "Warning: clean backend process of last round." >> log_backend.log
 fi
 . ./venv/bin/activate
-python backend_update_farms.py >> log_backend.log
+python backend.py >> log_backend.log
 echo 'OK'

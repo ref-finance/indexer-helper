@@ -15,6 +15,27 @@ def list_farms(network_id):
     return list_farms
 
 
+def list_pools(network_id):
+    import json
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"])
+    r.close()
+    pools = {}
+    for id, value in ret.items():
+        pools[id] = json.loads(value)
+    return pools
+
+def list_top_pools(network_id):
+    import json
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOP_POOL_KEY"])
+    r.close()
+    pools = {}
+    for key, value in ret.items():
+        pools[key] = json.loads(value)
+    return pools
+
+
 class RedisProvider(object):
 
     def __init__(self):
@@ -33,12 +54,11 @@ class RedisProvider(object):
         if self.pipe is not None:
             self.pipe.execute()
             self.pipe = None
-            # removed = self.review_farmid()
-            # print("Remove farmid: %s" % removed)
             return True
         else:
             return False
     
+    # remove farms that not existed in contract
     def review_farmid(self, network_id):
         old = set(self.r.hkeys(Cfg.NETWORK[network_id]["REDIS_KEY"]))
         expired = list(old - self.farmids)
@@ -49,6 +69,12 @@ class RedisProvider(object):
     def add_farm(self, network_id, farm_id, farm_str):
         self.farmids.add(farm_id)
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_KEY"], farm_id, farm_str)
+    
+    def add_pool(self, network_id, pool_id, pool_str):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], pool_id, pool_str)
+    
+    def add_top_pool(self, network_id, pool_id, pool_str):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOP_POOL_KEY"], pool_id, pool_str)
 
     def list_farms(self, network_id):
         return self.r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])
@@ -63,6 +89,7 @@ if __name__ == '__main__':
     # conn.end_pipe()
     p = list_farms("TESTNET")
     print(p)
+    list_pools("MAINNET")
 
 
     # r=redis.StrictRedis(connection_pool=pool)

@@ -9,7 +9,7 @@ from flask import jsonify
 import json
 import logging
 from market import get_actions
-from redis_provider import list_farms
+from redis_provider import list_farms, list_top_pools, list_pools
 
 Welcome = 'Welcome to ref datacenter API server, version 20210520.01'
 # 实例化，可视为固定格式
@@ -54,6 +54,38 @@ def handle_list_farms():
     list_farms
     """
     ret = list_farms("MAINNET")
+    return jsonify(ret)
+
+@app.route('/list-top-pools-testnet', methods=['GET'])
+def handle_list_top_pools_testnet():
+    """
+    list_top_pools_testnet
+    """
+    ret = list_top_pools("TESTNET")
+    return jsonify(ret)
+
+@app.route('/list-top-pools', methods=['GET'])
+def handle_list_top_pools():
+    """
+    list_farms
+    """
+    ret = list_top_pools("MAINNET")
+    return jsonify(ret)
+
+@app.route('/list-pools-testnet', methods=['GET'])
+def handle_list_pools_testnet():
+    """
+    list_pools_testnet
+    """
+    ret = list_pools("TESTNET")
+    return jsonify(ret)
+
+@app.route('/list-pools', methods=['GET'])
+def handle_list_pools():
+    """
+    list_farms
+    """
+    ret = list_pools("MAINNET")
     return jsonify(ret)
 
 

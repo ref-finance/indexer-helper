@@ -77,19 +77,24 @@ class JsonProvider(object):
 
 
 if __name__ == "__main__":
-    conn = JsonProvider("https://rpc.testnet.near.org")
-    status = conn.get_status()
-    # print(status)
-    ret = conn.view_call("ref-farming.testnet", "get_number_of_farms", b"")
-    # print(ret["result"])
-    a = "".join([chr(x) for x in ret["result"]])
-    print(a)
-    print()
-    ret = conn.view_call("ref-farming.testnet", "list_farms", b'{"from_index": 0, "limit": 100}')
-    # print(ret["result"])
+    # conn = JsonProvider("https://rpc.testnet.near.org")
+    # status = conn.get_status()
+    # # print(status)
+    # ret = conn.view_call("ref-farming.testnet", "get_number_of_farms", b"")
+    # # print(ret["result"])
+    # a = "".join([chr(x) for x in ret["result"]])
+    # print(a)
+    # print()
+    # ret = conn.view_call("ref-farming.testnet", "list_farms", b'{"from_index": 0, "limit": 100}')
+    # # print(ret["result"])
+    # b = "".join([chr(x) for x in ret["result"]])
+    # # print(b)
+    # c = json.loads(b)
+    # for item in c:
+    #     print(item)
+    
+    conn = JsonProvider("https://rpc.mainnet.near.org")
+    ret = conn.view_call("ref-finance.near", "get_number_of_pools", b'')
     b = "".join([chr(x) for x in ret["result"]])
-    # print(b)
-    c = json.loads(b)
-    for item in c:
-        print(item)
+    print(b)
 
