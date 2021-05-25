@@ -10,6 +10,7 @@ import json
 import logging
 from market import get_actions
 from redis_provider import list_farms, list_top_pools, list_pools
+from config import Cfg
 
 Welcome = 'Welcome to ref datacenter API server, version 20210520.01'
 # 实例化，可视为固定格式
@@ -31,37 +32,12 @@ def handle_latest_actions(account_id):
     json_obj = json.loads(ret)
     return jsonify(json_obj)
 
-@app.route('/latest-actions-testnet/<account_id>', methods=['GET'])
-def handle_latest_actions_testnet(account_id):
-    """
-    get user's latest actions
-    """
-    ret = get_actions("TESTNET", account_id)
-    json_obj = json.loads(ret)
-    return jsonify(json_obj)
-
-@app.route('/list-farms-testnet', methods=['GET'])
-def handle_list_farms_testnet():
-    """
-    list_farms_testnet
-    """
-    ret = list_farms("TESTNET")
-    return jsonify(ret)
-
 @app.route('/list-farms', methods=['GET'])
 def handle_list_farms():
     """
     list_farms
     """
     ret = list_farms("MAINNET")
-    return jsonify(ret)
-
-@app.route('/list-top-pools-testnet', methods=['GET'])
-def handle_list_top_pools_testnet():
-    """
-    list_top_pools_testnet
-    """
-    ret = list_top_pools("TESTNET")
     return jsonify(ret)
 
 @app.route('/list-top-pools', methods=['GET'])
@@ -72,14 +48,6 @@ def handle_list_top_pools():
     ret = list_top_pools("MAINNET")
     return jsonify(ret)
 
-@app.route('/list-pools-testnet', methods=['GET'])
-def handle_list_pools_testnet():
-    """
-    list_pools_testnet
-    """
-    ret = list_pools("TESTNET")
-    return jsonify(ret)
-
 @app.route('/list-pools', methods=['GET'])
 def handle_list_pools():
     """
@@ -88,6 +56,38 @@ def handle_list_pools():
     ret = list_pools("MAINNET")
     return jsonify(ret)
 
+# @app.route('/latest-actions-testnet/<account_id>', methods=['GET'])
+# def handle_latest_actions_testnet(account_id):
+#     """
+#     get user's latest actions
+#     """
+#     ret = get_actions("TESTNET", account_id)
+#     json_obj = json.loads(ret)
+#     return jsonify(json_obj)
+
+# @app.route('/list-farms-testnet', methods=['GET'])
+# def handle_list_farms_testnet():
+#     """
+#     list_farms_testnet
+#     """
+#     ret = list_farms("TESTNET")
+#     return jsonify(ret)
+
+# @app.route('/list-top-pools-testnet', methods=['GET'])
+# def handle_list_top_pools_testnet():
+#     """
+#     list_top_pools_testnet
+#     """
+#     ret = list_top_pools("TESTNET")
+#     return jsonify(ret)
+
+# @app.route('/list-pools-testnet', methods=['GET'])
+# def handle_list_pools_testnet():
+#     """
+#     list_pools_testnet
+#     """
+#     ret = list_pools("TESTNET")
+#     return jsonify(ret)
 
 
 if __name__ == '__main__':

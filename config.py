@@ -8,6 +8,7 @@ __author__ = 'Marco'
 
 
 class Cfg:
+    NETWORK_ID = "TESTNET",
     NETWORK = {
         "TESTNET": {
             "NEAR_RPC_URL": "https://rpc.testnet.near.org",
