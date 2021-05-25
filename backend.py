@@ -3,6 +3,7 @@ from redis_provider import RedisProvider
 from config import Cfg
 import json
 import time
+import sys
 
 def update_farms(network_id):
 
@@ -105,9 +106,16 @@ def update_pools(network_id):
 
 
 
-
 if __name__ == "__main__":
-    update_farms("TESTNET")
-    update_pools("TESTNET")
-    update_farms("MAINNET")
-    update_pools("MAINNET")
+
+    if len(sys.argv) == 2:
+        network_id = str(sys.argv[1]).upper()
+        if network_id in ["MAINNET", "TESTNET"]:
+            update_farms(network_id)
+            update_pools(network_id)
+        else:
+            print("Error, network_id should be MAINNET or TESTNET")
+            exit(1)
+    else:
+        print("Error, must put NETWORK_ID as arg")
+        exit(1)
