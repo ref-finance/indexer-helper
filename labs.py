@@ -25,6 +25,7 @@ if __name__ == '__main__':
     # {"pool_kind": "SIMPLE_POOL", "token_account_ids": ["berryclub.ek.near", "wrap.near"], 
     # "amounts": ["10781805299861938750618", "1038658988795550292193714729"], 
     # "total_fee": 30, "shares_total_supply": "104544652275134335110148000"}
+
     tokens = set()
     pools = list_pools("MAINNET")
     print(len(pools))
