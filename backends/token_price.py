@@ -40,6 +40,7 @@ def update_market_price(network_id):
                 # print(md2contract[md_id], str(value["usd"]))
                 conn.add_token_price(network_id, md2contract[md_id], str(value["usd"]))
             conn.end_pipe()
+            conn.close()
     except Exception as e:
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
 

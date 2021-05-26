@@ -94,7 +94,8 @@ if __name__ == "__main__":
     #     print(item)
     
     conn = JsonProvider("https://rpc.mainnet.near.org")
-    ret = conn.view_call("ref-finance.near", "get_number_of_pools", b'')
+    ret = conn.view_call("6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", "ft_metadata", b'')
     b = "".join([chr(x) for x in ret["result"]])
-    print(b)
+    obj = json.loads(b)
+    print(obj)
 

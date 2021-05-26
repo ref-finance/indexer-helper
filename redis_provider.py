@@ -43,6 +43,16 @@ def list_token_price(network_id):
     r.close()
     return ret
 
+def list_token_metadata(network_id):
+    import json
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"])
+    r.close()
+    metadata_obj = {}
+    for key, value in ret.items():
+        metadata_obj[key] = json.loads(value)
+    return metadata_obj
+
 
 class RedisProvider(object):
 
@@ -86,9 +96,15 @@ class RedisProvider(object):
     
     def add_token_price(self, network_id, contract_id, price_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], contract_id, price_str)
+    
+    def add_token_metadata(self, network_id, contract_id, metadata_str):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"], contract_id, metadata_str)
 
     def list_farms(self, network_id):
         return self.r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])
+    
+    def close(self):
+        self.r.close()
 
 
 if __name__ == '__main__':
