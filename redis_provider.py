@@ -35,6 +35,12 @@ def list_top_pools(network_id):
         pools.append(json.loads(value))
     return pools
 
+def list_token_price(network_id):
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"])
+    r.close()
+    return ret
+
 
 class RedisProvider(object):
 
@@ -75,6 +81,9 @@ class RedisProvider(object):
     
     def add_top_pool(self, network_id, pool_id, pool_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOP_POOL_KEY"], pool_id, pool_str)
+    
+    def add_token_price(self, network_id, contract_id, price_str):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], contract_id, price_str)
 
     def list_farms(self, network_id):
         return self.r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])
@@ -89,7 +98,8 @@ if __name__ == '__main__':
     # conn.end_pipe()
     p = list_farms("TESTNET")
     print(p)
-    list_pools("MAINNET")
+    # list_pools("MAINNET")
+    print(list_token_price("MAINNET"))
 
 
     # r=redis.StrictRedis(connection_pool=pool)

@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 from near_rpc_provider import JsonProviderError,  JsonProvider
 from redis_provider import RedisProvider
 from config import Cfg
