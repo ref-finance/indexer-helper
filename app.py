@@ -95,8 +95,29 @@ def handle_list_pools():
     """
     list_pools
     """
-    ret = list_pools(Cfg.NETWORK_ID)
-    return jsonify(ret)
+    precisions = {}
+    for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
+        precisions[token["NEAR_ID"]] = token["DECIMAL"]
+    pools = list_pools(Cfg.NETWORK_ID)
+    prices = list_token_price(Cfg.NETWORK_ID)
+
+    for pool in pools:
+        tvl0 = 0
+        tvl1 = 0
+        if pool['token_account_ids'][0] in prices:
+            tvl0 = float(prices[pool['token_account_ids'][0]]) * int(pool['amounts'][0]) / (10 ** precisions[pool['token_account_ids'][0]])
+        if pool['token_account_ids'][1] in prices:
+            tvl1 = float(prices[pool['token_account_ids'][1]]) * int(pool['amounts'][1]) / (10 ** precisions[pool['token_account_ids'][1]])
+        if tvl0 > 0 and tvl1 > 0:
+            pool["tvl"] = str(tvl0 + tvl1)
+        elif tvl0 > 0:
+            pool["tvl"] = str(tvl0 * 2)
+        elif tvl1 > 0:
+            pool["tvl"] = str(tvl1 * 2)
+        else:
+            pool["tvl"] = "0"
+
+    return jsonify(pools)
 
 
 if __name__ == '__main__':
