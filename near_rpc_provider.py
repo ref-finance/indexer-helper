@@ -94,8 +94,16 @@ if __name__ == "__main__":
     #     print(item)
     
     conn = JsonProvider("https://rpc.mainnet.near.org")
-    ret = conn.view_call("6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", "ft_metadata", b'')
+    # ret = conn.view_call("6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", "ft_metadata", b'')
+    ret = conn.view_call("ref-finance.near", "get_whitelisted_tokens", b'')
     b = "".join([chr(x) for x in ret["result"]])
     obj = json.loads(b)
-    print(obj)
+    for token_id in obj:
+        import time
+        time.sleep(0.1)
+        ret = conn.view_call(token_id, "ft_metadata", b'')
+        json_str = "".join([chr(x) for x in ret["result"]])
+        token_metadata = json.loads(json_str)
+        print("%s: %s, %s" % (token_id, token_metadata["symbol"], token_metadata["decimals"]))
+    print("Total %s whitelisted tokens" % len(obj))
 

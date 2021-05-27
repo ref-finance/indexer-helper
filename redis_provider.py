@@ -44,6 +44,22 @@ def list_token_price(network_id):
     return ret
 
 def list_token_metadata(network_id):
+    '''
+    return:
+    {
+        'nusdc.ft-fin.testnet': {
+            'spec': 'ft-1.0.0', 
+            'name': 'NEAR Wrapped USDC', 
+            'symbol': 'nUSDC', 
+            'icon': 'https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png', 
+            'reference': None, 
+            'reference_hash': None, 
+            'decimals': 2
+        },
+        ...
+    }
+    
+    '''
     import json
     r=redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"])
@@ -114,10 +130,11 @@ if __name__ == '__main__':
     # conn.add_farm("farm_id_2", "farm_value_2")
     # conn.add_farm("farm_id_3", "farm_value_3")
     # conn.end_pipe()
-    p = list_farms("TESTNET")
-    print(p)
+    # p = list_farms("TESTNET")
+    # print(p)
     # list_pools("MAINNET")
-    print(list_token_price("MAINNET"))
+    # print(list_token_price("MAINNET"))
+    print(list_token_metadata("TESTNET"))
 
 
     # r=redis.StrictRedis(connection_pool=pool)
