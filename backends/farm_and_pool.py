@@ -1,11 +1,23 @@
 import sys
 sys.path.append('../')
 from near_rpc_provider import JsonProviderError,  JsonProvider
-from redis_provider import RedisProvider, list_token_metadata
+from redis_provider import RedisProvider, list_token_metadata, list_farms
 from config import Cfg
 import json
 import time
 import sys
+
+def farm_seeds(network_id):
+    farms = list_farms(network_id)
+    seeds = set()
+    for farm in farms:
+        status = farm["farm_status"]
+        total_reward = int(farm["total_reward"])
+        claimed_reward = int(farm["claimed_reward"])
+        unclaimed_reward = int(farm["unclaimed_reward"])
+        if status == "Running" and total_reward > claimed_reward + unclaimed_reward :
+            seeds.add(farm["seed_id"])
+    return seeds
 
 def update_farms(network_id):
 
@@ -76,15 +88,18 @@ def update_pools(network_id):
 
     pools = []
     token_metadata = {}
+    seeds = set()
+    contract = Cfg.NETWORK[network_id]["REF_CONTRACT"]
 
     try:
         token_metadata = list_token_metadata(network_id)
+        seeds = farm_seeds(network_id)
     except Exception as e:
         print("Error occurred when fetch token_metadata from Redis. Error is: ", e)
 
     try:
         conn = JsonProvider(Cfg.NETWORK[network_id]["NEAR_RPC_URL"])
-        ret = conn.view_call(Cfg.NETWORK[network_id]["REF_CONTRACT"], "get_number_of_pools", b'')
+        ret = conn.view_call(contract, "get_number_of_pools", b'')
         pool_num = int("".join([chr(x) for x in ret["result"]]))
         print(pool_num)
 
@@ -92,7 +107,7 @@ def update_pools(network_id):
 
         while base_index < pool_num :
             time.sleep(0.1)
-            ret = conn.view_call(Cfg.NETWORK[network_id]["REF_CONTRACT"], 
+            ret = conn.view_call(contract, 
                 "get_pools", ('{"from_index": %s, "limit": 300}' % base_index).encode(encoding='utf-8'))
             json_str = "".join([chr(x) for x in ret["result"]])
             batch_pools = json.loads(json_str)
@@ -103,7 +118,14 @@ def update_pools(network_id):
         print("Update total %s pools" % len(pools))
 
         # add token info to pools
-        for pool in pools:
+        # for pool in pools:
+        for i in range(0,len(pools)):
+            pool = pools[i]
+            lpt_id = "%s@%s" % (contract, i)
+            if lpt_id in seeds:
+                pool["farming"] = True
+            else:
+                pool["farming"] = False
             time.sleep(0.1)
             pool["token_symbols"] = [pool["token_account_ids"][0], pool["token_account_ids"][1]]
             if pool["token_account_ids"][0] in token_metadata:

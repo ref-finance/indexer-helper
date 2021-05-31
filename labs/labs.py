@@ -1,8 +1,20 @@
 import sys
 sys.path.append('../')
-from redis_provider import list_token_price, list_top_pools, list_pools
+from redis_provider import list_token_price, list_top_pools, list_pools, list_farms
 from config import Cfg
 
+
+def farm_seeds():
+    farms = list_farms("TESTNET")
+    seeds = set()
+    for farm in farms:
+        status = farm["farm_status"]
+        total_reward = int(farm["total_reward"])
+        claimed_reward = int(farm["claimed_reward"])
+        unclaimed_reward = int(farm["unclaimed_reward"])
+        if status == "Running" and total_reward > claimed_reward + unclaimed_reward :
+            seeds.add(farm["seed_id"])
+    return seeds
 
 def all_top1():
     precisions = {}
@@ -59,4 +71,5 @@ if __name__ == '__main__':
     #     print(token)
     # print(len(tokens))
 
-    all_top1()
+    # all_top1()
+    print(farm_seeds())
