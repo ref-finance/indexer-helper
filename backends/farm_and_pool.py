@@ -145,8 +145,8 @@ def update_pools(network_id):
                 pool = pools[i]
                 key = "{%s}-{%s}" % (pool["token_account_ids"][0], pool["token_account_ids"][1])
                 pool["id"] = "%s" % i
-                if int(pool["amounts"][1]) == 0:
-                    continue
+                # if int(pool["amounts"][1]) == 0:
+                #     continue
                 if key in tops:
                     if int(tops[key]["amounts"][1]) < int(pool["amounts"][1]):
                         tops[key] = pool
