@@ -3,7 +3,18 @@ import redis
 
 pool = redis.ConnectionPool(host='127.0.0.1',port=6379,decode_responses=True)
 
-
+def list_pools_by_tokens(network_id: str, token1: str, token2: str) ->list:
+    import json
+    list_pools = []
+    token_str = "{%s}-{%s}" % (token1, token2)
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], token_str)
+    r.close()
+    try:
+        list_pools = json.loads(ret)
+    except Exception as e:
+        print(e)
+    return list_pools
 
 def list_farms(network_id):
     import json
@@ -115,6 +126,9 @@ class RedisProvider(object):
     
     def add_token_metadata(self, network_id, contract_id, metadata_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"], contract_id, metadata_str)
+    
+    def add_pools_by_tokens(self, network_id, tokens_str, pool_list_str):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], tokens_str, pool_list_str)
 
     def list_farms(self, network_id):
         return self.r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])

@@ -7,7 +7,7 @@ import json
 import time
 import sys
 
-def farm_seeds(network_id):
+def internal_farm_seeds(network_id):
     farms = list_farms(network_id)
     seeds = set()
     for farm in farms:
@@ -54,8 +54,7 @@ def update_farms(network_id):
     except Exception as e:
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
         
-
-def get_token_metadata(conn, contract_id):
+def internal_get_token_metadata(conn, contract_id):
     metadata_obj = {
         "spec":"", 
         "name": contract_id, 
@@ -84,8 +83,7 @@ def get_token_metadata(conn, contract_id):
 
     return metadata_obj
 
-def update_pools(network_id):
-
+def internal_get_pools(network_id: str) ->list:
     pools = []
     token_metadata = {}
     seeds = set()
@@ -93,7 +91,7 @@ def update_pools(network_id):
 
     try:
         token_metadata = list_token_metadata(network_id)
-        seeds = farm_seeds(network_id)
+        seeds = internal_farm_seeds(network_id)
     except Exception as e:
         print("Error occurred when fetch token_metadata from Redis. Error is: ", e)
 
@@ -126,19 +124,21 @@ def update_pools(network_id):
                 pool["farming"] = True
             else:
                 pool["farming"] = False
-            time.sleep(0.1)
+            
             pool["token_symbols"] = [pool["token_account_ids"][0], pool["token_account_ids"][1]]
             if pool["token_account_ids"][0] in token_metadata:
                 pool["token_symbols"][0] = token_metadata[pool["token_account_ids"][0]]["symbol"]
             else:
-                metadata_obj = get_token_metadata(conn, pool["token_account_ids"][0])
+                time.sleep(0.1)
+                metadata_obj = internal_get_token_metadata(conn, pool["token_account_ids"][0])
                 pool["token_symbols"][0] = metadata_obj["symbol"]
                 token_metadata[pool["token_account_ids"][0]] = metadata_obj
 
             if pool["token_account_ids"][1] in token_metadata:
                 pool["token_symbols"][1] = token_metadata[pool["token_account_ids"][1]]["symbol"]
             else:
-                metadata_obj = get_token_metadata(conn, pool["token_account_ids"][1])
+                time.sleep(0.1)
+                metadata_obj = internal_get_token_metadata(conn, pool["token_account_ids"][1])
                 pool["token_symbols"][1] = metadata_obj["symbol"]
                 token_metadata[pool["token_account_ids"][1]] = metadata_obj
 
@@ -148,32 +148,38 @@ def update_pools(network_id):
     except Exception as e:
         print("Error: ", e)
         pools.clear()
+    return pools
 
-    # following is redis thing
-    
+def internal_pools_to_redis(network_id: str, pools: list):
+    pools_by_tokens = {}
+    tops = {}
     try:
         if len(pools) > 0:
-            # pour pools data to redis
             conn = RedisProvider()
+
+            # pour pools data to redis
             conn.begin_pipe()
             for i in range(0,len(pools)):
-                conn.add_pool(network_id, "%s" % i, json.dumps(pools[i]))
-            conn.end_pipe()
-            print("Import Pools to Redis OK.")
-
-            # pour top-pools data to redis
-            tops = {}
-            for i in range(0,len(pools)):
                 pool = pools[i]
+                # gen tops 
                 key = "{%s}-{%s}" % (pool["token_account_ids"][0], pool["token_account_ids"][1])
                 pool["id"] = "%s" % i
-                # if int(pool["amounts"][1]) == 0:
-                #     continue
                 if key in tops:
                     if int(tops[key]["amounts"][1]) < int(pool["amounts"][1]):
                         tops[key] = pool
                 else:
                     tops[key] = pool
+                # gen pools_by_tokens
+                if key in pools_by_tokens:
+                    pools_by_tokens[key].append(pool)
+                else:
+                    pools_by_tokens[key] = [pool, ]
+                # pour to redis of pools
+                conn.add_pool(network_id, "%s" % i, json.dumps(pools[i]))
+            conn.end_pipe()
+            print("Import Pools to Redis OK.")
+
+            # pour top-pools data to redis
             conn.begin_pipe()
             for key, top_pool in tops.items():
                 conn.add_top_pool(network_id, key, json.dumps(top_pool))
@@ -181,12 +187,23 @@ def update_pools(network_id):
             conn.end_pipe()
             print("Import Top-Pools to Redis OK.")
 
+            # pour pools_by_tokens data to redis
+            conn.begin_pipe()
+            for key, pool_list in pools_by_tokens.items():
+                conn.add_pools_by_tokens(network_id, key, json.dumps(pool_list))
+                # print("%s" % (top_pool,))
+            conn.end_pipe()
+            print("Import pools_by_tokens to Redis OK.")
+
             conn.close()
 
     except Exception as e:
         print("Error occurred when update Pools to Redis, cancel pipe. Error is: ", e)
 
-
+def update_pools(network_id):
+    pools = internal_get_pools(network_id)
+    internal_pools_to_redis(network_id, pools)
+    
 
 if __name__ == "__main__":
 

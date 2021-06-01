@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../')
-from redis_provider import list_token_price, list_top_pools, list_pools, list_farms
+from redis_provider import list_token_price, list_top_pools, list_pools, list_farms, list_pools_by_tokens
 from config import Cfg
 
 
@@ -72,4 +72,7 @@ if __name__ == '__main__':
     # print(len(tokens))
 
     # all_top1()
-    print(farm_seeds())
+    # print(farm_seeds())
+    ret = list_pools_by_tokens("TESTNET", "ndai.ft-fin.testnet", "wrap.testnet")
+    print(len(ret))
+    print(ret)
