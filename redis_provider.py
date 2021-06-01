@@ -3,6 +3,18 @@ import redis
 
 pool = redis.ConnectionPool(host='127.0.0.1',port=6379,decode_responses=True)
 
+def list_pools_by_id_list(network_id: str, id_list: list) ->list:
+    import json
+    pool_list = []
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], id_list)
+    r.close()
+    try:
+        pool_list = [json.loads(x) for x in ret]
+    except Exception as e:
+        print(e)
+    return pool_list
+
 def list_pools_by_tokens(network_id: str, token1: str, token2: str) ->list:
     import json
     list_pools = []
@@ -148,7 +160,10 @@ if __name__ == '__main__':
     # print(p)
     # list_pools("MAINNET")
     # print(list_token_price("MAINNET"))
-    print(list_token_metadata("TESTNET"))
+    # print(list_token_metadata("TESTNET"))
+    a = list_pools_by_id_list("TESTNET", [100])
+    print(a)
+
 
 
     # r=redis.StrictRedis(connection_pool=pool)

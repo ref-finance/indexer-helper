@@ -10,7 +10,8 @@ import flask_cors
 import json
 import logging
 from indexer_provider import get_actions, get_liquidity_pools
-from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_token_metadata, list_pools_by_tokens
+from redis_provider import list_farms, list_top_pools, list_pools, list_token_price 
+from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens
 from config import Cfg
 
 Welcome = 'Welcome to ref datacenter API server, version 20210520.01'
@@ -40,7 +41,10 @@ def handle_liquidity_pools(account_id):
     """
     get user's liqudity pools
     """
-    ret = get_liquidity_pools(Cfg.NETWORK_ID, account_id)
+    ret = []
+    id_list = get_liquidity_pools(Cfg.NETWORK_ID, account_id)
+    if len(id_list) > 0:
+        ret = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_list])
     return jsonify(ret)
 
 @app.route('/list-farms', methods=['GET'])
