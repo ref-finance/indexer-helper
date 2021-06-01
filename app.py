@@ -9,7 +9,7 @@ from flask import jsonify
 import flask_cors 
 import json
 import logging
-from indexer_provider import get_actions
+from indexer_provider import get_actions, get_liquidity_pools
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_token_metadata, list_pools_by_tokens
 from config import Cfg
 
@@ -33,6 +33,15 @@ def handle_latest_actions(account_id):
     ret = get_actions(Cfg.NETWORK_ID, account_id)
     json_obj = json.loads(ret)
     return jsonify(json_obj)
+
+@app.route('/liquidity-pools/<account_id>', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_liquidity_pools(account_id):
+    """
+    get user's liqudity pools
+    """
+    ret = get_liquidity_pools(Cfg.NETWORK_ID, account_id)
+    return jsonify(ret)
 
 @app.route('/list-farms', methods=['GET'])
 @flask_cors.cross_origin()
