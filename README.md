@@ -6,9 +6,7 @@ A light web server using Flask + Gunicorn + Nginx
 Get user's action history of ref-finance
 ```shell
 # request ref-user's latest 10 actions on mainnet
-http://localhost:8000/latest-actions/<account_id>
-# request ref-user's latest 10 actions on testnet
-http://localhost:8000/latest-actions-testnet/<account_id>
+http://localhost/latest-actions/<account_id>
 # response in json type
 [
     ["<timestamp>", "<method>", "<args>", "<attached_deposit>"],
@@ -17,12 +15,65 @@ http://localhost:8000/latest-actions-testnet/<account_id>
 ]
 ```
 
+get user's liquidity pools
+```shell
+http://localhost/liquidity-pools/<account_id>
+# response in json type
+[
+    {<pool info>},
+    {<pool info>},
+    ...
+]
+```
+
+List pools with max liquidity in each token pair 
+```shell
+http://localhost/list-top-pools
+# response in json type
+[
+    {<pool info>},
+    {<pool info>},
+    ...
+]
+```
+
+list all token with cur market price from coingecko
+```shell
+http://localhost/list-token-price
+# response in json type
+{
+    token_id: {"pirce": "", "decimal": 8, "symbol": ""},
+    token_id: {"pirce": "", "decimal": 8, "symbol": ""},
+    ...
+}
+```
+
+list all pools in ref-finance
+```shell
+http://localhost/list-pools
+# response in json type
+[
+    {<pool info>},
+    {<pool info>},
+    ...
+]
+```
+
+given two tokens, list all pools using that token pair.
+```shell
+http://localhost/list-pools-by-tokens?token0=xxx&token1=xxxx
+# response in json type
+[
+    {<pool info>},
+    {<pool info>},
+    ...
+]
+```
+
 Get all farms in ref-farming
 ```shell
 # request for mainnet
 http://localhost:8000/list-farms
-# request for testnet
-http://localhost:8000/list-farms-testnet
 # response
 [
     {...}, # FarmInfo
@@ -49,7 +100,8 @@ pip install requests
 # psycopg2 (2.8.6)
 ```
 #### deploy backend
-Make ```backend.sh``` be periodically called.  
+Call deploy_xxx.sh to deploy backend shell scripts with correct network id.
+Then make those scripts be periodically called.  
 There are several ways to do that:
 * crontab
 * flask_apscheduler
