@@ -55,6 +55,7 @@ def get_actions(network_id, account_id):
     sql1 = (
         "select " 
         "included_in_block_timestamp as timestamp, " 
+        "originated_from_transaction_hash, "
         "args->>'method_name' as method_name, " 
         "convert_from(decode(args->>'args_base64', 'base64'), 'UTF8')::json as args, " 
         "args->>'deposit' as deposit " 
@@ -74,6 +75,7 @@ def get_actions(network_id, account_id):
 
 if __name__ == '__main__':
     print("#########MAINNET###########")
-    print(get_liquidity_pools("MAINNET", "reffer.near"))
-    print("#########TESTNET###########")
-    print(get_liquidity_pools("TESTNET", "pika8.testnet"))
+    # print(get_liquidity_pools("MAINNET", "reffer.near"))
+    print(get_actions("MAINNET", "reffer.near"))
+    # print("#########TESTNET###########")
+    # print(get_liquidity_pools("TESTNET", "pika8.testnet"))
