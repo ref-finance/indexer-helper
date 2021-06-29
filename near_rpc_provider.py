@@ -92,18 +92,18 @@ if __name__ == "__main__":
     # c = json.loads(b)
     # for item in c:
     #     print(item)
-    print("In tx GfcyYBJeQDUMbJrCkdymx6zPHcoZCEwYCPLNpTReACpP")
-    print("Yams.near calls remove_liquidity @1: 11529056751499847000000")
-    conn = JsonProvider("https://rpc.mainnet.near.org")
-    # ret = conn.view_call("6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", "ft_metadata", b'')
-    ret = conn.view_call("ref-finance.near", "mft_balance_of", b'{"token_id": "1", "account_id": "yams.near"}')
-    b = "".join([chr(x) for x in ret["result"]])
-    obj = json.loads(b)
-    print("mft_balance_of yams.near on pool  1:", obj)
-    ret = conn.view_call("ref-finance.near", "get_pool_shares", b'{"pool_id": 1, "account_id": "yams.near"}')
-    b = "".join([chr(x) for x in ret["result"]])
-    obj = json.loads(b)
-    print("get_pool_shares yams.near on pool 1:", obj)
+    # print("In tx GfcyYBJeQDUMbJrCkdymx6zPHcoZCEwYCPLNpTReACpP")
+    # print("Yams.near calls remove_liquidity @1: 11529056751499847000000")
+    # conn = JsonProvider("https://rpc.mainnet.near.org")
+    # # ret = conn.view_call("6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", "ft_metadata", b'')
+    # ret = conn.view_call("ref-finance.near", "mft_balance_of", b'{"token_id": "1", "account_id": "yams.near"}')
+    # b = "".join([chr(x) for x in ret["result"]])
+    # obj = json.loads(b)
+    # print("mft_balance_of yams.near on pool  1:", obj)
+    # ret = conn.view_call("ref-finance.near", "get_pool_shares", b'{"pool_id": 1, "account_id": "yams.near"}')
+    # b = "".join([chr(x) for x in ret["result"]])
+    # obj = json.loads(b)
+    # print("get_pool_shares yams.near on pool 1:", obj)
     # for token_id in obj:
     #     import time
     #     time.sleep(0.1)
@@ -113,3 +113,16 @@ if __name__ == "__main__":
     #     print("%s: %s, %s" % (token_id, token_metadata["symbol"], token_metadata["decimals"]))
     # print("Total %s whitelisted tokens" % len(obj))
 
+    # conn = JsonProvider("https://rpc.testnet.near.org")
+    # ret = conn.view_call("ref-farming.testnet", "get_unclaimed_reward", b'{"account_id": "pika8.testnet", "farm_id": "ref-finance."}')
+    # b = "".join([chr(x) for x in ret["result"]])
+    # obj = json.loads(b)
+
+    conn = JsonProvider("https://rpc.testnet.near.org")
+    ret = conn.view_call("ref-finance.testnet", "get_return", b'{"pool_id": 24, "token_in": "rft.tokenfactory.testnet", "amount_in": "100000000", "token_out": "wrap.testnet"}')
+    b = "".join([chr(x) for x in ret["result"]])
+    obj = json.loads(b)
+    print(" pool  24: %s in type %s" % (obj[:-16], type(obj)))
+    price = int(obj[:-16]) / 100000000
+    print(price)
+    # 0.996_505_985_279_683_515_693_096
