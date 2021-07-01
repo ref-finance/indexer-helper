@@ -106,7 +106,7 @@ def internal_get_pools(network_id: str) ->list:
         while base_index < pool_num :
             time.sleep(0.1)
             ret = conn.view_call(contract, 
-                "get_pools", ('{"from_index": %s, "limit": 300}' % base_index).encode(encoding='utf-8'))
+                "get_pools", ('{"from_index": %s, "limit": 200}' % base_index).encode(encoding='utf-8'))
             json_str = "".join([chr(x) for x in ret["result"]])
             batch_pools = json.loads(json_str)
             base_index += len(batch_pools)
