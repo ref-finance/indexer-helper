@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../')
-from near_rpc_provider import JsonProviderError,  JsonProvider
+from near_multinode_rpc_provider import MultiNodeJsonProviderError,  MultiNodeJsonProvider
 from redis_provider import RedisProvider
 import http.client
 from config import Cfg
@@ -13,7 +13,7 @@ def pool_price(network_id, tokens):
     # return [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "wrap.testnet", "price": "nnnnnn"}, ...]
     pool_tokens_price = []
     try:
-        conn = JsonProvider(Cfg.NETWORK[network_id]["NEAR_RPC_URL"])
+        conn = MultiNodeJsonProvider(network_id)
         for token in tokens:
             src, pool_id, base = token["MD_ID"].split("|")
             time.sleep(0.1)
@@ -28,7 +28,7 @@ def pool_price(network_id, tokens):
             price = json.loads(json_str)
             pool_tokens_price.append({"NEAR_ID": token["NEAR_ID"], "BASE_ID": base, "price": price})
 
-    except JsonProviderError as e:
+    except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
         pool_tokens_price.clear()
     except Exception as e:

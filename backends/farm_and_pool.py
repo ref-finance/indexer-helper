@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../')
-from near_rpc_provider import JsonProviderError,  JsonProvider
+from near_multinode_rpc_provider import MultiNodeJsonProviderError,  MultiNodeJsonProvider
 from redis_provider import RedisProvider, list_token_metadata, list_farms
 from config import Cfg
 import json
@@ -24,7 +24,7 @@ def update_farms(network_id):
     farms = []
 
     try:
-        conn = JsonProvider(Cfg.NETWORK[network_id]["NEAR_RPC_URL"])
+        conn = MultiNodeJsonProvider(network_id)
         ret = conn.view_call(Cfg.NETWORK[network_id]["FARMING_CONTRACT"], 
             "list_seeds", b'{"from_index": 0, "limit": 100}')
         json_str = "".join([chr(x) for x in ret["result"]])
@@ -38,7 +38,7 @@ def update_farms(network_id):
             seed_farms = json.loads(json_str)
             for farm in seed_farms:
                 farms.append(farm)
-    except JsonProviderError as e:
+    except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
     except Exception as e:
         print("Error: ", e)
@@ -73,7 +73,7 @@ def internal_get_token_metadata(conn, contract_id):
         else:
             print("Token metadata using default for %s" % contract_id)
 
-    except JsonProviderError as e:
+    except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
     
     redis_conn = RedisProvider()
@@ -96,7 +96,7 @@ def internal_get_pools(network_id: str) ->list:
         print("Error occurred when fetch token_metadata from Redis. Error is: ", e)
 
     try:
-        conn = JsonProvider(Cfg.NETWORK[network_id]["NEAR_RPC_URL"])
+        conn = MultiNodeJsonProvider(network_id)
         ret = conn.view_call(contract, "get_number_of_pools", b'')
         pool_num = int("".join([chr(x) for x in ret["result"]]))
         print(pool_num)
@@ -142,7 +142,7 @@ def internal_get_pools(network_id: str) ->list:
                 pool["token_symbols"][1] = metadata_obj["symbol"]
                 token_metadata[pool["token_account_ids"][1]] = metadata_obj
 
-    except JsonProviderError as e:
+    except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
         pools.clear()
     except Exception as e:

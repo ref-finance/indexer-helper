@@ -77,9 +77,13 @@ class JsonProvider(object):
 
 
 if __name__ == "__main__":
-    # conn = JsonProvider("https://rpc.testnet.near.org")
-    # status = conn.get_status()
-    # # print(status)
+    conn = JsonProvider("https://rpc.testnet.near.org")
+    status = conn.get_status()
+    if "version" in status:
+        print(status["version"])
+    if "sync_info" in status:
+        print(status['sync_info'])
+    # print(status)
     # ret = conn.view_call("ref-farming.testnet", "get_number_of_farms", b"")
     # # print(ret["result"])
     # a = "".join([chr(x) for x in ret["result"]])
@@ -118,11 +122,11 @@ if __name__ == "__main__":
     # b = "".join([chr(x) for x in ret["result"]])
     # obj = json.loads(b)
 
-    conn = JsonProvider("https://rpc.testnet.near.org")
-    ret = conn.view_call("ref-finance.testnet", "get_return", b'{"pool_id": 24, "token_in": "rft.tokenfactory.testnet", "amount_in": "100000000", "token_out": "wrap.testnet"}')
-    b = "".join([chr(x) for x in ret["result"]])
-    obj = json.loads(b)
-    print(" pool  24: %s in type %s" % (obj[:-16], type(obj)))
-    price = int(obj[:-16]) / 100000000
-    print(price)
+    # conn = JsonProvider("https://rpc.testnet.near.org")
+    # ret = conn.view_call("ref-finance.testnet", "get_return", b'{"pool_id": 24, "token_in": "rft.tokenfactory.testnet", "amount_in": "100000000", "token_out": "wrap.testnet"}')
+    # b = "".join([chr(x) for x in ret["result"]])
+    # obj = json.loads(b)
+    # print(" pool  24: %s in type %s" % (obj[:-16], type(obj)))
+    # price = int(obj[:-16]) / 100000000
+    # print(price)
     # 0.996_505_985_279_683_515_693_096

@@ -11,7 +11,9 @@ class Cfg:
     NETWORK_ID = "TESTNET"
     NETWORK = {
         "TESTNET": {
-            "NEAR_RPC_URL": "https://rpc.testnet.near.org",
+            "NEAR_RPC_URL": [
+                "https://rpc.testnet.near.org", 
+            ],
             "FARMING_CONTRACT": "ref-farming.testnet",
             "REF_CONTRACT": "ref-finance.testnet",
             "REDIS_KEY": "FARMS_TESTNET",
@@ -27,7 +29,9 @@ class Cfg:
             "INDEXER_PORT": "5432",
         },
         "MAINNET": {
-            "NEAR_RPC_URL": "https://rpc.mainnet.near.org",
+            "NEAR_RPC_URL": [
+                "https://rpc.mainnet.near.org", 
+            ],
             "FARMING_CONTRACT": "ref-farming.near",
             "REF_CONTRACT": "ref-finance.near",
             "REDIS_KEY": "FARMS_MAINNET",
