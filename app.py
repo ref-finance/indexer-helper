@@ -241,7 +241,7 @@ def handle_price_skyward_near():
     """
     handle_price_skyward_near
     """
-    ret = {"price": "N/A"}
+    token_price = {"price": "N/A"}
     from near_multinode_rpc_provider import MultiNodeJsonProviderError,  MultiNodeJsonProvider
     contract = Cfg.NETWORK[Cfg.NETWORK_ID]["REF_CONTRACT"]
     try:
@@ -251,12 +251,12 @@ def handle_price_skyward_near():
         obj = json.loads(b)
         # print(" sky vs near: %s in type %s" % (obj[:-16], type(obj)))
         price = int(obj[:-16]) / 100000000
-        ret["price"] = "%s" % price
+        token_price["price"] = "%s" % price
     except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
     except Exception as e:
         print("Error: ", e)
-    return jsonify(ret)
+    return jsonify(token_price)
 
 
 if __name__ == '__main__':
