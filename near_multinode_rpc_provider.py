@@ -106,12 +106,27 @@ class MultiNodeJsonProvider(object):
 if __name__ == "__main__":
     # conn = JsonProvider("https://rpc.testnet.near.org")
     conn = MultiNodeJsonProvider("MAINNET")
+
     status = conn.get_status()
     if "version" in status:
         print(status["version"])
     if "sync_info" in status:
         print(status['sync_info'])
     # print(status)
+
+    ret = conn.view_call("ref-finance.near", "get_pool", b'{"pool_id": 1346}')
+    b = "".join([chr(x) for x in ret["result"]])
+    obj = json.loads(b)
+    print(obj)
+
+    ret = conn.view_call("ref-finance.near", "get_return", b'{"pool_id": 1346, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
+    b = "".join([chr(x) for x in ret["result"]])
+    obj = json.loads(b)
+    print(" sky vs near: %s in type %s" % (obj[:-16], type(obj)))
+    price = int(obj[:-16]) / 100000000
+    print(price)
+
+
     # ret = conn.view_call("ref-farming.testnet", "get_number_of_farms", b"")
     # # print(ret["result"])
     # a = "".join([chr(x) for x in ret["result"]])

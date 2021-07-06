@@ -235,6 +235,29 @@ def handle_list_pools_by_ids():
 
     return jsonify(pools)
 
+@app.route('/price-skyward-near', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_price_skyward_near():
+    """
+    handle_price_skyward_near
+    """
+    ret = {"price": "N/A"}
+    from near_multinode_rpc_provider import MultiNodeJsonProviderError,  MultiNodeJsonProvider
+    contract = Cfg.NETWORK[Cfg.NETWORK_ID]["REF_CONTRACT"]
+    try:
+        conn = MultiNodeJsonProvider(Cfg.NETWORK_ID)
+        ret = conn.view_call(contract, "get_return", b'{"pool_id": 1346, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
+        b = "".join([chr(x) for x in ret["result"]])
+        obj = json.loads(b)
+        # print(" sky vs near: %s in type %s" % (obj[:-16], type(obj)))
+        price = int(obj[:-16]) / 100000000
+        ret["price"] = "%s" % price
+    except MultiNodeJsonProviderError as e:
+        print("RPC Error: ", e)
+    except Exception as e:
+        print("Error: ", e)
+    return jsonify(ret)
+
 
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
