@@ -252,6 +252,8 @@ def handle_price_skyward_near():
         # print(" sky vs near: %s in type %s" % (obj[:-16], type(obj)))
         price = int(obj[:-16]) / 100000000
         token_price["price"] = "%s" % price
+        if 'block_height' in ret:
+            token_price['block_height'] = ret['block_height']
     except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
     except Exception as e:

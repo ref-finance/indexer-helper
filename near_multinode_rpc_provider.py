@@ -120,7 +120,10 @@ if __name__ == "__main__":
     print(obj)
 
     ret = conn.view_call("ref-finance.near", "get_return", b'{"pool_id": 1346, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
+    # print(ret)
     b = "".join([chr(x) for x in ret["result"]])
+    if 'block_height' in ret:
+        print("block_height:", ret['block_height'])
     obj = json.loads(b)
     print(" sky vs near: %s in type %s" % (obj[:-16], type(obj)))
     price = int(obj[:-16]) / 100000000
