@@ -119,17 +119,28 @@ if __name__ == "__main__":
     obj = json.loads(b)
     print(obj)
 
-    ret = conn.view_call("ref-finance.near", "get_return", b'{"pool_id": 1346, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
-    # print(ret)
+    token_price = {"price": "N/A", "decimal_skyward": 18, "decimal_near": 24, 
+        "volume_skyward2near": "N/A", "volume_near2skyward": "N/A"}
+
+    contract = "ref-finance.near"
+    conn = MultiNodeJsonProvider(Cfg.NETWORK_ID)
+    ret = conn.view_call(contract, "get_return", b'{"pool_id": 1346, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
     b = "".join([chr(x) for x in ret["result"]])
-    if 'block_height' in ret:
-        print("block_height:", ret['block_height'])
     obj = json.loads(b)
-    print(" sky vs near: %s in type %s" % (obj[:-16], type(obj)))
     price = int(obj[:-16]) / 100000000
-    print(price)
+    token_price["price"] = "%s" % price
+    if 'block_height' in ret:
+        token_price['block_height'] = ret['block_height']
+    
+    ret = conn.view_call("ref-finance.near", "get_pool_volumes", b'{"pool_id": 1346}')
+    b = "".join([chr(x) for x in ret["result"]])
+    obj = json.loads(b)
+    if len(obj) == 2:
+        token_price["volume_skyward2near"] = obj[0]
+        token_price["volume_near2skyward"] = obj[1]
 
-
+    print(token_price)
+    
     # ret = conn.view_call("ref-farming.testnet", "get_number_of_farms", b"")
     # # print(ret["result"])
     # a = "".join([chr(x) for x in ret["result"]])
