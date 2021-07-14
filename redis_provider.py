@@ -92,6 +92,32 @@ def list_token_metadata(network_id):
         metadata_obj[key] = json.loads(value)
     return metadata_obj
 
+def list_whitelist(network_id):
+    '''
+    return:
+    {
+        'nusdc.ft-fin.testnet': {
+            'spec': 'ft-1.0.0', 
+            'name': 'NEAR Wrapped USDC', 
+            'symbol': 'nUSDC', 
+            'icon': 'https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png', 
+            'reference': None, 
+            'reference_hash': None, 
+            'decimals': 2
+        },
+        ...
+    }
+    
+    '''
+    import json
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_WHITELIST_KEY"])
+    r.close()
+    whitelist_obj = {}
+    for key, value in ret.items():
+        whitelist_obj[key] = json.loads(value)
+    return whitelist_obj
+
 
 class RedisProvider(object):
 
@@ -126,6 +152,9 @@ class RedisProvider(object):
     def add_farm(self, network_id, farm_id, farm_str):
         self.farmids.add(farm_id)
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_KEY"], farm_id, farm_str)
+    
+    def add_whitelist(self, network_id, whitelist_id, whitelist_str):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_WHITELIST_KEY"], whitelist_id, whitelist_str)
     
     def add_pool(self, network_id, pool_id, pool_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], pool_id, pool_str)

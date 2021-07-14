@@ -114,7 +114,7 @@ if __name__ == "__main__":
         print(status['sync_info'])
     # print(status)
 
-    ret = conn.view_call("ref-finance.near", "get_pool", b'{"pool_id": 1346}')
+    ret = conn.view_call("ref-finance.near", "get_whitelisted_tokens", b'')
     b = "".join([chr(x) for x in ret["result"]])
     obj = json.loads(b)
     print(obj)

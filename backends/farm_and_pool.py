@@ -1,11 +1,13 @@
 import sys
 sys.path.append('../')
 from near_multinode_rpc_provider import MultiNodeJsonProviderError,  MultiNodeJsonProvider
-from redis_provider import RedisProvider, list_token_metadata, list_farms
+from redis_provider import RedisProvider, list_token_metadata, list_farms, list_whitelist
 from config import Cfg
 import json
 import time
 import sys
+
+
 
 def internal_farm_seeds(network_id):
     farms = list_farms(network_id)
@@ -150,6 +152,29 @@ def internal_get_pools(network_id: str) ->list:
         pools.clear()
     return pools
 
+def internal_add_volume_info(top_pools: dict):
+    contract = Cfg.NETWORK[network_id]["REF_CONTRACT"]
+    try:
+        conn = MultiNodeJsonProvider(network_id)
+
+        # add vol info to top_pools
+        for _, pool in top_pools.items():
+            pool["vol01"] = {"input": "0", "output": "0"}
+            pool["vol10"] = {"input": "0", "output": "0"}
+            ret = conn.view_call(contract, "get_pool_volumes", ('{"pool_id": %s}' % pool["id"]).encode(encoding='utf-8'))
+            if "result" in ret:
+                json_str = "".join([chr(x) for x in ret["result"]])
+                vol_obj = json.loads(json_str)
+                if len(vol_obj) == 2:
+                    pool["vol01"] = vol_obj[0]
+                    pool["vol10"] = vol_obj[1]
+
+    except MultiNodeJsonProviderError as e:
+        print("RPC Error: ", e)
+    except Exception as e:
+        print("Error: ", e)
+    pass
+
 def internal_pools_to_redis(network_id: str, pools: list):
     pools_by_tokens = {}
     tops = {}
@@ -179,6 +204,8 @@ def internal_pools_to_redis(network_id: str, pools: list):
             conn.end_pipe()
             print("Import Pools to Redis OK.")
 
+            # add vol info into top-pools
+            internal_add_volume_info(tops)
             # pour top-pools data to redis
             conn.begin_pipe()
             for key, top_pool in tops.items():
@@ -204,6 +231,45 @@ def update_pools(network_id):
     pools = internal_get_pools(network_id)
     internal_pools_to_redis(network_id, pools)
     
+def update_whitelist(network_id):
+
+    token_metadata = {}
+    prev_whitelist = {}
+    try:
+        token_metadata = list_token_metadata(network_id)
+        prev_whitelist = list_whitelist(network_id)
+    except Exception as e:
+        print("Error occurred when fetch token_metadata from Redis. Error is: ", e)
+
+    whitelist_tokens = []
+    contract = Cfg.NETWORK[network_id]["REF_CONTRACT"]
+    try:
+        conn = MultiNodeJsonProvider(network_id)
+        ret = conn.view_call(contract,  "get_whitelisted_tokens", b'')
+        json_str = "".join([chr(x) for x in ret["result"]])
+        whitelist_tokens = json.loads(json_str)
+    except MultiNodeJsonProviderError as e:
+        print("RPC Error: ", e)
+    except Exception as e:
+        print("Error: ", e)
+    
+    whitelist = {}
+    for token in whitelist_tokens:
+        if token in token_metadata and token not in prev_whitelist:
+            whitelist[token] = token_metadata[token]
+    
+    try:
+        if len(whitelist) > 0:
+            conn = RedisProvider()
+            conn.begin_pipe()
+            for key, item in whitelist.items():
+                conn.add_whitelist(network_id, key, json.dumps(item))
+            conn.end_pipe()
+            conn.close()
+            print("add %s tokens into whitelist." % len(whitelist))
+    except Exception as e:
+        print("Error occurred when update whitelist to Redis, cancel pipe. Error is: ", e)
+
 
 if __name__ == "__main__":
 
@@ -214,6 +280,8 @@ if __name__ == "__main__":
             update_farms(network_id)
             print("Staring update_pools ...")
             update_pools(network_id)
+            print("Staring update_whitelist ...")
+            update_whitelist(network_id)
         else:
             print("Error, network_id should be MAINNET or TESTNET")
             exit(1)
