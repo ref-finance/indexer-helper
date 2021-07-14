@@ -10,7 +10,7 @@ import flask_cors
 import json
 import logging
 from indexer_provider import get_actions, get_liquidity_pools
-from redis_provider import list_farms, list_top_pools, list_pools, list_token_price 
+from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist 
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens
 from config import Cfg
 
@@ -234,6 +234,32 @@ def handle_list_pools_by_ids():
             pool["token0_ref_price"] = "N/A"
 
     return jsonify(pools)
+
+
+@app.route('/whitelisted-active-pools', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_whitelisted_active_pools():
+    """
+    handle_whitelisted_active_pools
+    """
+    ret = []
+    pools = list_top_pools(Cfg.NETWORK_ID)
+    whitelist = list_whitelist(Cfg.NETWORK_ID)
+    for pool in pools:
+        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
+        if token0 in whitelist and token1 in whitelist:
+            ret.append({
+                "pool_id": pool["id"], 
+                "token_symbols": pool["token_symbols"],
+                "token_decimals": [whitelist[token0]["decimals"], whitelist[token1]["decimals"]],
+                "token_names": [whitelist[token0]["name"], whitelist[token1]["name"]],
+                "liquidity_amounts": pool["amounts"],
+                "vol_token0_token1": pool["vol01"],
+                "vol_token1_token0": pool["vol10"],
+                })
+
+    return jsonify(ret)
+    pass
 
 @app.route('/price-skyward-near', methods=['GET'])
 @flask_cors.cross_origin()
