@@ -247,6 +247,8 @@ def handle_whitelisted_active_pools():
     whitelist = list_whitelist(Cfg.NETWORK_ID)
     for pool in pools:
         token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
+        if pool["amounts"][0] == "0":
+            continue
         if token0 in whitelist and token1 in whitelist:
             ret.append({
                 "pool_id": pool["id"], 
