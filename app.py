@@ -113,6 +113,14 @@ def handle_list_token_price():
         }
     return jsonify(ret)
     
+@app.route('/list-token', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_list_token():
+    """
+    list_token
+    """
+    ret = list_token_metadata(Cfg.NETWORK_ID)
+    return jsonify(ret)
 
 @app.route('/list-pools', methods=['GET'])
 @flask_cors.cross_origin()
