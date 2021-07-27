@@ -50,6 +50,17 @@ def list_pools(network_id):
         pools.append(single_pool)
     return pools
 
+def get_pool(network_id, pool_id):
+    import json
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], pool_id)
+    r.close()
+    single_pool = {}
+    if ret:
+        single_pool = json.loads(ret)
+        single_pool["id"] = pool_id
+    return single_pool
+
 def list_top_pools(network_id):
     import json
     r=redis.StrictRedis(connection_pool=pool)
@@ -190,8 +201,10 @@ if __name__ == '__main__':
     # list_pools("MAINNET")
     # print(list_token_price("MAINNET"))
     # print(list_token_metadata("TESTNET"))
-    a = list_pools_by_id_list("TESTNET", [100])
+    a = get_pool("TESTNET", "0")
     print(a)
+    b = get_pool("TESTNET", "1000")
+    print(b)
 
 
 
