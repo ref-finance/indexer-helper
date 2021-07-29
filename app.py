@@ -111,6 +111,13 @@ def handle_list_token_price():
             "decimal": token["DECIMAL"],
             "symbol": token["SYMBOL"],
         }
+    # if token.ref-finance.near exists, mirror its info to rftt.tkn.near
+    if "token.ref-finance.near" in ret:
+        ret["rftt.tkn.near"] = {
+            "price": prices["token.ref-finance.near"], 
+            "decimal": 8,
+            "symbol": "RFTT",
+        }
     return jsonify(ret)
     
 @app.route('/list-token', methods=['GET'])
