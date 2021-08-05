@@ -10,7 +10,7 @@ def list_pools_by_id_list(network_id: str, id_list: list) ->list:
     ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], id_list)
     r.close()
     try:
-        pool_list = [json.loads(x) for x in ret]
+        pool_list = [json.loads(x) for x in ret if x is not None]
     except Exception as e:
         print(e)
     return pool_list
@@ -201,10 +201,13 @@ if __name__ == '__main__':
     # list_pools("MAINNET")
     # print(list_token_price("MAINNET"))
     # print(list_token_metadata("TESTNET"))
-    a = get_pool("TESTNET", "0")
+    # a = get_pool("TESTNET", "0")
+    # print(a)
+    # b = get_pool("TESTNET", "1000")
+    # print(b)
+
+    a = list_pools_by_id_list("MAINNET", ['1346', '1429'])
     print(a)
-    b = get_pool("TESTNET", "1000")
-    print(b)
 
 
 
