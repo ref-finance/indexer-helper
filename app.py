@@ -324,31 +324,34 @@ def handle_to_coingecko():
     handle_price_to_coingecko
     """
     ret = {}
-    pools = list_pools_by_id_list(Cfg.NETWORK_ID, ['1346', '1429'])
+    # pools = list_pools_by_id_list(Cfg.NETWORK_ID, ['1346', '1429'])
+    pools = list_top_pools(Cfg.NETWORK_ID)
     prices = list_token_price(Cfg.NETWORK_ID)
     metadata = list_token_metadata(Cfg.NETWORK_ID)
+    whitelist = list_whitelist(Cfg.NETWORK_ID)
     for pool in pools:
-        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
-        (balance0, balance1) = (
-            float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
-            float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
-        )
 
-        # add token0_ref_price = token1_price * token1_balance / token0_balance 
-        if balance0 > 0 and balance1 > 0 and token1 in prices:
-            ret[pool["token_symbols"][0]] = {
-                "token_symbol": pool["token_symbols"][0],
-                "other_token": pool["token_symbols"][1],
-                "price_in_usd": str(float(prices[token1]) * balance1 / balance0),
-                "price_in_other_token": str(balance1 / balance0),
-                }
-        else:
-            ret[pool["token_symbols"][0]] = {
-                "token_symbol": pool["token_symbols"][0],
-                "other_token": pool["token_symbols"][1],
-                "price_in_usd": "N/A",
-                "price_in_other_token": "N/A",
-                }
+        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
+        if pool["amounts"][0] == "0":
+            continue
+        if token0 in whitelist and token1 in whitelist:
+            (balance0, balance1) = (
+                float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
+                float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
+            )
+            # add token0_ref_price = token1_price * token1_balance / token0_balance 
+            if balance0 > 0 and balance1 > 0:
+                ret[pool["token_symbols"][0]] = {
+                    "pool_id": pool["id"], 
+                    "token_symbol": pool["token_symbols"][0],
+                    "other_token": pool["token_symbols"][1],
+                    "token_decimals": [whitelist[token0]["decimals"], whitelist[token1]["decimals"]],
+                    "liquidity_amounts": pool["amounts"],
+                    "price_in_usd": str(float(prices[token1]) * balance1 / balance0) if token1 in prices else "N/A",
+                    "price_in_other_token": str(balance1 / balance0),
+                    "vol_to_other_token": pool["vol01"],
+                    "vol_from_other_token": pool["vol10"],
+                    }
 
     return jsonify(ret)
 
