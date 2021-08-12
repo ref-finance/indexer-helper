@@ -339,9 +339,10 @@ def handle_to_coingecko():
                 float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
                 float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
             )
+            key = "%s-%s" % (pool["token_symbols"][0], pool["token_symbols"][1])
             # add token0_ref_price = token1_price * token1_balance / token0_balance 
             if balance0 > 0 and balance1 > 0:
-                ret[pool["token_symbols"][0]] = {
+                ret[key] = {
                     "pool_id": pool["id"], 
                     "token_symbol": pool["token_symbols"][0],
                     "other_token": pool["token_symbols"][1],
