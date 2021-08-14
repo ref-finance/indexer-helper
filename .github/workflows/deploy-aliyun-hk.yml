@@ -2,20 +2,13 @@ name: Deploy To Aliyun HK
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 15.x
-      - run: yarn install --frozen-lockfile
-      - run: yarn build
-      - run: yarn test
-      - run: yarn prettier
       - uses: actions/upload-artifact@v2.2.4
         with:
           name: mydist
