@@ -72,7 +72,7 @@ jobs:
         with:
           hosts: 'root@47.242.213.140:22 root@47.242.226.48:22'
           privateKey: ${{ secrets.SSH_PRIVATE_KEY }}
-          debug: false
+          debug: true
           command: |
             sed -i 's/host=\'127.0.0.1\'/host=\'r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com\'/g' /data/indexer-helper/redis_provider.py
             sh /data/indexer-helper/boot.sh restart
