@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 basedir=$(cd "$(dirname "$0")"; pwd)
+cd ${basedir}
 . ./venv/bin/activate
 
 function getpid() {
