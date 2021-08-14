@@ -35,7 +35,7 @@ jobs:
           # Port
           REMOTE_PORT: 22
           # Source Path
-          SOURCE: mydist
+          SOURCE: "mydist/"
           # Target Path
           TARGET: "/data/indexer-helper2"
           #  rsync
@@ -43,19 +43,19 @@ jobs:
           # An array of folder to exclude
           EXCLUDE: ".git, .github"
 
-      - name: deploy to 47.242.213.140
+      - name: deploy to 47.242.226.48
         uses: easingthemes/ssh-deploy@v2.2.11
         with:
           # Private Key
           SSH_PRIVATE_KEY:  ${{ secrets.SSH_PRIVATE_KEY }}
           # Server IP
-          REMOTE_HOST:  47.242.213.140
+          REMOTE_HOST:  47.242.226.48
           # Useranme
           REMOTE_USER:  root
           # Port
           REMOTE_PORT: 22
           # Source Path
-          SOURCE: mydist
+          SOURCE: "mydist/"
           # Target Path
           TARGET: "/data/indexer-helper2"
           #  rsync
