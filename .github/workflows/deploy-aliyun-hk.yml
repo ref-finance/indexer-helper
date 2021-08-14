@@ -12,7 +12,7 @@ jobs:
       - uses: actions/upload-artifact@v2.2.4
         with:
           name: mydist
-          path: ./
+          path: './*'
   deploy-aliyun-hk:
     needs: build
     runs-on: ubuntu-latest
@@ -21,7 +21,7 @@ jobs:
         uses: actions/download-artifact@v2.0.10
         with:
           name: mydist
-          path: ./
+          path: mydist
 
       - name: deploy to 47.242.213.140
         uses: easingthemes/ssh-deploy@v2.2.11
@@ -35,7 +35,7 @@ jobs:
           # Port
           REMOTE_PORT: 22
           # Source Path
-          SOURCE: "./"
+          SOURCE: mydist
           # Target Path
           TARGET: "/data/indexer-helper2"
           #  rsync
@@ -55,7 +55,7 @@ jobs:
           # Port
           REMOTE_PORT: 22
           # Source Path
-          SOURCE: "dist/"
+          SOURCE: mydist
           # Target Path
           TARGET: "/data/indexer-helper2"
           #  rsync
