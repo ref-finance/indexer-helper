@@ -52,7 +52,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            sed -i 's/host=\'127.0.0.1\'/host=\'r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com\'/g' /data/indexer-helper/redis_provider.py
+            sed -i "s/host='127.0.0.1'/host='r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com'/g" /data/indexer-helper/redis_provider.py
             sh /data/indexer-helper/boot.sh restart
 
       - name: deploy to remote server [47.242.226.48]
@@ -84,7 +84,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            sed -i 's/host=\'127.0.0.1\'/host=\'r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com\'/g' /data/indexer-helper/redis_provider.py
+            sed -i "s/host='127.0.0.1'/host='r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com'/g" /data/indexer-helper/redis_provider.py
             sh /data/indexer-helper/boot.sh restart
 
 
