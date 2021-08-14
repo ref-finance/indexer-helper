@@ -23,7 +23,7 @@ jobs:
           name: mydist
           path: mydist
 
-      - name: deploy to 47.242.213.140
+      - name: deploy to remote server [47.242.213.140]
         uses: easingthemes/ssh-deploy@v2.2.11
         with:
           # 服务器私钥
@@ -37,13 +37,16 @@ jobs:
           # Source Path
           SOURCE: "mydist/"
           # Target Path
-          TARGET: "/data/indexer-helper2"
+          TARGET: "/data/indexer-helper"
           #  rsync
           ARGS: "-rltgoDzvO"
           # An array of folder to exclude
           EXCLUDE: ".git, .github"
 
-      - name: deploy to 47.242.226.48
+
+
+
+      - name: deploy to remote server [47.242.226.48]
         uses: easingthemes/ssh-deploy@v2.2.11
         with:
           # Private Key
@@ -57,8 +60,21 @@ jobs:
           # Source Path
           SOURCE: "mydist/"
           # Target Path
-          TARGET: "/data/indexer-helper2"
+          TARGET: "/data/indexer-helper"
           #  rsync
           ARGS: "-rltgoDzvO"
           # An array of folder to exclude
           EXCLUDE: ".git, .github"
+
+
+      - name: Execute SSH commmands on remote server[47.242.213.140,47.242.226.48]
+        uses: JimCronqvist/action-ssh@master
+        with:
+          hosts: 'root@47.242.213.140:22 root@47.242.226.48:22'
+          privateKey: ${{ secrets.SSH_PRIVATE_KEY }}
+          debug: false
+          command: |
+            sed -i 's/host=\'127.0.0.1\'/host=\'r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com\'/g' /data/indexer-helper/redis_provider.py
+            sh /data/indexer-helper/boot.sh restart
+
+
