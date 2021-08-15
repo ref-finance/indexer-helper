@@ -1,0 +1,16 @@
+[
+  [
+    "F9cpkZpzxp2SpAUKkQJXgaRHMazHb7BhZFvNrn2Qqj6X",
+    "1628951240932977589",
+    "remove_liquidity",
+    {
+      "pool_id": 1429,
+      "shares": "28800000000000000000000",
+      "min_amounts": [
+        "548272611553887300",
+        "188942412449138740000000"
+      ]
+    },
+    "SUCCESS_VALUE"
+  ]
+]

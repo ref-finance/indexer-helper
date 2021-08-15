@@ -1,0 +1,30 @@
+[
+  [
+    "ERZWnaygMPzZgSx5yT7wQ8AcmiFYwCYwsGMh3c6sYDCd",
+    "1628950045296974949",
+    "remove_liquidity",
+    {
+      "pool_id": 1346,
+      "shares": "100559895426648905080567763",
+      "min_amounts": [
+        "11957667482600180000",
+        "61161646504844085000000000"
+      ]
+    },
+    "SUCCESS_VALUE"
+  ],
+  [
+    "ANBqX7GzjrWaFBLGsgx8EYZJJDpGw8iVGVtvRY98MAkP",
+    "1628951125570139523",
+    "remove_liquidity",
+    {
+      "pool_id": 1346,
+      "shares": "100559895426648905080567763",
+      "min_amounts": [
+        "11961741462377548000",
+        "61140890666839420000000000"
+      ]
+    },
+    "SUCCESS_VALUE"
+  ]
+]

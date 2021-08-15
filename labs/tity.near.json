@@ -1,0 +1,44 @@
+[
+  [
+    "CZdYy6MP2y38cJgT1e6x4vSqqNmBuZKtsPs6WmbrAdtU",
+    "1628950719377618984",
+    "remove_liquidity",
+    {
+      "pool_id": 1,
+      "shares": "7779853207832750315978",
+      "min_amounts": [
+        "128443756556955920000000",
+        "420862607182752000"
+      ]
+    },
+    "SUCCESS_VALUE"
+  ],
+  [
+    "9woQeRsWTkdaY4WKEytbPz59tgisiyJonL668oL8WWyP",
+    "1628950741784912137",
+    "remove_liquidity",
+    {
+      "pool_id": 1,
+      "shares": "7779853207832750315978",
+      "min_amounts": [
+        "128443756556955900000000",
+        "420862607182752060"
+      ]
+    },
+    "SUCCESS_VALUE"
+  ],
+  [
+    "J7foKd7U6TtgJed8gZUHHCop7pYqPErRiAB7CHopqpNb",
+    "1628950866647833490",
+    "remove_liquidity",
+    {
+      "pool_id": 1,
+      "shares": "7779853207832750315978",
+      "min_amounts": [
+        "128443756556955900000000",
+        "420862607182752060"
+      ]
+    },
+    "SUCCESS_VALUE"
+  ]
+]
