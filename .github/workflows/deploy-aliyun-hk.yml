@@ -3,6 +3,8 @@ name: Deploy To Aliyun HK
 on:
   push:
     branches: [dev]
+  pull_request:
+    branches: [dev]
 
 jobs:
   build:
