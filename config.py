@@ -10,25 +10,6 @@ __author__ = 'Marco'
 class Cfg:
     NETWORK_ID = "MAINNET"
     NETWORK = {
-        "TESTNET": {
-            "NEAR_RPC_URL": [
-                "https://rpc.testnet.near.org", 
-            ],
-            "FARMING_CONTRACT": "v2.ref-farming.testnet",
-            "REF_CONTRACT": "ref-finance-101.testnet",
-            "REDIS_KEY": "FARMS_TESTNET",
-            "REDIS_POOL_KEY": "POOLS_TESTNET",
-            "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET",
-            "REDIS_TOP_POOL_KEY": "TOP_POOLS_TESTNET",
-            "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_TESTNET",
-            "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_TESTNET",
-            "REDIS_WHITELIST_KEY": "WHITELIST_TESTNET",
-            "INDEXER_DSN": "testnet_explorer",
-            "INDEXER_UID": "public_readonly",
-            "INDEXER_PWD": "nearprotocol",
-            "INDEXER_HOST": "35.184.214.98",
-            "INDEXER_PORT": "5432",
-        },
         "MAINNET": {
             "NEAR_RPC_URL": [
                 "https://rpc.mainnet.near.org", 
@@ -50,12 +31,6 @@ class Cfg:
         }
     }
     TOKENS = {
-        "TESTNET": [
-            {"SYMBOL": "near", "NEAR_ID": "wrap.testnet", "MD_ID": "near", "DECIMAL": 24},
-            {"SYMBOL": "nDAI", "NEAR_ID": "ndai.ft-fin.testnet", "MD_ID": "dai", "DECIMAL": 8},
-            {"SYMBOL": "nUSDT", "NEAR_ID": "nusdt.ft-fin.testnet", "MD_ID": "tether", "DECIMAL": 6},
-            {"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8},
-        ],
         "MAINNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.near", "MD_ID": "near", "DECIMAL": 24},
             {"SYMBOL": "nUSDC", "NEAR_ID": "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near", "MD_ID": "usd-coin", "DECIMAL": 6},
