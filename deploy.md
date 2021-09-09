@@ -1,4 +1,4 @@
-# Deployment Instruction
+# Deployment Instruction <TESTNET>
 
 ## Common Prerequisite
 
@@ -36,8 +36,8 @@ Redis is required in this project. Please refer to [redis.io](https://redis.io/d
 ### Using deploy scripts
 Call deploy_xxx.sh to deploy backend shell scripts with correct network id.
 ```shell
-python3 deploy_backend_farm_and_pool.py mainnet
-python3 deploy_backend_token_price.py mainnet
+python3 deploy_backend_farm_and_pool.py
+python3 deploy_backend_token_price.py
 ```
 You will see two scripts file, make them executable:
 ```shell
