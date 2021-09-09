@@ -14,8 +14,8 @@ class Cfg:
             "NEAR_RPC_URL": [
                 "https://rpc.testnet.near.org", 
             ],
-            "FARMING_CONTRACT": "ref-farming.testnet",
-            "REF_CONTRACT": "ref-finance.testnet",
+            "FARMING_CONTRACT": "v2.ref-farming.testnet",
+            "REF_CONTRACT": "ref-finance-101.testnet",
             "REDIS_KEY": "FARMS_TESTNET",
             "REDIS_POOL_KEY": "POOLS_TESTNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET",
@@ -33,7 +33,7 @@ class Cfg:
             "NEAR_RPC_URL": [
                 "https://rpc.mainnet.near.org", 
             ],
-            "FARMING_CONTRACT": "near",
+            "FARMING_CONTRACT": "v2.ref-farming.near",
             "REF_CONTRACT": "v2.ref-finance.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
