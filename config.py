@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
-import rpc_info
+
+
+try:
+    from rpc_info import TESTNET_RPC_URL, MAINNET_RPC_URL
+except ImportError:
+    TESTNET_RPC_URL= ["https://rpc.testnet.near.org", ]
+    MAINNET_RPC_URL= ["https://rpc.mainnet.near.org", ]
 
 """
 
@@ -11,7 +17,7 @@ class Cfg:
     NETWORK_ID = "MAINNET"
     NETWORK = {
         "TESTNET": {
-            "NEAR_RPC_URL": rpc_info.TESTNET_RPC_URL,
+            "NEAR_RPC_URL": TESTNET_RPC_URL,
             "FARMING_CONTRACT": "v2.ref-farming.testnet",
             "REF_CONTRACT": "ref-finance-101.testnet",
             "REDIS_KEY": "FARMS_TESTNET",
@@ -28,7 +34,7 @@ class Cfg:
             "INDEXER_PORT": "5432",
         },
         "MAINNET": {
-            "NEAR_RPC_URL": rpc_info.MAINNET_RPC_URL,
+            "NEAR_RPC_URL": MAINNET_RPC_URL,
             "FARMING_CONTRACT": "v2.ref-farming.near",
             "REF_CONTRACT": "v2.ref-finance.near",
             "REDIS_KEY": "FARMS_MAINNET",
@@ -71,3 +77,4 @@ if __name__ == '__main__':
     print(type(Cfg))
     print(type(Cfg.TOKENS))
     print(type(Cfg.NETWORK_ID), Cfg.NETWORK_ID)
+    print(Cfg.NETWORK["TESTNET"]["NEAR_RPC_URL"])
