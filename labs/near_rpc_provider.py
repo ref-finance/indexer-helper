@@ -74,6 +74,9 @@ class JsonProvider(object):
 
     def get_changes_in_block(self, changes_in_block_request):
         return self.json_rpc('EXPERIMENTAL_changes_in_block', changes_in_block_request)
+    
+    def get_tx_status(self, tx_hash, sender_id):
+        return self.json_rpc('EXPERIMENTAL_tx_status', [tx_hash, sender_id])
 
 
 if __name__ == "__main__":
@@ -98,6 +101,7 @@ if __name__ == "__main__":
     #     print(item)
     # print("In tx GfcyYBJeQDUMbJrCkdymx6zPHcoZCEwYCPLNpTReACpP")
     # print("Yams.near calls remove_liquidity @1: 11529056751499847000000")
+
     # conn = JsonProvider("https://rpc.mainnet.near.org")
     # # ret = conn.view_call("6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", "ft_metadata", b'')
     # ret = conn.view_call("ref-finance.near", "mft_balance_of", b'{"token_id": "1", "account_id": "yams.near"}')
