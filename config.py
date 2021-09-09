@@ -2,15 +2,22 @@
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
 
-"""
+
+try:
+    from rpc_info import TESTNET_RPC_URL, MAINNET_RPC_URL
+except ImportError:
+    TESTNET_RPC_URL= ["https://rpc.testnet.near.org", ]
+    MAINNET_RPC_URL= ["https://rpc.mainnet.near.org", ]
 
 """
 
+"""
 
 class Cfg:
     NETWORK_ID = "TESTNET"
     NETWORK = {
         "TESTNET": {
+<<<<<<< HEAD
             "NEAR_RPC_URL": [
                 "https://rpc.testnet.near.org", 
             ],
@@ -23,11 +30,43 @@ class Cfg:
             "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_TESTNET_DEV",
             "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_TESTNET_DEV",
             "REDIS_WHITELIST_KEY": "WHITELIST_TESTNET_DEV",
+=======
+            "NEAR_RPC_URL": TESTNET_RPC_URL,
+            "FARMING_CONTRACT": "v2.ref-farming.testnet",
+            "REF_CONTRACT": "ref-finance-101.testnet",
+            "REDIS_KEY": "FARMS_TESTNET",
+            "REDIS_POOL_KEY": "POOLS_TESTNET",
+            "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET",
+            "REDIS_TOP_POOL_KEY": "TOP_POOLS_TESTNET",
+            "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_TESTNET",
+            "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_TESTNET",
+            "REDIS_WHITELIST_KEY": "WHITELIST_TESTNET",
+>>>>>>> main
             "INDEXER_DSN": "testnet_explorer",
             "INDEXER_UID": "public_readonly",
             "INDEXER_PWD": "nearprotocol",
             "INDEXER_HOST": "35.184.214.98",
             "INDEXER_PORT": "5432",
+<<<<<<< HEAD
+=======
+        },
+        "MAINNET": {
+            "NEAR_RPC_URL": MAINNET_RPC_URL,
+            "FARMING_CONTRACT": "v2.ref-farming.near",
+            "REF_CONTRACT": "v2.ref-finance.near",
+            "REDIS_KEY": "FARMS_MAINNET",
+            "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
+            "REDIS_POOL_KEY": "POOLS_MAINNET",
+            "REDIS_TOP_POOL_KEY": "TOP_POOLS_MAINNET",
+            "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_MAINNET",
+            "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_MAINNET",
+            "REDIS_WHITELIST_KEY": "WHITELIST_MAINNET",
+            "INDEXER_DSN": "mainnet_explorer",
+            "INDEXER_UID": "public_readonly",
+            "INDEXER_PWD": "nearprotocol",
+            "INDEXER_HOST": "104.199.89.51",
+            "INDEXER_PORT": "5432",
+>>>>>>> main
         }
     }
     TOKENS = {
@@ -45,3 +84,4 @@ if __name__ == '__main__':
     print(type(Cfg))
     print(type(Cfg.TOKENS))
     print(type(Cfg.NETWORK_ID), Cfg.NETWORK_ID)
+    print(Cfg.NETWORK["TESTNET"]["NEAR_RPC_URL"])
