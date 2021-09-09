@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
+import rpc_info
 
 """
 
 """
-
 
 class Cfg:
-    NETWORK_ID = "MAINNET"
+    NETWORK_ID = "TESTNET"
     NETWORK = {
         "TESTNET": {
-            "NEAR_RPC_URL": [
-                "https://rpc.testnet.near.org", 
-            ],
+            "NEAR_RPC_URL": rpc_info.TESTNET_RPC_URL,
             "FARMING_CONTRACT": "v2.ref-farming.testnet",
             "REF_CONTRACT": "ref-finance-101.testnet",
             "REDIS_KEY": "FARMS_TESTNET",
@@ -30,9 +28,7 @@ class Cfg:
             "INDEXER_PORT": "5432",
         },
         "MAINNET": {
-            "NEAR_RPC_URL": [
-                "https://rpc.mainnet.near.org", 
-            ],
+            "NEAR_RPC_URL": rpc_info.MAINNET_RPC_URL,
             "FARMING_CONTRACT": "v2.ref-farming.near",
             "REF_CONTRACT": "v2.ref-finance.near",
             "REDIS_KEY": "FARMS_MAINNET",
