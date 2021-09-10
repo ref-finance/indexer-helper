@@ -26,7 +26,7 @@ def hello_world():
 
 
 @app.route('/latest-actions/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_latest_actions(account_id):
     """
     get user's latest actions
@@ -37,7 +37,7 @@ def handle_latest_actions(account_id):
 
 
 @app.route('/liquidity-pools/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_liquidity_pools(account_id):
     """
     get user's liqudity pools
@@ -49,7 +49,7 @@ def handle_liquidity_pools(account_id):
     return jsonify(ret)
 
 @app.route('/list-farms', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_list_farms():
     """
     list_farms
@@ -58,7 +58,7 @@ def handle_list_farms():
     return jsonify(ret)
 
 @app.route('/list-top-pools', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_list_top_pools():
     """
     list_top_pools
@@ -98,7 +98,7 @@ def handle_list_top_pools():
     return jsonify(pools)
 
 @app.route('/list-token-price', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_list_token_price():
     """
     list_token_price
@@ -121,7 +121,7 @@ def handle_list_token_price():
     return jsonify(ret)
     
 @app.route('/list-token', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_list_token():
     """
     list_token
@@ -130,7 +130,7 @@ def handle_list_token():
     return jsonify(ret)
 
 @app.route('/get-pool', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_get_pool():
     """
     get_pool
@@ -170,7 +170,7 @@ def handle_get_pool():
 
 
 @app.route('/list-pools', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_list_pools():
     """
     list_pools
@@ -211,7 +211,7 @@ def handle_list_pools():
 
 
 @app.route('/list-pools-by-tokens', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_list_pools_by_tokens():
     """
     list_pools_by_tokens
@@ -251,7 +251,7 @@ def handle_list_pools_by_tokens():
 
 
 @app.route('/list-pools-by-ids', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_list_pools_by_ids():
     """
     list_pools_by_ids
@@ -292,7 +292,7 @@ def handle_list_pools_by_ids():
 
 
 @app.route('/whitelisted-active-pools', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_whitelisted_active_pools():
     """
     handle_whitelisted_active_pools
@@ -318,7 +318,7 @@ def handle_whitelisted_active_pools():
     return jsonify(ret)
     
 @app.route('/to-coingecko', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_to_coingecko():
     """
     handle_price_to_coingecko
@@ -357,7 +357,7 @@ def handle_to_coingecko():
     return jsonify(ret)
 
 @app.route('/price-skyward-near', methods=['GET'])
-@flask_cors.cross_origin()
+# @flask_cors.cross_origin()
 def handle_price_skyward_near():
     """
     handle_price_skyward_near
