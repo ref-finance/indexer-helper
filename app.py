@@ -14,7 +14,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20210629.01'
+Welcome = 'Welcome to ref datacenter API server, version 20210910.01-cicd'
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -24,6 +24,11 @@ app = Flask(__name__)
 def hello_world():
     return Welcome
 
+@app.route('/timestamp', methods=['GET'])
+# @flask_cors.cross_origin()
+def handle_timestamp():
+    import time
+    return "%s" % int(time.time())
 
 @app.route('/latest-actions/<account_id>', methods=['GET'])
 # @flask_cors.cross_origin()

@@ -1,19 +1,12 @@
 import sys
+sys.path.append('../')
+from config import Cfg
 
 if __name__ == '__main__':
     cur_path = sys.path[0]
     print("Working Path is:", cur_path)
 
-    if len(sys.argv) == 2:
-        network_id = str(sys.argv[1]).upper()
-        if network_id in ["MAINNET", "TESTNET"]:
-            pass
-        else:
-            print("Error, network_id should be MAINNET or TESTNET")
-            exit(1)
-    else:
-        print("Error, must put NETWORK_ID as arg")
-        exit(1)
+    network_id = Cfg.NETWORK_ID
 
     exec_lines = []
     tmpl = open("%s/backend_token_price.sh.tmpl" % cur_path, mode='r')

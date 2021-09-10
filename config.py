@@ -16,23 +16,6 @@ except ImportError:
 class Cfg:
     NETWORK_ID = "MAINNET"
     NETWORK = {
-        "TESTNET": {
-            "NEAR_RPC_URL": TESTNET_RPC_URL,
-            "FARMING_CONTRACT": "v2.ref-farming.testnet",
-            "REF_CONTRACT": "ref-finance-101.testnet",
-            "REDIS_KEY": "FARMS_TESTNET",
-            "REDIS_POOL_KEY": "POOLS_TESTNET",
-            "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET",
-            "REDIS_TOP_POOL_KEY": "TOP_POOLS_TESTNET",
-            "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_TESTNET",
-            "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_TESTNET",
-            "REDIS_WHITELIST_KEY": "WHITELIST_TESTNET",
-            "INDEXER_DSN": "testnet_explorer",
-            "INDEXER_UID": "public_readonly",
-            "INDEXER_PWD": "nearprotocol",
-            "INDEXER_HOST": "35.184.214.98",
-            "INDEXER_PORT": "5432",
-        },
         "MAINNET": {
             "NEAR_RPC_URL": MAINNET_RPC_URL,
             "FARMING_CONTRACT": "v2.ref-farming.near",
