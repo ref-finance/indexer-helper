@@ -24,6 +24,11 @@ app = Flask(__name__)
 def hello_world():
     return Welcome
 
+@app.route('/timestamp', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_timestamp():
+    import time
+    return jsonify({"ts": int(time.time())})
 
 @app.route('/latest-actions/<account_id>', methods=['GET'])
 @flask_cors.cross_origin()
