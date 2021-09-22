@@ -1,6 +1,6 @@
 # ref-indexer-helper
 
-A light web server using Flask + Gunicorn + Nginx
+A light web server using Flask + Gunicorn + Nginx, with CICD support
 
 ### Usage
 Get user's action history of ref-finance
