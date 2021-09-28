@@ -14,7 +14,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20210910.01-cicd'
+Welcome = 'Welcome to ref datacenter API server, version 20210928.01-cicd'
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -25,13 +25,14 @@ def hello_world():
     return Welcome
 
 @app.route('/timestamp', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_timestamp():
     import time
     return jsonify({"ts": int(time.time())})
 
+
 @app.route('/latest-actions/<account_id>', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_latest_actions(account_id):
     """
     get user's latest actions
@@ -42,7 +43,7 @@ def handle_latest_actions(account_id):
 
 
 @app.route('/liquidity-pools/<account_id>', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_liquidity_pools(account_id):
     """
     get user's liqudity pools
@@ -54,7 +55,7 @@ def handle_liquidity_pools(account_id):
     return jsonify(ret)
 
 @app.route('/list-farms', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_list_farms():
     """
     list_farms
@@ -63,7 +64,7 @@ def handle_list_farms():
     return jsonify(ret)
 
 @app.route('/list-top-pools', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_list_top_pools():
     """
     list_top_pools
@@ -103,7 +104,7 @@ def handle_list_top_pools():
     return jsonify(pools)
 
 @app.route('/list-token-price', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_list_token_price():
     """
     list_token_price
@@ -126,7 +127,7 @@ def handle_list_token_price():
     return jsonify(ret)
     
 @app.route('/list-token', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_list_token():
     """
     list_token
@@ -135,7 +136,7 @@ def handle_list_token():
     return jsonify(ret)
 
 @app.route('/get-pool', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_get_pool():
     """
     get_pool
@@ -175,7 +176,7 @@ def handle_get_pool():
 
 
 @app.route('/list-pools', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_list_pools():
     """
     list_pools
@@ -216,7 +217,7 @@ def handle_list_pools():
 
 
 @app.route('/list-pools-by-tokens', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_list_pools_by_tokens():
     """
     list_pools_by_tokens
@@ -256,7 +257,7 @@ def handle_list_pools_by_tokens():
 
 
 @app.route('/list-pools-by-ids', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_list_pools_by_ids():
     """
     list_pools_by_ids
@@ -297,7 +298,7 @@ def handle_list_pools_by_ids():
 
 
 @app.route('/whitelisted-active-pools', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_whitelisted_active_pools():
     """
     handle_whitelisted_active_pools
@@ -323,7 +324,7 @@ def handle_whitelisted_active_pools():
     return jsonify(ret)
     
 @app.route('/to-coingecko', methods=['GET'])
-# @flask_cors.cross_origin()
+@flask_cors.cross_origin()
 def handle_to_coingecko():
     """
     handle_price_to_coingecko
@@ -360,39 +361,6 @@ def handle_to_coingecko():
                     }
 
     return jsonify(ret)
-
-@app.route('/price-skyward-near', methods=['GET'])
-# @flask_cors.cross_origin()
-def handle_price_skyward_near():
-    """
-    handle_price_skyward_near
-    """
-    token_price = {"price": "N/A", "decimal_skyward": 18, "decimal_near": 24, 
-    "volume_skyward2near": {}, "volume_near2skyward": {}, "block_height": 0}
-    from near_multinode_rpc_provider import MultiNodeJsonProviderError,  MultiNodeJsonProvider
-    contract = Cfg.NETWORK[Cfg.NETWORK_ID]["REF_CONTRACT"]
-    try:
-        conn = MultiNodeJsonProvider(Cfg.NETWORK_ID)
-        ret = conn.view_call(contract, "get_return", b'{"pool_id": 1346, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
-        b = "".join([chr(x) for x in ret["result"]])
-        obj = json.loads(b)
-        price = int(obj[:-16]) / 100000000
-        token_price["price"] = "%s" % price
-        if 'block_height' in ret:
-            token_price['block_height'] = ret['block_height']
-        
-        ret = conn.view_call("ref-finance.near", "get_pool_volumes", b'{"pool_id": 1346}')
-        b = "".join([chr(x) for x in ret["result"]])
-        obj = json.loads(b)
-        if len(obj) == 2:
-            token_price["volume_skyward2near"] = obj[0]
-            token_price["volume_near2skyward"] = obj[1]
-
-    except MultiNodeJsonProviderError as e:
-        print("RPC Error: ", e)
-    except Exception as e:
-        print("Error: ", e)
-    return jsonify(token_price)
 
 
 if __name__ == '__main__':
