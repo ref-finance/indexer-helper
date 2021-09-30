@@ -52,9 +52,10 @@ class MultiNodeJsonProvider(object):
         return self.json_rpc('broadcast_tx_commit', [base64.b64encode(signed_tx).decode('utf8')], timeout=timeout)
 
     def get_status(self):
-        r = requests.get("%s/status" % self.rpc_addr(), timeout=2)
-        r.raise_for_status()
-        return json.loads(r.content)
+        # r = requests.get("%s/status" % self.rpc_addr(), timeout=2)
+        # r.raise_for_status()
+        # return json.loads(r.content)
+        return self.json_rpc('status', [None])
 
     def get_validators(self):
         return self.json_rpc('validators', [None])
@@ -114,7 +115,7 @@ if __name__ == "__main__":
         print(status['sync_info'])
     # print(status)
 
-    ret = conn.view_call("ref-finance.near", "get_whitelisted_tokens", b'')
+    ret = conn.view_call("v2.ref-finance.near", "get_whitelisted_tokens", b'')
     b = "".join([chr(x) for x in ret["result"]])
     obj = json.loads(b)
     print(obj)
@@ -122,9 +123,9 @@ if __name__ == "__main__":
     token_price = {"price": "N/A", "decimal_skyward": 18, "decimal_near": 24, 
         "volume_skyward2near": "N/A", "volume_near2skyward": "N/A"}
 
-    contract = "ref-finance.near"
-    conn = MultiNodeJsonProvider(Cfg.NETWORK_ID)
-    ret = conn.view_call(contract, "get_return", b'{"pool_id": 1346, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
+    contract = "v2.ref-finance.near"
+    conn = MultiNodeJsonProvider("MAINNET")
+    ret = conn.view_call(contract, "get_return", b'{"pool_id": 0, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
     b = "".join([chr(x) for x in ret["result"]])
     obj = json.loads(b)
     price = int(obj[:-16]) / 100000000
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     if 'block_height' in ret:
         token_price['block_height'] = ret['block_height']
     
-    ret = conn.view_call("ref-finance.near", "get_pool_volumes", b'{"pool_id": 1346}')
+    ret = conn.view_call("v2.ref-finance.near", "get_pool_volumes", b'{"pool_id": 0}')
     b = "".join([chr(x) for x in ret["result"]])
     obj = json.loads(b)
     if len(obj) == 2:

@@ -14,7 +14,7 @@ except ImportError:
 """
 
 class Cfg:
-    NETWORK_ID = "TESTNET"
+    NETWORK_ID = "MAINNET"
     NETWORK = {
         "TESTNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
