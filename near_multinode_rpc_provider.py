@@ -52,9 +52,6 @@ class MultiNodeJsonProvider(object):
         return self.json_rpc('broadcast_tx_commit', [base64.b64encode(signed_tx).decode('utf8')], timeout=timeout)
 
     def get_status(self):
-        # r = requests.get("%s/status" % self.rpc_addr(), timeout=2)
-        # r.raise_for_status()
-        # return json.loads(r.content)
         return self.json_rpc('status', [None])
 
     def get_validators(self):
@@ -105,7 +102,6 @@ class MultiNodeJsonProvider(object):
         return ret
 
 if __name__ == "__main__":
-    # conn = JsonProvider("https://rpc.testnet.near.org")
     conn = MultiNodeJsonProvider("MAINNET")
 
     status = conn.get_status()
@@ -113,78 +109,3 @@ if __name__ == "__main__":
         print(status["version"])
     if "sync_info" in status:
         print(status['sync_info'])
-    # print(status)
-
-    ret = conn.view_call("v2.ref-finance.near", "get_whitelisted_tokens", b'')
-    b = "".join([chr(x) for x in ret["result"]])
-    obj = json.loads(b)
-    print(obj)
-
-    token_price = {"price": "N/A", "decimal_skyward": 18, "decimal_near": 24, 
-        "volume_skyward2near": "N/A", "volume_near2skyward": "N/A"}
-
-    contract = "v2.ref-finance.near"
-    conn = MultiNodeJsonProvider("MAINNET")
-    ret = conn.view_call(contract, "get_return", b'{"pool_id": 0, "token_in": "token.skyward.near", "amount_in": "1000000000000000000", "token_out": "wrap.near"}')
-    b = "".join([chr(x) for x in ret["result"]])
-    obj = json.loads(b)
-    price = int(obj[:-16]) / 100000000
-    token_price["price"] = "%s" % price
-    if 'block_height' in ret:
-        token_price['block_height'] = ret['block_height']
-    
-    ret = conn.view_call("v2.ref-finance.near", "get_pool_volumes", b'{"pool_id": 0}')
-    b = "".join([chr(x) for x in ret["result"]])
-    obj = json.loads(b)
-    if len(obj) == 2:
-        token_price["volume_skyward2near"] = obj[0]
-        token_price["volume_near2skyward"] = obj[1]
-
-    print(token_price)
-    
-    # ret = conn.view_call("ref-farming.testnet", "get_number_of_farms", b"")
-    # # print(ret["result"])
-    # a = "".join([chr(x) for x in ret["result"]])
-    # print(a)
-    # print()
-    # ret = conn.view_call("ref-farming.testnet", "list_farms", b'{"from_index": 0, "limit": 100}')
-    # # print(ret["result"])
-    # b = "".join([chr(x) for x in ret["result"]])
-    # # print(b)
-    # c = json.loads(b)
-    # for item in c:
-    #     print(item)
-    # print("In tx GfcyYBJeQDUMbJrCkdymx6zPHcoZCEwYCPLNpTReACpP")
-    # print("Yams.near calls remove_liquidity @1: 11529056751499847000000")
-    # conn = JsonProvider("https://rpc.mainnet.near.org")
-    # # ret = conn.view_call("6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near", "ft_metadata", b'')
-    # ret = conn.view_call("ref-finance.near", "mft_balance_of", b'{"token_id": "1", "account_id": "yams.near"}')
-    # b = "".join([chr(x) for x in ret["result"]])
-    # obj = json.loads(b)
-    # print("mft_balance_of yams.near on pool  1:", obj)
-    # ret = conn.view_call("ref-finance.near", "get_pool_shares", b'{"pool_id": 1, "account_id": "yams.near"}')
-    # b = "".join([chr(x) for x in ret["result"]])
-    # obj = json.loads(b)
-    # print("get_pool_shares yams.near on pool 1:", obj)
-    # for token_id in obj:
-    #     import time
-    #     time.sleep(0.1)
-    #     ret = conn.view_call(token_id, "ft_metadata", b'')
-    #     json_str = "".join([chr(x) for x in ret["result"]])
-    #     token_metadata = json.loads(json_str)
-    #     print("%s: %s, %s" % (token_id, token_metadata["symbol"], token_metadata["decimals"]))
-    # print("Total %s whitelisted tokens" % len(obj))
-
-    # conn = JsonProvider("https://rpc.testnet.near.org")
-    # ret = conn.view_call("ref-farming.testnet", "get_unclaimed_reward", b'{"account_id": "pika8.testnet", "farm_id": "ref-finance."}')
-    # b = "".join([chr(x) for x in ret["result"]])
-    # obj = json.loads(b)
-
-    # conn = JsonProvider("https://rpc.testnet.near.org")
-    # ret = conn.view_call("ref-finance.testnet", "get_return", b'{"pool_id": 24, "token_in": "rft.tokenfactory.testnet", "amount_in": "100000000", "token_out": "wrap.testnet"}')
-    # b = "".join([chr(x) for x in ret["result"]])
-    # obj = json.loads(b)
-    # print(" pool  24: %s in type %s" % (obj[:-16], type(obj)))
-    # price = int(obj[:-16]) / 100000000
-    # print(price)
-    # 0.996_505_985_279_683_515_693_096

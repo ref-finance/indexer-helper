@@ -187,7 +187,6 @@ def internal_pools_to_redis(network_id: str, pools: list):
             for i in range(0,len(pools)):
                 pool = pools[i]
                 # gen tops
-                # key = "{%s}-{%s}" % (pool["token_account_ids"][0], pool["token_account_ids"][1])
                 sorted_tp = sorted(pool["token_account_ids"])
                 key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
                 pool["id"] = "%s" % i
