@@ -186,11 +186,15 @@ def internal_pools_to_redis(network_id: str, pools: list):
             conn.begin_pipe()
             for i in range(0,len(pools)):
                 pool = pools[i]
-                # gen tops 
-                key = "{%s}-{%s}" % (pool["token_account_ids"][0], pool["token_account_ids"][1])
+                # gen tops
+                # key = "{%s}-{%s}" % (pool["token_account_ids"][0], pool["token_account_ids"][1])
+                sorted_tp = sorted(pool["token_account_ids"])
+                key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
                 pool["id"] = "%s" % i
                 if key in tops:
-                    if int(tops[key]["amounts"][1]) < int(pool["amounts"][1]):
+                    max_k = int(tops[key]["amounts"][0]) * int(tops[key]["amounts"][1])
+                    cur_k = int(pool["amounts"][0]) * int(pool["amounts"][1])
+                    if cur_k > max_k:
                         tops[key] = pool
                 else:
                     tops[key] = pool
