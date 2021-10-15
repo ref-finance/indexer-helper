@@ -14,11 +14,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from config import Cfg
 
-<<<<<<< HEAD
-Welcome = 'Welcome to ref datacenter API server, version 20211007.01-cicd'
-=======
-Welcome = 'Welcome to ref datacenter API server, version 20211007.01'
->>>>>>> main
+Welcome = 'Welcome to ref datacenter API server, version 20211015.01-cicd'
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
