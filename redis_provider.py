@@ -77,6 +77,12 @@ def list_token_price(network_id):
     r.close()
     return ret
 
+def get_token_price(network_id, token_contract_id):
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], token_contract_id)
+    r.close()
+    return ret
+
 def list_token_metadata(network_id):
     '''
     return:
@@ -206,8 +212,9 @@ if __name__ == '__main__':
     # b = get_pool("TESTNET", "1000")
     # print(b)
 
-    a = list_pools_by_id_list("MAINNET", ['1346', '1429'])
-    print(a)
+    # a = list_pools_by_id_list("MAINNET", ['1346', '1429'])
+    # print(a)
+    print(get_token_price("MAINNET", "token.v2.ref-finance.near"))
 
 
 
