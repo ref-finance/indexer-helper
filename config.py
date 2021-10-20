@@ -52,6 +52,7 @@ class Cfg:
             {"SYMBOL": "nWBTC", "NEAR_ID": "2260fac5e5542a773aa44fbcfedf7c193bc2c599.factory.bridge.near", "MD_ID": "wrapped-bitcoin", "DECIMAL": 8},
             {"SYMBOL": "nLINK", "NEAR_ID": "514910771af9ca656af840dff83e8264ecf986ca.factory.bridge.near", "MD_ID": "chainlink", "DECIMAL": 18},
             {"SYMBOL": "PARAS", "NEAR_ID": "token.paras.near", "MD_ID": "v2.ref-finance.near|377|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "STNEAR", "NEAR_ID": "meta-pool.near", "MD_ID": "meta-pool.near|535|wrap.near", "DECIMAL": 24},
         ],
     }
     MARKET_URL = "api.coingecko.com"
