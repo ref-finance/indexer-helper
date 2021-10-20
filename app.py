@@ -10,11 +10,11 @@ import flask_cors
 import json
 import logging
 from indexer_provider import get_actions, get_liquidity_pools
-from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist 
+from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price 
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20211015.01-cicd'
+Welcome = 'Welcome to ref datacenter API server, version 20211020.01-cicd'
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -102,6 +102,19 @@ def handle_list_top_pools():
             pool["token0_ref_price"] = "N/A"
 
     return jsonify(pools)
+
+@app.route('/get-token-price', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_get_token_price():
+    """
+    get_token_price
+    """
+    token_contract_id = request.args.get("token_id", "N/A")
+    ret = {"token_contract_id": token_contract_id}
+    ret["price"] = get_token_price(Cfg.NETWORK_ID, token_contract_id)
+    if ret["price"] is None:
+        ret["price"] = "N/A"
+    return jsonify(ret)
 
 @app.route('/list-token-price', methods=['GET'])
 @flask_cors.cross_origin()

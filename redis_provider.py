@@ -77,6 +77,12 @@ def list_token_price(network_id):
     r.close()
     return ret
 
+def get_token_price(network_id, token_contract_id):
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], token_contract_id)
+    r.close()
+    return ret
+
 def list_token_metadata(network_id):
     '''
     return:
