@@ -2,6 +2,27 @@
 
 A light web server using Flask + Gunicorn + Nginx
 
+### Feature List
+
+|feature|remark|URL|
+|--|--|--|
+|welcome msg|version info|/|
+|timestamp|current timestamp at server-side|/timestamp|
+|latest actions|user's latest actions on REF|/latest-actions/<account_id>|
+|liquidity pools|user's liquidity pools on REF|/liquidity-pools/<account_id>|
+|all farms|--|/list-farms|
+|pools info for distinct token pair|--|/list-top-pools|
+|token price by token id|--|/get-token-price?token_id=<token_id>|
+|all tokens price|price from coingecko or native pool|/list-token-price|
+|all tokens metadata|--|/list-token|
+|pool info by single pool id|--|/get-pool?pool_id=<pool_id>|
+|all pools info|--|/list-pools|
+|pools info by tokens|--|/list-pools-by-tokens?token0=\<token0\>&token1=\<token1\>|
+|pools info by pool ids|--|/list-pools-by-ids?ids=id0\|id1\|...\|idn|
+|provide general info of whitelist pools|volume, liquidity|/whitelisted-active-pools|
+|provide info for coingecko|price, volume, liquidity of all global whitelisted token pools|/to-coingecko|
+
+
 ### Usage
 Get user's action history of ref-finance
 ```shell
