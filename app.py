@@ -14,7 +14,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20211020.02-cicd'
+Welcome = 'Welcome to ref datacenter API server, version 20211102.01-cicd'
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -37,8 +37,13 @@ def handle_latest_actions(account_id):
     """
     get user's latest actions
     """
-    ret = get_actions(Cfg.NETWORK_ID, account_id)
-    json_obj = json.loads(ret)
+    json_obj = []
+    try:
+        ret = get_actions(Cfg.NETWORK_ID, account_id)
+        json_obj = json.loads(ret)
+    except Exception as e:
+        print("Exception when get_actions: ", e)
+        
     return jsonify(json_obj)
 
 
@@ -49,9 +54,13 @@ def handle_liquidity_pools(account_id):
     get user's liqudity pools
     """
     ret = []
-    id_list = get_liquidity_pools(Cfg.NETWORK_ID, account_id)
-    if len(id_list) > 0:
-        ret = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_list])
+    try:
+        id_list = get_liquidity_pools(Cfg.NETWORK_ID, account_id)
+        if len(id_list) > 0:
+            ret = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_list])
+    except Exception as e:
+        print("Exception when get_liquidity_pools: ", e)
+    
     return jsonify(ret)
 
 @app.route('/list-farms', methods=['GET'])
