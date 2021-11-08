@@ -2,12 +2,21 @@
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
 
-
 try:
     from rpc_info import TESTNET_RPC_URL, MAINNET_RPC_URL
 except ImportError:
     TESTNET_RPC_URL= ["https://rpc.testnet.near.org", ]
     MAINNET_RPC_URL= ["https://rpc.mainnet.near.org", ]
+
+try:
+    from indexer_info import INDEXER_DSN, INDEXER_UID, INDEXER_PWD, INDEXER_HOST, INDEXER_PORT
+except ImportError:
+    INDEXER_DSN = "mainnet_explorer"
+    INDEXER_UID = "public_readonly"
+    INDEXER_PWD = "nearprotocol"
+    INDEXER_HOST = "104.199.89.51"
+    INDEXER_PORT = "5432"
+
 
 """
 
@@ -44,11 +53,11 @@ class Cfg:
             "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_MAINNET",
             "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_MAINNET",
             "REDIS_WHITELIST_KEY": "WHITELIST_MAINNET",
-            "INDEXER_DSN": "mainnet_explorer",
-            "INDEXER_UID": "public_readonly",
-            "INDEXER_PWD": "nearprotocol",
-            "INDEXER_HOST": "104.199.89.51",
-            "INDEXER_PORT": "5432",
+            "INDEXER_DSN": INDEXER_DSN,
+            "INDEXER_UID": INDEXER_UID,
+            "INDEXER_PWD": INDEXER_PWD,
+            "INDEXER_HOST": INDEXER_HOST,
+            "INDEXER_PORT": INDEXER_PORT,
         }
     }
     TOKENS = {

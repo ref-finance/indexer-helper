@@ -5,6 +5,7 @@ __pycache__/
 
 .vscode/
 rpc_info.py
+indexer_info.py
 
 # C extensions
 *.so
