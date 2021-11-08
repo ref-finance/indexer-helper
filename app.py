@@ -14,7 +14,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20211106.01-cicd'
+Welcome = 'Welcome to ref datacenter API server, version 20211108.01-cicd, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
