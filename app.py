@@ -157,7 +157,7 @@ def handle_list_token_price_by_ids():
     ids = request.args.get("ids", "") 
     id_str_list = ids.split("|")
 
-    prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_str_list])
+    prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])
     ret = ["N/A" if i is None else i for i in prices]
 
     return jsonify(ret)
