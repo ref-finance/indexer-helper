@@ -84,7 +84,7 @@ def list_token_price_by_id_list(network_id: str, id_list: list) ->list:
     ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], id_list)
     r.close()
     try:
-        token_list = [json.loads(x) for x in ret if x is not None]
+        token_list = [json.loads(x) if x is not None else None for x in ret]
     except Exception as e:
         print(e)
     return token_list
