@@ -11,10 +11,10 @@ import json
 import logging
 from indexer_provider import get_actions, get_liquidity_pools
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price 
-from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
+from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_price_by_id_list
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20211008.01, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+Welcome = 'Welcome to ref datacenter API server, version 20211110.01, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -147,7 +147,21 @@ def handle_list_token_price():
             "symbol": "RFTT",
         }
     return jsonify(ret)
-    
+
+@app.route('/list-token-price-by-ids', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_list_token_price_by_ids():
+    """
+    list_token_price_by_ids
+    """
+    ids = request.args.get("ids", "") 
+    id_str_list = ids.split("|")
+
+    prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_str_list])
+    ret = ["N/A" if i is None else i for i in prices]
+
+    return jsonify(ret)
+
 @app.route('/list-token', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_list_token():
