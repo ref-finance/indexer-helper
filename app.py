@@ -14,7 +14,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_price_by_id_list
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20211118.01, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+Welcome = 'Welcome to ref datacenter API server, version 20211121.01, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -134,11 +134,12 @@ def handle_list_token_price():
     ret = {}
     prices = list_token_price(Cfg.NETWORK_ID)
     for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
-        ret[token["NEAR_ID"]] = {
-            "price": prices[token["NEAR_ID"]], 
-            "decimal": token["DECIMAL"],
-            "symbol": token["SYMBOL"],
-        }
+        if token["NEAR_ID"] in prices:
+            ret[token["NEAR_ID"]] = {
+                "price": prices[token["NEAR_ID"]], 
+                "decimal": token["DECIMAL"],
+                "symbol": token["SYMBOL"],
+            }
     # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
     if "token.v2.ref-finance.near" in ret:
         ret["rftt.tkn.near"] = {

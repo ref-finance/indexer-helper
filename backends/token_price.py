@@ -42,7 +42,6 @@ def market_price(network_id, tokens):
     # return [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "", "price": "nnnnnn"}, ...]
     market_tokens_price = []
     md_ids = []
-    md2contract = {}
     obj = None
     try:
         conn = http.client.HTTPSConnection(Cfg.MARKET_URL, port=443)
@@ -51,7 +50,6 @@ def market_price(network_id, tokens):
         
         for token in tokens:
             md_ids.append(token["MD_ID"])
-            md2contract[token["MD_ID"]] = token["NEAR_ID"]
 
         token_str = ",".join(md_ids)
         # print(token_str)
@@ -66,13 +64,15 @@ def market_price(network_id, tokens):
         print("Error: ", e)
 
     if obj and len(obj) > 0:
-        for md_id, value in obj.items():
-            # print(md2contract[md_id], str(value["usd"]))
-            market_tokens_price.append({
-                "NEAR_ID": md2contract[md_id], 
-                "BASE_ID": "", 
-                "price": str(value["usd"])
-            })
+        for token in tokens:
+            md_id = token["MD_ID"]
+            if md_id in obj:
+                market_tokens_price.append({
+                    "NEAR_ID": token["NEAR_ID"], 
+                    "BASE_ID": "", 
+                    "price": str(obj[md_id]["usd"])
+                })
+
     return market_tokens_price
 
 
