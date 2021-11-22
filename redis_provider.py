@@ -77,6 +77,18 @@ def list_token_price(network_id):
     r.close()
     return ret
 
+def list_token_price_by_id_list(network_id: str, id_list: list) ->list:
+    import json
+    token_list = []
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], id_list)
+    r.close()
+    try:
+        token_list = [json.loads(x) if x is not None else None for x in ret]
+    except Exception as e:
+        print(e)
+    return token_list
+
 def get_token_price(network_id, token_contract_id):
     r=redis.StrictRedis(connection_pool=pool)
     ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], token_contract_id)

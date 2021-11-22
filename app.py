@@ -11,10 +11,10 @@ import json
 import logging
 from indexer_provider import get_actions, get_liquidity_pools
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price 
-from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
+from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_price_by_id_list
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20211118.01-cicd, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+Welcome = 'Welcome to ref datacenter API server, version 20211123.01-cicd, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -134,11 +134,12 @@ def handle_list_token_price():
     ret = {}
     prices = list_token_price(Cfg.NETWORK_ID)
     for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
-        ret[token["NEAR_ID"]] = {
-            "price": prices[token["NEAR_ID"]], 
-            "decimal": token["DECIMAL"],
-            "symbol": token["SYMBOL"],
-        }
+        if token["NEAR_ID"] in prices:
+            ret[token["NEAR_ID"]] = {
+                "price": prices[token["NEAR_ID"]], 
+                "decimal": token["DECIMAL"],
+                "symbol": token["SYMBOL"],
+            }
     # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
     if "token.v2.ref-finance.near" in ret:
         ret["rftt.tkn.near"] = {
@@ -146,6 +147,20 @@ def handle_list_token_price():
             "decimal": 8,
             "symbol": "RFTT",
         }
+    return jsonify(ret)
+
+@app.route('/list-token-price-by-ids', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_list_token_price_by_ids():
+    """
+    list_token_price_by_ids
+    """
+    ids = request.args.get("ids", "") 
+    id_str_list = ids.split("|")
+
+    prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])
+    ret = ["N/A" if i is None else i for i in prices]
+
     return jsonify(ret)
     
 @app.route('/list-token', methods=['GET'])
