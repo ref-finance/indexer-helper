@@ -77,8 +77,12 @@ class Cfg:
             {"SYMBOL": "BANANA", "NEAR_ID": "banana.ft-fin.testnet", "MD_ID": "dai", "DECIMAL": 18},
             {"SYMBOL": "PARAS", "NEAR_ID": "paras.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
             {"SYMBOL": "PULSE", "NEAR_ID": "pulse.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
-            {"SYMBOL": "AURORA", "NEAR_ID": "aorora.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "AURORA", "NEAR_ID": "aurora.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
 	        {"SYMBOL": "OCT", "NEAR_ID": "oct.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "USDT", "NEAR_ID": "usdt.fakes.testnet", "MD_ID": "dai", "DECIMAL": 6},
+            {"SYMBOL": "USDC", "NEAR_ID": "usdc.fakes.testnet", "MD_ID": "dai", "DECIMAL": 6},
+            {"SYMBOL": "DAI", "NEAR_ID": "dai.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+
         ],
         "MAINNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.near", "MD_ID": "near", "DECIMAL": 24},
