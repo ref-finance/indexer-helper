@@ -56,6 +56,7 @@ def get_actions(network_id, account_id):
         "select " 
         "included_in_block_timestamp as timestamp, " 
         "originated_from_transaction_hash, "
+        "receiver_account_id, "
         "args->>'method_name' as method_name, " 
         "convert_from(decode(args->>'args_base64', 'base64'), 'UTF8')::json as args, " 
         "args->>'deposit' as deposit, " 
