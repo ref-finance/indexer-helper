@@ -25,6 +25,23 @@ except ImportError:
 class Cfg:
     NETWORK_ID = "MAINNET"
     NETWORK = {
+        "DEVNET": {
+            "NEAR_RPC_URL": TESTNET_RPC_URL,
+            "FARMING_CONTRACT": "farm110.ref-dev.testnet",
+            "REF_CONTRACT": "exchange.ref-dev.testnet",
+            "REDIS_KEY": "FARMS_TESTNET_DEV",
+            "REDIS_POOL_KEY": "POOLS_TESTNET_DEV",
+            "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET_DEV",
+            "REDIS_TOP_POOL_KEY": "TOP_POOLS_TESTNET_DEV",
+            "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_TESTNET_DEV",
+            "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_TESTNET_DEV",
+            "REDIS_WHITELIST_KEY": "WHITELIST_TESTNET_DEV",
+            "INDEXER_DSN": "testnet_explorer",
+            "INDEXER_UID": "public_readonly",
+            "INDEXER_PWD": "nearprotocol",
+            "INDEXER_HOST": "35.184.214.98",
+            "INDEXER_PORT": "5432",
+        },
         "TESTNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
             "FARMING_CONTRACT": "v2.ref-farming.testnet",
@@ -61,6 +78,27 @@ class Cfg:
         }
     }
     TOKENS = {
+        "DEVNET": [
+            {"SYMBOL": "near", "NEAR_ID": "wrap.testnet", "MD_ID": "near", "DECIMAL": 24},
+            {"SYMBOL": "nDAI", "NEAR_ID": "ndai.ft-fin.testnet", "MD_ID": "dai", "DECIMAL": 8},
+            {"SYMBOL": "nUSDT", "NEAR_ID": "nusdt.ft-fin.testnet", "MD_ID": "tether", "DECIMAL": 6},
+            {"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "dai", "DECIMAL": 8},
+            {"SYMBOL": "ref2", "NEAR_ID": "ref.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "nUSDC", "NEAR_ID": "nusdc.ft-fin.testnet", "MD_ID": "usd-coin", "DECIMAL": 6},
+            {"SYMBOL": "nWETH", "NEAR_ID": "weth.fakes.testnet", "MD_ID": "weth", "DECIMAL": 18},
+            {"SYMBOL": "STNEAR", "NEAR_ID": "stnear.fakes.testnet", "MD_ID": "near", "DECIMAL": 24},
+            {"SYMBOL": "ETH", "NEAR_ID": "eth.fakes.testnet", "MD_ID": "ethereum", "DECIMAL": 18},
+            {"SYMBOL": "HAPI", "NEAR_ID": "hapi.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "SKYWARD", "NEAR_ID": "skyward.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "BANANA", "NEAR_ID": "banana.ft-fin.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "PARAS", "NEAR_ID": "paras.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "PULSE", "NEAR_ID": "pulse.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "AURORA", "NEAR_ID": "aurora.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "OCT", "NEAR_ID": "oct.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "USDT", "NEAR_ID": "usdt.fakes.testnet", "MD_ID": "dai", "DECIMAL": 6},
+            {"SYMBOL": "USDC", "NEAR_ID": "usdc.fakes.testnet", "MD_ID": "dai", "DECIMAL": 6},
+            {"SYMBOL": "DAI", "NEAR_ID": "dai.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
+        ],
         "TESTNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.testnet", "MD_ID": "near", "DECIMAL": 24},
             {"SYMBOL": "nDAI", "NEAR_ID": "ndai.ft-fin.testnet", "MD_ID": "dai", "DECIMAL": 8},

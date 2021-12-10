@@ -12,9 +12,10 @@ import logging
 from indexer_provider import get_actions, get_liquidity_pools
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price 
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_price_by_id_list
+from utils import combine_pools_info
 from config import Cfg
 
-Welcome = 'Welcome to ref datacenter API server, version 20211205.03, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+Welcome = 'Welcome to ref datacenter API server, version 20211209.01, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -71,46 +72,6 @@ def handle_list_farms():
     """
     ret = list_farms(Cfg.NETWORK_ID)
     return jsonify(ret)
-
-@app.route('/list-top-pools', methods=['GET'])
-@flask_cors.cross_origin()
-def handle_list_top_pools():
-    """
-    list_top_pools
-    """
-    # precisions = {}
-    # for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
-    #     precisions[token["NEAR_ID"]] = token["DECIMAL"]
-    pools = list_top_pools(Cfg.NETWORK_ID)
-    prices = list_token_price(Cfg.NETWORK_ID)
-    metadata = list_token_metadata(Cfg.NETWORK_ID)
-    for pool in pools:
-        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
-        (balance0, balance1) = (
-            float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
-            float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
-        )
-        # add TVL
-        tvl0, tvl1 = 0, 0
-        if token0 in prices and token0 in metadata:
-            tvl0 = float(prices[token0]) * balance0
-        if token1 in prices and token1 in metadata:
-            tvl1 = float(prices[token1]) * balance1
-        if tvl0 > 0 and tvl1 > 0:
-            pool["tvl"] = str(tvl0 + tvl1)
-        elif tvl0 > 0:
-            pool["tvl"] = str(tvl0 * 2)
-        elif tvl1 > 0:
-            pool["tvl"] = str(tvl1 * 2)
-        else:
-            pool["tvl"] = "0"
-        # add token0_ref_price = token1_price * token1_balance / token0_balance 
-        if balance0 > 0 and balance1 > 0 and token1 in prices:
-            pool["token0_ref_price"] = str(float(prices[token1]) * balance1 / balance0)
-        else:
-            pool["token0_ref_price"] = "N/A"
-
-    return jsonify(pools)
 
 @app.route('/get-token-price', methods=['GET'])
 @flask_cors.cross_origin()
@@ -180,37 +141,28 @@ def handle_get_pool():
     """
     pool_id = request.args.get("pool_id", "N/A") 
     pool = get_pool(Cfg.NETWORK_ID, pool_id)
-    # print(pool)
+
     if pool:
         prices = list_token_price(Cfg.NETWORK_ID)
         metadata = list_token_metadata(Cfg.NETWORK_ID)
-        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
-        (balance0, balance1) = (
-            float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
-            float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
-        )
-        # add TVL
-        tvl0, tvl1 = 0, 0
-        if token0 in prices:
-            tvl0 = float(prices[token0]) * balance0
-        if token1 in prices:
-            tvl1 = float(prices[token1]) * balance1
-        if tvl0 > 0 and tvl1 > 0:
-            pool["tvl"] = str(tvl0 + tvl1)
-        elif tvl0 > 0:
-            pool["tvl"] = str(tvl0 * 2)
-        elif tvl1 > 0:
-            pool["tvl"] = str(tvl1 * 2)
-        else:
-            pool["tvl"] = "0"
-        # add token0_ref_price = token1_price * token1_balance / token0_balance 
-        if balance0 > 0 and balance1 > 0 and token1 in prices:
-            pool["token0_ref_price"] = str(float(prices[token1]) * balance1 / balance0)
-        else:
-            pool["token0_ref_price"] = "N/A"
+        combine_pools_info([pool,], prices, metadata)
 
     return jsonify(pool)
 
+@app.route('/list-top-pools', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_list_top_pools():
+    """
+    list_top_pools
+    """
+
+    pools = list_top_pools(Cfg.NETWORK_ID)
+    prices = list_token_price(Cfg.NETWORK_ID)
+    metadata = list_token_metadata(Cfg.NETWORK_ID)
+
+    combine_pools_info(pools, prices, metadata)
+
+    return jsonify(pools)
 
 @app.route('/list-pools', methods=['GET'])
 @flask_cors.cross_origin()
@@ -218,40 +170,13 @@ def handle_list_pools():
     """
     list_pools
     """
-    # precisions = {}
-    # for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
-    #     precisions[token["NEAR_ID"]] = token["DECIMAL"]
     pools = list_pools(Cfg.NETWORK_ID)
     prices = list_token_price(Cfg.NETWORK_ID)
     metadata = list_token_metadata(Cfg.NETWORK_ID)
-    for pool in pools:
-        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
-        (balance0, balance1) = (
-            float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
-            float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
-        )
-        # add TVL
-        tvl0, tvl1 = 0, 0
-        if token0 in prices:
-            tvl0 = float(prices[token0]) * balance0
-        if token1 in prices:
-            tvl1 = float(prices[token1]) * balance1
-        if tvl0 > 0 and tvl1 > 0:
-            pool["tvl"] = str(tvl0 + tvl1)
-        elif tvl0 > 0:
-            pool["tvl"] = str(tvl0 * 2)
-        elif tvl1 > 0:
-            pool["tvl"] = str(tvl1 * 2)
-        else:
-            pool["tvl"] = "0"
-        # add token0_ref_price = token1_price * token1_balance / token0_balance 
-        if balance0 > 0 and balance1 > 0 and token1 in prices:
-            pool["token0_ref_price"] = str(float(prices[token1]) * balance1 / balance0)
-        else:
-            pool["token0_ref_price"] = "N/A"
+
+    combine_pools_info(pools, prices, metadata)
 
     return jsonify(pools)
-
 
 @app.route('/list-pools-by-tokens', methods=['GET'])
 @flask_cors.cross_origin()
@@ -261,34 +186,12 @@ def handle_list_pools_by_tokens():
     """
     token0 = request.args.get("token0", "N/A") 
     token1 = request.args.get("token1", "N/A") 
+
     pools = list_pools_by_tokens(Cfg.NETWORK_ID, token0, token1)
     prices = list_token_price(Cfg.NETWORK_ID)
     metadata = list_token_metadata(Cfg.NETWORK_ID)
-    for pool in pools:
-        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
-        (balance0, balance1) = (
-            float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
-            float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
-        )
-        # add TVL
-        tvl0, tvl1 = 0, 0
-        if token0 in prices:
-            tvl0 = float(prices[token0]) * balance0
-        if token1 in prices:
-            tvl1 = float(prices[token1]) * balance1
-        if tvl0 > 0 and tvl1 > 0:
-            pool["tvl"] = str(tvl0 + tvl1)
-        elif tvl0 > 0:
-            pool["tvl"] = str(tvl0 * 2)
-        elif tvl1 > 0:
-            pool["tvl"] = str(tvl1 * 2)
-        else:
-            pool["tvl"] = "0"
-        # add token0_ref_price = token1_price * token1_balance / token0_balance 
-        if balance0 > 0 and balance1 > 0 and token1 in prices:
-            pool["token0_ref_price"] = str(float(prices[token1]) * balance1 / balance0)
-        else:
-            pool["token0_ref_price"] = "N/A"
+
+    combine_pools_info(pools, prices, metadata)
 
     return jsonify(pools)
 
@@ -305,31 +208,8 @@ def handle_list_pools_by_ids():
     pools = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_str_list])
     prices = list_token_price(Cfg.NETWORK_ID)
     metadata = list_token_metadata(Cfg.NETWORK_ID)
-    for pool in pools:
-        token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
-        (balance0, balance1) = (
-            float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
-            float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
-        )
-        # add TVL
-        tvl0, tvl1 = 0, 0
-        if token0 in prices:
-            tvl0 = float(prices[token0]) * balance0
-        if token1 in prices:
-            tvl1 = float(prices[token1]) * balance1
-        if tvl0 > 0 and tvl1 > 0:
-            pool["tvl"] = str(tvl0 + tvl1)
-        elif tvl0 > 0:
-            pool["tvl"] = str(tvl0 * 2)
-        elif tvl1 > 0:
-            pool["tvl"] = str(tvl1 * 2)
-        else:
-            pool["tvl"] = "0"
-        # add token0_ref_price = token1_price * token1_balance / token0_balance 
-        if balance0 > 0 and balance1 > 0 and token1 in prices:
-            pool["token0_ref_price"] = str(float(prices[token1]) * balance1 / balance0)
-        else:
-            pool["token0_ref_price"] = "N/A"
+
+    combine_pools_info(pools, prices, metadata)
 
     return jsonify(pools)
 
@@ -344,6 +224,8 @@ def handle_whitelisted_active_pools():
     pools = list_top_pools(Cfg.NETWORK_ID)
     whitelist = list_whitelist(Cfg.NETWORK_ID)
     for pool in pools:
+        if pool["pool_kind"] != "SIMPLE_POOL":
+            continue
         token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
         if pool["amounts"][0] == "0":
             continue
@@ -373,7 +255,8 @@ def handle_to_coingecko():
     metadata = list_token_metadata(Cfg.NETWORK_ID)
     whitelist = list_whitelist(Cfg.NETWORK_ID)
     for pool in pools:
-
+        if pool["pool_kind"] != "SIMPLE_POOL":
+            continue
         token0, token1 = pool['token_account_ids'][0], pool['token_account_ids'][1]
         if pool["amounts"][0] == "0":
             continue

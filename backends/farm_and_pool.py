@@ -127,22 +127,15 @@ def internal_get_pools(network_id: str) ->list:
             else:
                 pool["farming"] = False
             
-            pool["token_symbols"] = [pool["token_account_ids"][0], pool["token_account_ids"][1]]
-            if pool["token_account_ids"][0] in token_metadata:
-                pool["token_symbols"][0] = token_metadata[pool["token_account_ids"][0]]["symbol"]
-            else:
-                time.sleep(0.1)
-                metadata_obj = internal_get_token_metadata(conn, pool["token_account_ids"][0])
-                pool["token_symbols"][0] = metadata_obj["symbol"]
-                token_metadata[pool["token_account_ids"][0]] = metadata_obj
-
-            if pool["token_account_ids"][1] in token_metadata:
-                pool["token_symbols"][1] = token_metadata[pool["token_account_ids"][1]]["symbol"]
-            else:
-                time.sleep(0.1)
-                metadata_obj = internal_get_token_metadata(conn, pool["token_account_ids"][1])
-                pool["token_symbols"][1] = metadata_obj["symbol"]
-                token_metadata[pool["token_account_ids"][1]] = metadata_obj
+            pool["token_symbols"] = []
+            for x in pool["token_account_ids"]:
+                if x in token_metadata:
+                    pool["token_symbols"].append(token_metadata[x]["symbol"])
+                else:
+                    time.sleep(0.1)
+                    metadata_obj = internal_get_token_metadata(conn, x)
+                    pool["token_symbols"].append(metadata_obj["symbol"])
+                    token_metadata[x] = metadata_obj
 
     except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
@@ -279,7 +272,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 2:
         network_id = str(sys.argv[1]).upper()
-        if network_id in ["MAINNET", "TESTNET"]:
+        if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
             print("Staring update_farms ...")
             update_farms(network_id)
             print("Staring update_pools ...")
@@ -287,7 +280,7 @@ if __name__ == "__main__":
             print("Staring update_whitelist ...")
             update_whitelist(network_id)
         else:
-            print("Error, network_id should be MAINNET or TESTNET")
+            print("Error, network_id should be MAINNET, TESTNET or DEVNET")
             exit(1)
     else:
         print("Error, must put NETWORK_ID as arg")
