@@ -64,9 +64,10 @@ def get_actions(network_id, account_id):
         "from action_receipt_actions join receipts using(receipt_id) "
         "join execution_outcomes using(receipt_id) " 
     )
-    sql2 = "where (action_kind = 'FUNCTION_CALL' and (receiver_account_id in ('%s', '%s', 'wrap.near') or args->'args_json'->>'receiver_id' = '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["REF_CONTRACT"])
-    sql3 = """and predecessor_account_id = %s ) order by timestamp desc limit 10""" 
-    sql = "%s %s %s" % (sql1, sql2, sql3)
+    sql2 = "where (action_kind = 'FUNCTION_CALL' and (receiver_account_id in ('%s', '%s', '%s', 'wrap.near') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql3 = "or args->'args_json'->>'receiver_id' in ('%s', '%s')) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql4 = """and predecessor_account_id = %s ) order by timestamp desc limit 10"""
+    sql = "%s %s %s %s" % (sql1, sql2, sql3, sql4)
 
     cur.execute(sql, (account_id, ))
     rows = cur.fetchall()
