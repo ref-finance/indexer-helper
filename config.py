@@ -71,6 +71,7 @@ class Cfg:
             {"SYMBOL": "HAPI", "NEAR_ID": "d9c2d319cd7e6177336b0a9c93c21cb48d84fb54.factory.bridge.near", "MD_ID": "v2.ref-finance.near|250|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "META", "NEAR_ID": "meta-token.near", "MD_ID": "v2.ref-finance.near|1559|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "nUSDO", "NEAR_ID": "v3.oin_finance.near", "MD_ID": "v2.ref-finance.near|2043|wrap.near", "DECIMAL": 8},
+            {"SYMBOL": "FLX", "NEAR_ID": "3ea8ea4237344c9931214796d9417af1a1180770.factory.bridge.near", "MD_ID": "v2.ref-finance.near|2330|wrap.near", "DECIMAL": 18},
         ],
     }
     MARKET_URL = "api.coingecko.com"
