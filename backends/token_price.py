@@ -26,6 +26,9 @@ def pool_price(network_id, tokens):
             )
             json_str = "".join([chr(x) for x in ret["result"]])
             price = json.loads(json_str)
+            if token["NEAR_ID"] == "token.v2.ref-finance.near":
+                debug_price = int(price) / 1000000000000000000000000.0
+                print('[debug][%s]REF-wNEAR:%.08f' % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), debug_price))
             pool_tokens_price.append({"NEAR_ID": token["NEAR_ID"], "BASE_ID": base, "price": price})
 
     except MultiNodeJsonProviderError as e:
@@ -59,7 +62,8 @@ def market_price(network_id, tokens):
         data = res.read()
         conn.close()
         obj = json.loads(data.decode("utf-8"))
-        # print(obj)  # {'tether': {'usd': 1.0}, 'near': {'usd': 3.29}, 'dai': {'usd': 1.0}}
+        # {'tether': {'usd': 1.0}, 'near': {'usd': 3.29}, 'dai': {'usd': 1.0}}
+        print('[debug][%s]%s' % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), obj))
     except Exception as e:
         print("Error: ", e)
 
