@@ -155,6 +155,9 @@ class Cfg:
             {"SYMBOL": "FLX", "NEAR_ID": "3ea8ea4237344c9931214796d9417af1a1180770.factory.bridge.near", "MD_ID": "v2.ref-finance.near|2330|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "PXT", "NEAR_ID": "pixeltoken.near", "MD_ID": "v2.ref-finance.near|1178|wrap.near", "DECIMAL": 6},
             {"SYMBOL": "MYRIA", "NEAR_ID": "myriadcore.near", "MD_ID": "v2.ref-finance.near|2448|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "CELO", "NEAR_ID": "celo.token.a11bd.near", "MD_ID": "celo", "DECIMAL": 24},
+            {"SYMBOL": "cUSD", "NEAR_ID": "cusd.token.a11bd.near", "MD_ID": "celo-dollar", "DECIMAL": 24},
+            {"SYMBOL": "ABR", "NEAR_ID": "abr.a11bd.near", "MD_ID": "allbridge", "DECIMAL": 24},
         ],
     }
     MARKET_URL = "api.coingecko.com"
