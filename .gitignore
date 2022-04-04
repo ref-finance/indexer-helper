@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 .vscode/
+labs/
 rpc_info.py
 indexer_info.py
 
