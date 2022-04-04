@@ -35,7 +35,7 @@ jobs:
           # Username
           REMOTE_USER:  root
           # Port
-          REMOTE_PORT: 22
+          REMOTE_PORT: 60022
           # Source Path
           SOURCE: "mydist/"
           # Target Path
@@ -52,7 +52,7 @@ jobs:
           host: 47.242.213.140
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
+          port: 60022
           script: |
             sed -i "s/host='127.0.0.1'/host='r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com'/g" /data/indexer-helper/redis_provider.py
             sh /data/indexer-helper/boot.sh restart
@@ -67,7 +67,7 @@ jobs:
           # Useranme
           REMOTE_USER:  root
           # Port
-          REMOTE_PORT: 22
+          REMOTE_PORT: 60022
           # Source Path
           SOURCE: "mydist/"
           # Target Path
@@ -84,7 +84,7 @@ jobs:
           host: 47.242.226.48
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
+          port: 60022
           script: |
             sed -i "s/host='127.0.0.1'/host='r-j6c1m0as7tqlioyu3b.redis.rds.aliyuncs.com'/g" /data/indexer-helper/redis_provider.py
             sh /data/indexer-helper/boot.sh restart
