@@ -101,6 +101,13 @@ def handle_list_token_price():
                 "decimal": token["DECIMAL"],
                 "symbol": token["SYMBOL"],
             }
+    # if usdt exists, mirror its price to USN
+    if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
+        ret["usn"] = {
+            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"], 
+            "decimal": 18,
+            "symbol": "USN",
+        }
     # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
     if "token.v2.ref-finance.near" in ret:
         ret["rftt.tkn.near"] = {
@@ -117,7 +124,8 @@ def handle_list_token_price_by_ids():
     list_token_price_by_ids
     """
     ids = request.args.get("ids", "") 
-    id_str_list = ids.split("|")
+    ids = ("|"+ids.lstrip("|").rstrip("|")+"|").replace("|usn|", "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    id_str_list = ids.lstrip("|").rstrip("|").split("|")
 
     prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])
     ret = ["N/A" if i is None else i for i in prices]
