@@ -63,15 +63,18 @@ def get_actions(network_id, account_id):
         "status "
         "from action_receipt_actions join receipts using(receipt_id) "
         "join execution_outcomes using(receipt_id) " 
+        "where action_kind = 'FUNCTION_CALL' and ( "
     )
 
-    sql2 = "where (action_kind = 'FUNCTION_CALL' and (receiver_account_id in ('%s', '%s', '%s', 'wrap.near') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
-    sql3 = "or args->'args_json'->>'receiver_id' in ('%s', '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
-    sql4 = "or (receiver_account_id = 'usn' and args->>'method_name' in ('buy', 'sell')) ) " 
-    sql5 = """and predecessor_account_id = %s ) order by timestamp desc limit 10"""
-    sql = "%s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5)
+    sql2 = """(predecessor_account_id = %s and """ 
+    sql3 = "(receiver_account_id in ('%s', '%s', '%s', 'wrap.near') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql4 = "or args->'args_json'->>'receiver_id' in ('%s', '%s'))) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql5 = "or (predecessor_account_id = 'usn' and receiver_account_id = 'usn' and  args->>'method_name' in ('buy_with_price_callback', 'sell_with_price_callback') "
+    sql6 = """ and args->'args_json'->>'account' = %s )) """
+    sql7 = "order by timestamp desc limit 10"
+    sql = "%s %s %s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5, sql6, sql7)
 
-    cur.execute(sql, (account_id, ))
+    cur.execute(sql, (account_id, account_id))
     rows = cur.fetchall()
     conn.close()
 
