@@ -66,9 +66,10 @@ def get_actions(network_id, account_id):
     )
 
     sql2 = "where (action_kind = 'FUNCTION_CALL' and (receiver_account_id in ('%s', '%s', '%s', 'wrap.near') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
-    sql3 = "or args->'args_json'->>'receiver_id' in ('%s', '%s')) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
-    sql4 = """and predecessor_account_id = %s ) order by timestamp desc limit 10"""
-    sql = "%s %s %s %s" % (sql1, sql2, sql3, sql4)
+    sql3 = "or args->'args_json'->>'receiver_id' in ('%s', '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql4 = "or (receiver_account_id = 'usn' and args->>'method_name' in ('buy', 'sell')) ) " 
+    sql5 = """and predecessor_account_id = %s ) order by timestamp desc limit 10"""
+    sql = "%s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5)
 
     cur.execute(sql, (account_id, ))
     rows = cur.fetchall()
