@@ -58,7 +58,7 @@ def get_actions(network_id, account_id):
         "originated_from_transaction_hash, "
         "receiver_account_id, "
         "args->>'method_name' as method_name, " 
-        "convert_from(decode(args->>'args_base64', 'base64'), 'UTF8')::json as args, " 
+        "args->>'args_json' as args, " 
         "args->>'deposit' as deposit, " 
         "status "
         "from action_receipt_actions join receipts using(receipt_id) "
@@ -68,11 +68,13 @@ def get_actions(network_id, account_id):
 
     sql2 = """(predecessor_account_id = %s and """ 
     sql3 = "(receiver_account_id in ('%s', '%s', '%s', 'wrap.near') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
-    sql4 = "or args->'args_json'->>'receiver_id' in ('%s', '%s'))) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
-    sql5 = "or (predecessor_account_id = 'usn' and receiver_account_id = 'usn' and  args->>'method_name' in ('buy_with_price_callback', 'sell_with_price_callback') "
-    sql6 = """ and args->'args_json'->>'account' = %s )) """
-    sql7 = "order by timestamp desc limit 10"
-    sql = "%s %s %s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5, sql6, sql7)
+    sql4 = "or (args->'args_json'->>'receiver_id' = 'aurora' and args->>'method_name' = 'ft_transfer_call') "
+    sql5 = "or (receiver_account_id = 'aurora' and args->>'method_name' = 'call') "
+    sql6 = "or args->'args_json'->>'receiver_id' in ('%s', '%s'))) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql7 = "or (predecessor_account_id = 'usn' and receiver_account_id = 'usn' and  args->>'method_name' in ('buy_with_price_callback', 'sell_with_price_callback') "
+    sql8 = """ and args->'args_json'->>'account' = %s )) """
+    sql9 = "order by timestamp desc limit 10"
+    sql = "%s %s %s %s %s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5, sql6, sql7, sql8, sql9)
 
     cur.execute(sql, (account_id, account_id))
     rows = cur.fetchall()
