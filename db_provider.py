@@ -20,7 +20,7 @@ class Encoder(json.JSONEncoder):
 
 
 def get_db_connect():
-    conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd='root', db='mytest')
+    conn = pymysql.connect(host='47.242.213.140', port=3306, user='ref', passwd='Hd2n7TKFej@C', db='mysql')
     return conn
 
 
