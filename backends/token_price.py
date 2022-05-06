@@ -129,24 +129,24 @@ def update_price(network_id):
                 if token["BASE_ID"] != "":
                     if token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
-                        add_token_price_to_db(network_id, token["NEAR_ID"], "%.08f" % price)
+                        add_token_price_to_db(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["BASE_ID"]])
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
                 else:
-                    add_token_price_to_db(network_id, token["NEAR_ID"], token["price"])
+                    add_token_price_to_db(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["BASE_ID"]])
     except Exception as e:
         print("Error occurred when update to db, Error is: ", e)
 
 
 if __name__ == '__main__':
-    # update_price("TESTNET")
-    if len(sys.argv) == 2:
-        network_id = str(sys.argv[1]).upper()
-        if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-            update_price(network_id)
-        else:
-            print("Error, network_id should be MAINNET, TESTNET or DEVNET")
-            exit(1)
-    else:
-        print("Error, must put NETWORK_ID as arg")
-        exit(1)
+    update_price("TESTNET")
+    # if len(sys.argv) == 2:
+    #     network_id = str(sys.argv[1]).upper()
+    #     if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
+    #         update_price(network_id)
+    #     else:
+    #         print("Error, network_id should be MAINNET, TESTNET or DEVNET")
+    #         exit(1)
+    # else:
+    #     print("Error, must put NETWORK_ID as arg")
+    #     exit(1)

@@ -68,14 +68,14 @@ def get_history_token_price(id_list: list) -> list:
     return json_ret
 
 
-def add_token_price_to_db(contract_address, symbol, price):
+def add_token_price_to_db(contract_address, symbol, price, decimals):
     """
     将token价格写入mysql数据库
     """
     conn = get_db_connect()
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
-          "`status`) values(%s,%s,%s, 18, now(), now(), 1) "
-    par = (contract_address, symbol, price)
+          "`status`) values(%s,%s,%s,%s, now(), now(), 1) "
+    par = (contract_address, symbol, price, decimals)
     cursor = conn.cursor()
     try:
         cursor.execute(sql, par)
