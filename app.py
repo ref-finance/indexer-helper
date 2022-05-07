@@ -16,7 +16,7 @@ from utils import combine_pools_info
 from config import Cfg
 from db_provider import get_history_token_price
 
-Welcome = 'Welcome to ref datacenter API server, version 20220507.02, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+Welcome = 'Welcome to ref datacenter API server, version 20220507.03, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
@@ -290,6 +290,24 @@ def handle_to_coingecko():
                     }
 
     return jsonify(ret)
+
+
+@app.route('/list-history-token-price-by-ids', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_history_token_price_by_ids():
+
+    ids = request.args.get("ids", "")
+    ids = ("|"+ids.lstrip("|").rstrip("|")+"|")
+    id_str_list = ids.lstrip("|").rstrip("|").split("|")
+
+    json_obj = []
+    try:
+        ret = get_history_token_price([str(x) for x in id_str_list])
+        json_obj = json.loads(ret)
+    except Exception as e:
+        print("Exception when list-history-token-price-by-ids: ", e)
+
+    return jsonify(json_obj)
 
 
 if __name__ == '__main__':
