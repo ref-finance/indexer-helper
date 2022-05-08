@@ -35,14 +35,14 @@ def get_history_token_price(id_list: list) -> list:
 
     # 执行的sql语句
     # 根据token查询出当前最新的一条价格记录
-    sql = "select * from(select DISTINCT(a.symbol) ,a.contract_address,a.price,a.decimal,a.create_time, " \
-          "1 as float_ratio from mk_history_token_price a where a.symbol in %s order by a.create_time desc) t " \
-          "GROUP BY t.symbol "
+    sql = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.decimal,a.create_time, " \
+          "1 as float_ratio from mk_history_token_price a where a.contract_address in %s order by a.create_time desc) t " \
+          "GROUP BY t.contract_address "
     # 根据token查询出24小时之前的价格记录
-    sql2 = "select * from(select DISTINCT(a.symbol) ,a.contract_address,a.price,a.decimal,a.create_time, " \
-           "1 as float_ratio from mk_history_token_price a where a.symbol in %s AND a.create_time BETWEEN (" \
+    sql2 = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.decimal,a.create_time, " \
+           "1 as float_ratio from mk_history_token_price a where a.contract_address in %s AND a.create_time BETWEEN (" \
            "CURRENT_TIMESTAMP-interval 1445 minute) and (CURRENT_TIMESTAMP-interval 1440 minute) order by " \
-           "a.create_time desc) t GROUP BY t.symbol "
+           "a.create_time desc) t GROUP BY t.contract_address "
     # 进行数据查询
     cur.execute(sql, (id_list,))
     # 取出所有结果集（当前最新的价格）
@@ -54,7 +54,7 @@ def get_history_token_price(id_list: list) -> list:
     conn.close()
     for new in new_rows:
         for old in old_rows:
-            if new['symbol'] in old['symbol']:
+            if new['contract_address'] in old['contract_address']:
                 new_price = new['price']
                 print(new_price)
                 old_price = old['price']
