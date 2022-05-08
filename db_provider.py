@@ -2,6 +2,7 @@ import decimal
 import pymysql
 import json
 from datetime import datetime
+from config import Cfg
 
 
 class Encoder(json.JSONEncoder):
@@ -56,11 +57,8 @@ def get_history_token_price(id_list: list) -> list:
         for old in old_rows:
             if new['contract_address'] in old['contract_address']:
                 new_price = new['price']
-                print(new_price)
                 old_price = old['price']
-                print(old_price)
                 float_ratio = format_percentage(new_price, old_price)
-                print("float_ratio：", float_ratio)
                 new['float_ratio'] = float_ratio
 
     # 转为json格式
@@ -72,6 +70,11 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
     """
     将token价格写入mysql数据库
     """
+    for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
+        if token["NEAR_ID"] in contract_address:
+            symbol = token["SYMBOL"]
+
+
     conn = get_db_connect()
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
           "`status`) values(%s,%s,%s,%s, now(), now(), 1) "

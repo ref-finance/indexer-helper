@@ -16,7 +16,7 @@ from utils import combine_pools_info
 from config import Cfg
 from db_provider import get_history_token_price
 
-Welcome = 'Welcome to ref datacenter API server, version 20220508.05, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+Welcome = 'Welcome to ref datacenter API server, version 20220508.06, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
