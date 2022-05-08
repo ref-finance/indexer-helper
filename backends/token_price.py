@@ -95,7 +95,7 @@ def update_price(network_id):
             market_tokens.append(token)
     
     # [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "wrap.testnet", "price": "nnnnnn"}, ...]
-    tokens_price = market_price(network_id, market_tokens) 
+    tokens_price = market_price(network_id, market_tokens)
     for token in tokens_price:
         price_ref[token["NEAR_ID"]] = token["price"]
 
@@ -139,14 +139,14 @@ def update_price(network_id):
 
 
 if __name__ == '__main__':
-    update_price("TESTNET")
-    # if len(sys.argv) == 2:
-    #     network_id = str(sys.argv[1]).upper()
-    #     if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-    #         update_price(network_id)
-    #     else:
-    #         print("Error, network_id should be MAINNET, TESTNET or DEVNET")
-    #         exit(1)
-    # else:
-    #     print("Error, must put NETWORK_ID as arg")
-    #     exit(1)
+    # update_price("TESTNET")
+    if len(sys.argv) == 2:
+        network_id = str(sys.argv[1]).upper()
+        if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
+            update_price(network_id)
+        else:
+            print("Error, network_id should be MAINNET, TESTNET or DEVNET")
+            exit(1)
+    else:
+        print("Error, must put NETWORK_ID as arg")
+        exit(1)
