@@ -125,7 +125,9 @@ def update_price(network_id):
 
     try:
         if len(tokens_price) > 0:
+            print("token_price list is:", tokens_price)
             for token in tokens_price:
+                print("token is:", token)
                 if token["BASE_ID"] != "":
                     if token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
