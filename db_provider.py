@@ -60,6 +60,10 @@ def get_history_token_price(id_list: list) -> list:
                 old_price = old['price']
                 float_ratio = format_percentage(new_price, old_price)
                 new['float_ratio'] = float_ratio
+        if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in new['contract_address']:
+            new['contract_address'] = "usn"
+            new['symbol'] = "usn"
+            new['decimal'] = 18
 
     # 转为json格式
     json_ret = json.dumps(new_rows, cls=Encoder)

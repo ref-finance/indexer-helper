@@ -297,7 +297,7 @@ def handle_to_coingecko():
 def handle_history_token_price_by_ids():
 
     ids = request.args.get("ids", "")
-    ids = ("|"+ids.lstrip("|").rstrip("|")+"|")
+    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|", "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
     id_str_list = ids.lstrip("|").rstrip("|").split("|")
 
     json_obj = []
