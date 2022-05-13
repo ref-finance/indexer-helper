@@ -27,9 +27,24 @@ def get_db_connect():
 
 def get_history_token_price(id_list: list) -> list:
     """
-    查询历史价格
+    批量查询历史价格
     """
-    print(id_list)
+    """
+    因usn需特殊处理，使用dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near的价格，
+    记录入参是否有传入usn，如果有传入usn，但是没有传入dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near，
+    那么返回参数只需要返回usn，不返回dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near，如果两个都有传入，
+    需同时返回两个的价格信息，usn_flag为1代表没有传入usn，为2代表同时传入了usn和dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near，
+    为3代表只传入了usn，没有传入dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near
+    """
+    usn_flag = 1
+    # 对usn特殊处理，判断入参中是否包含usn
+    if "usn" in id_list:
+        if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in id_list:
+            usn_flag = 2
+        else:
+            usn_flag = 3
+
+    id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usn' else i for i in id_list]
     conn = get_db_connect()
     # 光标对象,设置返回结果带上字段名称
     cur = conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -61,9 +76,20 @@ def get_history_token_price(id_list: list) -> list:
                 float_ratio = format_percentage(new_price, old_price)
                 new['float_ratio'] = float_ratio
         if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in new['contract_address']:
-            new['contract_address'] = "usn"
-            new['symbol'] = "usn"
-            new['decimal'] = 18
+            if 2 == usn_flag:
+                new_usn = {
+                    "price": new['price'],
+                    "decimal": 18,
+                    "symbol": "USN",
+                    "float_ratio": new['float_ratio'],
+                    "create_time": new['create_time'],
+                    "contract_address": "usn"
+                }
+                new_rows.append(new_usn)
+            elif 3 == usn_flag:
+                new['contract_address'] = "usn"
+                new['symbol'] = "usn"
+                new['decimal'] = 18
 
     # 转为json格式
     json_ret = json.dumps(new_rows, cls=Encoder)
