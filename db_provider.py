@@ -88,7 +88,7 @@ def get_history_token_price(id_list: list) -> list:
                 new_rows.append(new_usn)
             elif 3 == usn_flag:
                 new['contract_address'] = "usn"
-                new['symbol'] = "usn"
+                new['symbol'] = "USN"
                 new['decimal'] = 18
 
     # 转为json格式
