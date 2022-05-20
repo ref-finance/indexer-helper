@@ -21,7 +21,7 @@ class Encoder(json.JSONEncoder):
 
 
 def get_db_connect():
-    conn = pymysql.connect(host='47.242.213.140', port=3306, user='ref', passwd='Hd2n7TKFej@C', db='mysql')
+    conn = pymysql.connect(host='139.162.85.48', port=3306, user='ref', passwd='Hd2n7TKFej@C', db='mysql')
     return conn
 
 
