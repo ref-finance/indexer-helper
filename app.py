@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
-# 导入Flask类
+# Import flask class
 from http.client import responses
 from flask import Flask
 from flask import request
@@ -17,11 +17,11 @@ from config import Cfg
 from db_provider import get_history_token_price
 
 Welcome = 'Welcome to ref datacenter API server, version 20220520.01, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
-# 实例化，可视为固定格式
+# Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
 
 
-# route()方法用于设定路由；类似spring路由配置
+# route()Method is used to set the route; Similar to spring routing configuration
 @app.route('/')
 def hello_world():
     return Welcome
