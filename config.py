@@ -17,6 +17,14 @@ except ImportError:
     INDEXER_HOST = "104.199.89.51"
     INDEXER_PORT = "5432"
 
+try:
+    from db_info import DB_DSN, DB_UID, DB_PWD, DB_HOST, DB_PORT
+except ImportError:
+    DB_DSN = "mysql"
+    DB_UID = "aaa"
+    DB_PWD = "bbb"
+    DB_HOST = "127.0.0.1"
+    DB_PORT = "3306"
 
 """
 
@@ -42,6 +50,11 @@ class Cfg:
             "INDEXER_PWD": "nearprotocol",
             "INDEXER_HOST": "35.184.214.98",
             "INDEXER_PORT": "5432",
+            "DB_DSN": DB_DSN,
+            "DB_UID": DB_UID,
+            "DB_PWD": DB_PWD,
+            "DB_HOST": DB_HOST,
+            "DB_PORT": DB_PORT,
         },
         "TESTNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
@@ -60,6 +73,11 @@ class Cfg:
             "INDEXER_PWD": "nearprotocol",
             "INDEXER_HOST": "35.184.214.98",
             "INDEXER_PORT": "5432",
+            "DB_DSN": DB_DSN,
+            "DB_UID": DB_UID,
+            "DB_PWD": DB_PWD,
+            "DB_HOST": DB_HOST,
+            "DB_PORT": DB_PORT,
         },
         "MAINNET": {
             "NEAR_RPC_URL": MAINNET_RPC_URL,
@@ -78,6 +96,11 @@ class Cfg:
             "INDEXER_PWD": INDEXER_PWD,
             "INDEXER_HOST": INDEXER_HOST,
             "INDEXER_PORT": INDEXER_PORT,
+            "DB_DSN": DB_DSN,
+            "DB_UID": DB_UID,
+            "DB_PWD": DB_PWD,
+            "DB_HOST": DB_HOST,
+            "DB_PORT": DB_PORT,
         }
     }
     TOKENS = {

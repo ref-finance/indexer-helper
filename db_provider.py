@@ -20,8 +20,13 @@ class Encoder(json.JSONEncoder):
         super(Encoder, self).default(o)
 
 
-def get_db_connect():
-    conn = pymysql.connect(host='127.0.0.1', port=3306, user='ref', passwd='xxx', db='mysql')
+def get_db_connect(network_id: str):
+    conn = pymysql.connect(
+        host=Cfg.NETWORK[network_id]["DB_HOST"], 
+        port=int(Cfg.NETWORK[network_id]["DB_PORT"]), 
+        user=Cfg.NETWORK[network_id]["DB_UID"], 
+        passwd=Cfg.NETWORK[network_id]["DB_PWD"], 
+        db=Cfg.NETWORK[network_id]["DB_DSN"])
     return conn
 
 
@@ -45,7 +50,7 @@ def get_history_token_price(id_list: list) -> list:
             usn_flag = 3
 
     id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usn' else i for i in id_list]
-    conn = get_db_connect()
+    conn = get_db_connect(Cfg.NETWORK_ID)
     # Cursor object, set the return result with field name
     cur = conn.cursor(cursor=pymysql.cursors.DictCursor)
 
@@ -105,7 +110,7 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
             symbol = token["SYMBOL"]
 
 
-    conn = get_db_connect()
+    conn = get_db_connect(Cfg.NETWORK_ID)
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
           "`status`) values(%s,%s,%s,%s, now(), now(), 1) "
     par = (contract_address, symbol, price, decimals)

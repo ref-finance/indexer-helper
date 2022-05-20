@@ -7,6 +7,7 @@ __pycache__/
 labs/
 rpc_info.py
 indexer_info.py
+db_info.py
 
 # C extensions
 *.so
