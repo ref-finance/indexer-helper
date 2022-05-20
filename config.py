@@ -103,6 +103,7 @@ class Cfg:
             {"SYMBOL": "DAI", "NEAR_ID": "dai.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
             {"SYMBOL": "HBTC", "NEAR_ID": "hbtc.fakes.testnet", "MD_ID": "huobi-btc", "DECIMAL": 18},
             {"SYMBOL": "WBTC", "NEAR_ID": "wbtc.fakes.testnet", "MD_ID": "wrapped-bitcoin", "DECIMAL": 8},
+            {"SYMBOL": "cUSD", "NEAR_ID": "cusd.fakes.testnet", "MD_ID": "celo-dollar", "DECIMAL": 24},
         ],
         "TESTNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.testnet", "MD_ID": "near", "DECIMAL": 24},
@@ -127,6 +128,7 @@ class Cfg:
             {"SYMBOL": "DAI", "NEAR_ID": "dai.fakes.testnet", "MD_ID": "dai", "DECIMAL": 18},
             {"SYMBOL": "HBTC", "NEAR_ID": "hbtc.fakes.testnet", "MD_ID": "huobi-btc", "DECIMAL": 18},
             {"SYMBOL": "WBTC", "NEAR_ID": "wbtc.fakes.testnet", "MD_ID": "wrapped-bitcoin", "DECIMAL": 8},
+            {"SYMBOL": "cUSD", "NEAR_ID": "cusd.fakes.testnet", "MD_ID": "celo-dollar", "DECIMAL": 24},
 
         ],
         "MAINNET": [
