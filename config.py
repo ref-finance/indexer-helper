@@ -2,7 +2,6 @@
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
 
-
 try:
     from rpc_info import TESTNET_RPC_URL, MAINNET_RPC_URL
 except ImportError:
@@ -17,6 +16,15 @@ except ImportError:
     INDEXER_PWD = "nearprotocol"
     INDEXER_HOST = "104.199.89.51"
     INDEXER_PORT = "5432"
+
+try:
+    from db_info import DB_DSN, DB_UID, DB_PWD, DB_HOST, DB_PORT
+except ImportError:
+    DB_DSN = "mysql"
+    DB_UID = "aaa"
+    DB_PWD = "bbb"
+    DB_HOST = "127.0.0.1"
+    DB_PORT = "3306"
 
 """
 
@@ -42,6 +50,11 @@ class Cfg:
             "INDEXER_PWD": INDEXER_PWD,
             "INDEXER_HOST": INDEXER_HOST,
             "INDEXER_PORT": INDEXER_PORT,
+            "DB_DSN": DB_DSN,
+            "DB_UID": DB_UID,
+            "DB_PWD": DB_PWD,
+            "DB_HOST": DB_HOST,
+            "DB_PORT": DB_PORT,
         }
     }
     TOKENS = {
@@ -84,7 +97,6 @@ class Cfg:
             {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.near", "MD_ID": "v2.ref-finance.near|3088|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "HBTC", "NEAR_ID": "0316eb71485b0ab14103307bf65a021042c6d380.factory.bridge.near", "MD_ID": "huobi-btc", "DECIMAL": 18},
             {"SYMBOL": "Cheddar", "NEAR_ID": "token.cheddar.near", "MD_ID": "v2.ref-finance.near|2769|wrap.near", "DECIMAL": 24},
-
         ],
     }
     MARKET_URL = "api.coingecko.com"

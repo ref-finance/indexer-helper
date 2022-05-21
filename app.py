@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
-# 导入Flask类
+# Import flask class
 from http.client import responses
 from flask import Flask
 from flask import request
@@ -14,13 +14,14 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_price_by_id_list
 from utils import combine_pools_info
 from config import Cfg
+from db_provider import get_history_token_price
 
-Welcome = 'Welcome to ref datacenter API server, version 20220512.01-cicd, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+Welcome = 'Welcome to ref datacenter API server, version 20220521.01-cicd, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # 实例化，可视为固定格式
 app = Flask(__name__)
 
 
-# route()方法用于设定路由；类似spring路由配置
+# route()Method is used to set the route; Similar to spring routing configuration
 @app.route('/')
 def hello_world():
     return Welcome
@@ -193,6 +194,7 @@ def handle_list_pools_by_tokens():
     """
     token0 = request.args.get("token0", "N/A") 
     token1 = request.args.get("token1", "N/A") 
+
     pools = list_pools_by_tokens(Cfg.NETWORK_ID, token0, token1)
     prices = list_token_price(Cfg.NETWORK_ID)
     metadata = list_token_metadata(Cfg.NETWORK_ID)
@@ -285,6 +287,25 @@ def handle_to_coingecko():
                     }
 
     return jsonify(ret)
+
+
+@app.route('/list-history-token-price-by-ids', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_history_token_price_by_ids():
+
+    ids = request.args.get("ids", "")
+    ids = ("|" + ids.lstrip("|").rstrip("|") + "|")
+    id_str_list = ids.lstrip("|").rstrip("|").split("|")
+
+    json_obj = []
+
+    try:
+        ret = get_history_token_price([str(x) for x in id_str_list])
+        json_obj = json.loads(ret)
+    except Exception as e:
+        print("Exception when list-history-token-price-by-ids: ", e)
+
+    return jsonify(json_obj)
 
 
 if __name__ == '__main__':
