@@ -63,8 +63,8 @@ def get_history_token_price(id_list: list) -> list:
     sql2 = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.decimal," \
            "from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s' ) AS datetime, 1 as float_ratio " \
            "from mk_history_token_price a where a.contract_address in %s " \
-           "AND from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') BETWEEN (CURRENT_TIMESTAMP-interval 1460 minute) " \
-           "and (CURRENT_TIMESTAMP-interval 1440 minute) " \
+           "AND from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') BETWEEN (CURRENT_TIMESTAMP-interval 1500 minute) " \
+           "and (CURRENT_TIMESTAMP-interval 1500 minute) " \
            "order by from_unixtime(a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') desc) t GROUP BY t.contract_address"
     # Data query
     cur.execute(sql, (id_list,))
@@ -89,7 +89,7 @@ def get_history_token_price(id_list: list) -> list:
                     "decimal": 18,
                     "symbol": "USN",
                     "float_ratio": new['float_ratio'],
-                    "create_time": new['create_time'],
+                    "timestamp": new['datetime'],
                     "contract_address": "usn"
                 }
                 new_rows.append(new_usn)
@@ -112,9 +112,10 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
             symbol = token["SYMBOL"]
 
     import time
+    now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    print("update_price now time:", now_time)
     # Get current timestamp
     now = int(time.time())
-    print("add_token_price_to_db time:", now)
     conn = get_db_connect(Cfg.NETWORK_ID)
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
           "`status`, `timestamp`) values(%s,%s,%s,%s, now(), now(), 1, %s) "

@@ -82,6 +82,10 @@ def market_price(network_id, tokens):
 
 
 def update_price(network_id):
+    import time
+    # Get current timestamp
+    now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    print("update_price now time:", now_time)
     pool_tokens = []
     market_tokens = []
     decimals = {}
@@ -124,6 +128,7 @@ def update_price(network_id):
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
 
     try:
+        print("add_token_price_to_db tokens_price length:", len(tokens_price))
         if len(tokens_price) > 0:
             for token in tokens_price:
                 if token["BASE_ID"] != "":
