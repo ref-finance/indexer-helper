@@ -109,11 +109,17 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
         if token["NEAR_ID"] in contract_address:
             symbol = token["SYMBOL"]
 
-
+    import time
+    # Get current timestamp
+    now = int(time.time())
+    # Convert to other date formats, such as:"%Y-%m-%d %H:%M:%S"
+    timeArray = time.localtime(now)
+    nowTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+    print("add_token_price_to_db time:", nowTime)
     conn = get_db_connect(Cfg.NETWORK_ID)
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
-          "`status`) values(%s,%s,%s,%s, now(), now(), 1) "
-    par = (contract_address, symbol, price, decimals)
+          "`status`) values(%s,%s,%s,%s, %s, %s, 1) "
+    par = (contract_address, symbol, price, decimals, nowTime, nowTime)
     cursor = conn.cursor()
     try:
         cursor.execute(sql, par)
