@@ -26,6 +26,14 @@ except ImportError:
     DB_HOST = "127.0.0.1"
     DB_PORT = "3306"
 
+try:
+    from redis_info import REDIS_HOST, REDIS_PORT, REDIS_PWD
+except ImportError:
+    REDIS_PWD = ""
+    REDIS_HOST = "127.0.0.1"
+    REDIS_PORT = "6379"
+
+
 """
 
 """
@@ -55,6 +63,9 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "REDIS_PWD": REDIS_PWD,
+            "REDIS_HOST": REDIS_HOST,
+            "REDIS_PORT": REDIS_PORT,
         },
         "TESTNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
@@ -78,6 +89,9 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "REDIS_PWD": REDIS_PWD,
+            "REDIS_HOST": REDIS_HOST,
+            "REDIS_PORT": REDIS_PORT,
         },
         "MAINNET": {
             "NEAR_RPC_URL": MAINNET_RPC_URL,
@@ -101,6 +115,9 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "REDIS_PWD": REDIS_PWD,
+            "REDIS_HOST": REDIS_HOST,
+            "REDIS_PORT": REDIS_PORT,
         }
     }
     TOKENS = {
