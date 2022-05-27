@@ -64,7 +64,7 @@ def get_history_token_price(id_list: list) -> list:
            "from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s' ) AS datetime, 1 as float_ratio " \
            "from mk_history_token_price a where a.contract_address in %s " \
            "AND from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') BETWEEN (CURRENT_TIMESTAMP-interval 1500 minute) " \
-           "and (CURRENT_TIMESTAMP-interval 1500 minute) " \
+           "and (CURRENT_TIMESTAMP-interval 1440 minute) " \
            "order by from_unixtime(a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') desc) t GROUP BY t.contract_address"
     # Data query
     cur.execute(sql, (id_list,))
@@ -112,8 +112,6 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
             symbol = token["SYMBOL"]
 
     import time
-    now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-    print("update_price now time:", now_time)
     # Get current timestamp
     now = int(time.time())
     conn = get_db_connect(Cfg.NETWORK_ID)
