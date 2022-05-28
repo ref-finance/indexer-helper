@@ -56,14 +56,16 @@ def get_history_token_price(id_list: list) -> list:
 
     # Executed SQL statement
     # Query the latest price record according to the token
-    sql = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.decimal,a.create_time, " \
-          "1 as float_ratio from mk_history_token_price a where a.contract_address in %s order by a.create_time desc) t " \
-          "GROUP BY t.contract_address "
+    sql = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.`decimal`,a.`timestamp` as datetime," \
+          "1 as float_ratio from mk_history_token_price a where a.contract_address in %s " \
+          "order by a.`timestamp` desc) t GROUP BY t.contract_address"
     # Query the price records 24 hours ago according to the token
-    sql2 = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.decimal,a.create_time, " \
-           "1 as float_ratio from mk_history_token_price a where a.contract_address in %s AND a.create_time BETWEEN (" \
-           "CURRENT_TIMESTAMP-interval 1445 minute) and (CURRENT_TIMESTAMP-interval 1440 minute) order by " \
-           "a.create_time desc) t GROUP BY t.contract_address "
+    sql2 = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.decimal," \
+           "from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s' ) AS datetime, 1 as float_ratio " \
+           "from mk_history_token_price a where a.contract_address in %s " \
+           "AND from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') BETWEEN (CURRENT_TIMESTAMP-interval 1500 minute) " \
+           "and (CURRENT_TIMESTAMP-interval 1440 minute) " \
+           "order by from_unixtime(a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') desc) t GROUP BY t.contract_address"
     # Data query
     cur.execute(sql, (id_list,))
     # Take out all result sets (current latest prices)
@@ -87,7 +89,7 @@ def get_history_token_price(id_list: list) -> list:
                     "decimal": 18,
                     "symbol": "USN",
                     "float_ratio": new['float_ratio'],
-                    "create_time": new['create_time'],
+                    "timestamp": new['datetime'],
                     "contract_address": "usn"
                 }
                 new_rows.append(new_usn)
@@ -112,14 +114,10 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
     import time
     # Get current timestamp
     now = int(time.time())
-    # Convert to other date formats, such as:"%Y-%m-%d %H:%M:%S"
-    timeArray = time.localtime(now)
-    nowTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
-    print("add_token_price_to_db time:", nowTime)
     conn = get_db_connect(Cfg.NETWORK_ID)
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
-          "`status`) values(%s,%s,%s,%s, %s, %s, 1) "
-    par = (contract_address, symbol, price, decimals, nowTime, nowTime)
+          "`status`, `timestamp`) values(%s,%s,%s,%s, now(), now(), 1, %s) "
+    par = (contract_address, symbol, price, decimals, now)
     cursor = conn.cursor()
     try:
         cursor.execute(sql, par)
