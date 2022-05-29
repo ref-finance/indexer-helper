@@ -22,14 +22,15 @@ def pool_price(network_id, tokens):
                 try:
                     ret = conn.view_call(src, "get_rated_pool", ('{"pool_id": %s}' % pool_id)
                                          .encode(encoding='utf-8'))
-                    print("get_rated_pool return:", ret)
                     json_str = "".join([chr(x) for x in ret["result"]])
                     result_obj = json.loads(json_str)
                     rates = result_obj["rates"]
+                    print("get_rated_pool rates:", rates)
                     price = int(rates[0]) / int(rates[1])
+                    print("get_rated_pool price:", price)
                 except Exception as e:
                     print("get_rated_pool error:", e)
-                    price = 0
+                    continue
             else:
                 ret = conn.view_call(
                     src,
