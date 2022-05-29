@@ -140,9 +140,11 @@ def update_price(network_id):
     try:
         if len(tokens_price) > 0:
             for token in tokens_price:
+                print("token_price_db_token:", token)
                 if token["BASE_ID"] != "":
                     if token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+                        print("token_price_db_price:", price)
                         add_token_price_to_db(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]])
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
