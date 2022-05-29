@@ -20,16 +20,13 @@ def pool_price(network_id, tokens):
             time.sleep(0.1)
             if token["NEAR_ID"] == "meta-v2.pool.testnet":
                 try:
-                    ret = conn.view_call(
-                        src,
-                        "get_rated_pool",
-                        ('{"pool_id": %s, "token_in": "%s", "amount_in": "1%s", "token_out": "%s"}'
-                         % (pool_id, token["NEAR_ID"], '0' * token["DECIMAL"], base))
-                            .encode(encoding='utf-8')
-                    )
+                    ret = conn.view_call(src, "get_rated_pool", ('{"pool_id": %s}' % pool_id)
+                                         .encode(encoding='utf-8'))
                     print("get_rated_pool return:", ret)
                     json_str = "".join([chr(x) for x in ret["result"]])
-                    price = json.loads(json_str)
+                    result_obj = json.loads(json_str)
+                    rates = result_obj["rates"]
+                    price = int(rates[0]) / int(rates[1])
                 except Exception as e:
                     print("get_rated_pool error:", e)
                     price = 0
@@ -41,7 +38,6 @@ def pool_price(network_id, tokens):
                      % (pool_id, token["NEAR_ID"], '0' * token["DECIMAL"], base))
                         .encode(encoding='utf-8')
                 )
-                print("get_return return:", ret)
                 json_str = "".join([chr(x) for x in ret["result"]])
                 price = json.loads(json_str)
             if token["NEAR_ID"] == "token.v2.ref-finance.near":
