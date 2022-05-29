@@ -26,7 +26,7 @@ def pool_price(network_id, tokens):
                     result_obj = json.loads(json_str)
                     rates = result_obj["rates"]
                     print("get_rated_pool rates:", rates)
-                    price = int(rates[0]) / int(rates[1])
+                    price = int(rates[0])
                     print("get_rated_pool price:", price)
                 except Exception as e:
                     print("get_rated_pool error:", e)
