@@ -86,7 +86,7 @@ def get_actions(network_id, account_id):
 
 if __name__ == '__main__':
     print("#########MAINNET###########")
-    # print(get_liquidity_pools("MAINNET", "reffer.near"))
-    print(get_actions("DEVNET", "juaner.testnet'); select version() -- "))
+    print(get_liquidity_pools("MAINNET", "reffer.near"))
+    print(get_actions("MAINNET", "reffer.near'); select version() -- "))
     # print("#########TESTNET###########")
     # print(get_liquidity_pools("TESTNET", "pika8.testnet"))
