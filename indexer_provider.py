@@ -67,7 +67,7 @@ def get_actions(network_id, account_id):
     )
 
     sql2 = """(predecessor_account_id = %s and """ 
-    sql3 = "(receiver_account_id in ('%s', '%s', '%s', 'wrap.near') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql3 = "(receiver_account_id in ('%s', '%s', '%s', 'wrap.near', '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"], Cfg.NETWORK[network_id]["BOOSTFARM_CONTRACT"])
     sql4 = "or (args->'args_json'->>'receiver_id' = 'aurora' and args->>'method_name' = 'ft_transfer_call') "
     sql5 = "or (receiver_account_id = 'aurora' and args->>'method_name' = 'call') "
     sql6 = "or args->'args_json'->>'receiver_id' in ('%s', '%s'))) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
@@ -86,7 +86,7 @@ def get_actions(network_id, account_id):
 
 if __name__ == '__main__':
     print("#########MAINNET###########")
-    print(get_liquidity_pools("MAINNET", "reffer.near"))
-    print(get_actions("MAINNET", "reffer.near'); select version() -- "))
+    # print(get_liquidity_pools("MAINNET", "reffer.near"))
+    print(get_actions("DEVNET", "juaner.testnet'); select version() -- "))
     # print("#########TESTNET###########")
     # print(get_liquidity_pools("TESTNET", "pika8.testnet"))
