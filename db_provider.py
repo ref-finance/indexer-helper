@@ -3,6 +3,7 @@ import pymysql
 import json
 from datetime import datetime
 from config import Cfg
+import time
 
 
 class Encoder(json.JSONEncoder):
@@ -111,7 +112,6 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
         if token["NEAR_ID"] in contract_address:
             symbol = token["SYMBOL"]
 
-    import time
     # Get current timestamp
     now = int(time.time())
     conn = get_db_connect(Cfg.NETWORK_ID)
@@ -136,5 +136,27 @@ def format_percentage(new, old):
     return '%.2f' % p
 
 
+def clear_token_price():
+    now = int(time.time())
+    before = now - (7*24*60*60)
+    print("seven days ago time:", before)
+    conn = get_db_connect(Cfg.NETWORK_ID)
+    # sql = "delete from mk_history_token_price where `timestamp` < %s"
+    sql = "select count(*) from mk_history_token_price where `timestamp` < %s"
+    cursor = conn.cursor()
+    try:
+        cursor.execute(sql, before)
+        # Submit to database for execution
+        conn.commit()
+    except Exception as e:
+        # Rollback on error
+        conn.rollback()
+        print(e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
+    clear_token_price()
+
