@@ -138,14 +138,13 @@ def format_percentage(new, old):
 
 def clear_token_price():
     now = int(time.time())
-    before = now - (7*24*60*60)
-    print("seven days ago time:", before)
+    before_time = now - (7*24*60*60)
+    print("seven days ago time:", before_time)
     conn = get_db_connect(Cfg.NETWORK_ID)
-    # sql = "delete from mk_history_token_price where `timestamp` < %s"
-    sql = "select count(*) from mk_history_token_price where `timestamp` < %s"
+    sql = "delete from mk_history_token_price where `timestamp` < %s"
     cursor = conn.cursor()
     try:
-        cursor.execute(sql, before)
+        cursor.execute(sql, before_time)
         # Submit to database for execution
         conn.commit()
     except Exception as e:
