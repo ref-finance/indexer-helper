@@ -17,7 +17,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         network_id = str(sys.argv[1]).upper()
         if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-            clear_token_price(network_id)
+            clear_db_data()
         else:
             print("Error, network_id should be MAINNET, TESTNET or DEVNET")
             exit(1)
