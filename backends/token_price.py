@@ -102,22 +102,18 @@ def update_price(network_id):
     decimals = {}
     price_ref = {}
     for token in Cfg.TOKENS[network_id]:
-        print("update_price token:", token)
         # token = {"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8}
         decimals[token["NEAR_ID"]] = token["DECIMAL"]
         if len(token["MD_ID"].split("|")) == 3:
             pool_tokens.append(token)
-            print("update_price pool_tokens:", pool_tokens)
         else:
             market_tokens.append(token)
-            print("update_price market_tokens:", market_tokens)
     
     # [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "wrap.testnet", "price": "nnnnnn"}, ...]
     tokens_price = market_price(network_id, market_tokens)
     for token in tokens_price:
         price_ref[token["NEAR_ID"]] = token["price"]
 
-    print("pool_price tokens:", pool_tokens)
     tokens_price += pool_price(network_id, pool_tokens)
 
     try:
@@ -145,12 +141,9 @@ def update_price(network_id):
     try:
         if len(tokens_price) > 0:
             for token in tokens_price:
-                print("token_price_db_token:", token)
                 if token["BASE_ID"] != "":
                     if token["BASE_ID"] in price_ref:
-                        print("token_price_db_ref:", float(price_ref[token["BASE_ID"]]))
                         price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
-                        print("token_price_db_price:", price)
                         add_token_price_to_db(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]])
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
