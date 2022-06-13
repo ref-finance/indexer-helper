@@ -19,7 +19,7 @@ def pool_price(network_id, tokens):
         for token in tokens:
             src, pool_id, base = token["MD_ID"].split("|")
             time.sleep(0.1)
-            if token["NEAR_ID"] == "meta-v2.pool.testnet" or token["NEAR_ID"] == "linear-protocol.testnet":
+            if token["NEAR_ID"] == "meta-pool.near" or token["NEAR_ID"] == "linear-protocol.near":
                 try:
                     ret = conn.view_call(src, "get_rated_pool", ('{"pool_id": %s}' % pool_id)
                                          .encode(encoding='utf-8'))

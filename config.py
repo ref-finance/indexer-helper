@@ -20,9 +20,9 @@ except ImportError:
 try:
     from db_info import DB_DSN, DB_UID, DB_PWD, DB_HOST, DB_PORT
 except ImportError:
-    DB_DSN = "mysql"
-    DB_UID = "aaa"
-    DB_PWD = "bbb"
+    DB_DSN = "ref"
+    DB_UID = "root"
+    DB_PWD = "root"
     DB_HOST = "127.0.0.1"
     DB_PORT = "3306"
 
@@ -175,7 +175,7 @@ class Cfg:
             {"SYMBOL": "nWBTC", "NEAR_ID": "2260fac5e5542a773aa44fbcfedf7c193bc2c599.factory.bridge.near", "MD_ID": "wrapped-bitcoin", "DECIMAL": 8},
             {"SYMBOL": "nLINK", "NEAR_ID": "514910771af9ca656af840dff83e8264ecf986ca.factory.bridge.near", "MD_ID": "chainlink", "DECIMAL": 18},
             {"SYMBOL": "PARAS", "NEAR_ID": "token.paras.near", "MD_ID": "v2.ref-finance.near|377|wrap.near", "DECIMAL": 18},
-            {"SYMBOL": "STNEAR", "NEAR_ID": "meta-pool.near", "MD_ID": "v2.ref-finance.near|535|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "STNEAR", "NEAR_ID": "meta-pool.near", "MD_ID": "v2.ref-finance.near|3514|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "marmaj", "NEAR_ID": "marmaj.tkn.near", "MD_ID": "v2.ref-finance.near|11|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "PULSE", "NEAR_ID": "52a047ee205701895ee06a375492490ec9c597ce.factory.bridge.near", "MD_ID": "v2.ref-finance.near|852|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "ETH", "NEAR_ID": "aurora", "MD_ID": "ethereum", "DECIMAL": 18},
@@ -194,7 +194,7 @@ class Cfg:
             {"SYMBOL": "SOL", "NEAR_ID": "sol.token.a11bd.near", "MD_ID": "solana", "DECIMAL": 24},
             {"SYMBOL": "UTO", "NEAR_ID": "utopia.secretskelliessociety.near", "MD_ID": "v2.ref-finance.near|2973|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "WOO", "NEAR_ID": "4691937a7508860f876c9c0a2a617e7d9e945d4b.factory.bridge.near", "MD_ID": "woo-network", "DECIMAL": 18},
-            {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.near", "MD_ID": "v2.ref-finance.near|3088|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.near", "MD_ID": "v2.ref-finance.near|3515|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "HBTC", "NEAR_ID": "0316eb71485b0ab14103307bf65a021042c6d380.factory.bridge.near", "MD_ID": "huobi-btc", "DECIMAL": 18},
             {"SYMBOL": "Cheddar", "NEAR_ID": "token.cheddar.near", "MD_ID": "v2.ref-finance.near|2769|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "PEM", "NEAR_ID": "token.pembrock.near", "MD_ID": "v2.ref-finance.near|3449|wrap.near", "DECIMAL": 18},
