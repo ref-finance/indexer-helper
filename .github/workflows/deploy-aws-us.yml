@@ -78,7 +78,7 @@ jobs:
           EXCLUDE: ".git, .github"
 
 
-      - name: Execute SSH commmands on remote server[3.228.195.200]
+      - name: Execute SSH commmands on remote server [3.228.195.200]
         uses: appleboy/ssh-action@master
         with:
           host: 3.228.195.200
