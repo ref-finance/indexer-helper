@@ -16,7 +16,8 @@ from utils import combine_pools_info
 from config import Cfg
 from db_provider import get_history_token_price
 
-Welcome = 'Welcome to ref datacenter API server, version 20220527.01, indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+service_version = "20220615.01"
+Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
 
@@ -309,6 +310,12 @@ def handle_history_token_price_by_ids():
         print("Exception when list-history-token-price-by-ids: ", e)
 
     return jsonify(json_obj)
+
+
+@app.route('/get-service-version', methods=['GET'])
+@flask_cors.cross_origin()
+def get_service_version():
+    return jsonify(service_version)
 
 
 if __name__ == '__main__':
