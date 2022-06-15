@@ -13,20 +13,35 @@ def pool_price(network_id, tokens):
     # tokens = [{"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8}, ...]
     # return [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "wrap.testnet", "price": "nnnnnn"}, ...]
     pool_tokens_price = []
+    print("pool_price tokens:", tokens)
     try:
         conn = MultiNodeJsonProvider(network_id)
         for token in tokens:
             src, pool_id, base = token["MD_ID"].split("|")
             time.sleep(0.1)
-            ret = conn.view_call(
-                src, 
-                "get_return", 
-                ('{"pool_id": %s, "token_in": "%s", "amount_in": "1%s", "token_out": "%s"}' 
-                % (pool_id, token["NEAR_ID"], '0'*token["DECIMAL"], base))
-                .encode(encoding='utf-8')
-            )
-            json_str = "".join([chr(x) for x in ret["result"]])
-            price = json.loads(json_str)
+            if token["NEAR_ID"] == "meta-pool.near" or token["NEAR_ID"] == "linear-protocol.near":
+                try:
+                    ret = conn.view_call(src, "get_rated_pool", ('{"pool_id": %s}' % pool_id)
+                                         .encode(encoding='utf-8'))
+                    json_str = "".join([chr(x) for x in ret["result"]])
+                    result_obj = json.loads(json_str)
+                    rates = result_obj["rates"]
+                    print("get_rated_pool rates:", rates)
+                    price = int(rates[0])
+                    print("get_rated_pool price:", price)
+                except Exception as e:
+                    print("get_rated_pool error:", e)
+                    continue
+            else:
+                ret = conn.view_call(
+                    src,
+                    "get_return",
+                    ('{"pool_id": %s, "token_in": "%s", "amount_in": "1%s", "token_out": "%s"}'
+                     % (pool_id, token["NEAR_ID"], '0' * token["DECIMAL"], base))
+                        .encode(encoding='utf-8')
+                )
+                json_str = "".join([chr(x) for x in ret["result"]])
+                price = json.loads(json_str)
             if token["NEAR_ID"] == "token.v2.ref-finance.near":
                 debug_price = int(price) / 1000000000000000000000000.0
                 print('[debug][%s]REF-wNEAR:%.08f' % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), debug_price))
