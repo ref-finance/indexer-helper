@@ -96,6 +96,7 @@ class Cfg:
             "FARMING_CONTRACT": "v2.ref-farming.near",
             "REF_CONTRACT": "v2.ref-finance.near",
             "XREF_CONTRACT": "xtoken.ref-finance.near",
+            "BOOSTFARM_CONTRACT": "boostfarm.ref-finance.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",
