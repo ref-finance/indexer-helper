@@ -1,7 +1,7 @@
 from config import Cfg
 import redis
 
-pool = redis.ConnectionPool(host='127.0.0.1',port=6379,decode_responses=True)
+pool = redis.ConnectionPool(host=Cfg.REDIS["REDIS_HOST"], port=int(Cfg.REDIS["REDIS_PORT"]), decode_responses=True)
 
 def list_pools_by_id_list(network_id: str, id_list: list) ->list:
     import json

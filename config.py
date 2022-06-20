@@ -2,11 +2,18 @@
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
 
+# load private info
 try:
     from rpc_info import TESTNET_RPC_URL, MAINNET_RPC_URL
 except ImportError:
     TESTNET_RPC_URL= ["https://rpc.testnet.near.org", ]
     MAINNET_RPC_URL= ["https://rpc.mainnet.near.org", ]
+
+try:
+    from redis_info import REDIS_HOST, REDIS_PORT
+except ImportError:
+    REDIS_HOST = "127.0.0.1"
+    REDIS_PORT = "6379"
 
 try:
     from indexer_info import INDEXER_DSN, INDEXER_UID, INDEXER_PWD, INDEXER_HOST, INDEXER_PORT
@@ -32,6 +39,10 @@ except ImportError:
 
 class Cfg:
     NETWORK_ID = "MAINNET"
+    REDIS = {
+        "REDIS_HOST": REDIS_HOST,
+        "REDIS_PORT": REDIS_PORT,
+    }
     NETWORK = {
         "DEVNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
