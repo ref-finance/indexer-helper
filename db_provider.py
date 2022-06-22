@@ -57,7 +57,8 @@ def get_history_token_price(id_list: list) -> list:
     history_token_prices = list_history_token_price(Cfg.NETWORK_ID, id_list)
     for token_price in history_token_prices:
         if not token_price is None:
-            float_ratio = format_percentage(token_price['now_price'], token_price['history_price'])
+            token_price = json.loads(token_price)
+            float_ratio = format_percentage(float(token_price['now_price']), float(token_price['history_price']))
             if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in token_price['contract_address']:
                 if 2 == usn_flag:
                     new_usn = {
