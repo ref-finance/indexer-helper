@@ -7,7 +7,7 @@ from config import Cfg
 import json
 import time
 import sys
-from db_provider import add_token_price_to_db
+from db_provider import add_history_token_price
 
 def pool_price(network_id, tokens):
     # tokens = [{"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8}, ...]
@@ -144,11 +144,11 @@ def update_price(network_id):
                 if token["BASE_ID"] != "":
                     if token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
-                        add_token_price_to_db(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]])
+                        add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]], network_id)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
                 else:
-                    add_token_price_to_db(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["NEAR_ID"]])
+                    add_history_token_price(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["NEAR_ID"]], network_id)
     except Exception as e:
         print("Error occurred when update to db, Error is: ", e)
 
