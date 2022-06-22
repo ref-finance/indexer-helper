@@ -57,11 +57,11 @@ def get_history_token_price(id_list: list) -> list:
     history_token_prices = list_history_token_price(Cfg.NETWORK_ID, id_list)
     for token_price in history_token_prices:
         if not token_price is None:
-            float_ratio = format_percentage(float(token_price['now_price']), float(token_price['history_price']))
+            float_ratio = format_percentage(float(token_price['price']), float(token_price['history_price']))
             if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in token_price['contract_address']:
                 if 2 == usn_flag:
                     new_usn = {
-                        "price": token_price['now_price'],
+                        "price": token_price['price'],
                         "decimal": 18,
                         "symbol": "USN",
                         "float_ratio": float_ratio,
@@ -110,12 +110,12 @@ def add_history_token_price(contract_address, symbol, price, decimals, network_i
             old_price = old_rows["price"]
 
         history_token = {
-            "now_price": price,
+            "price": price,
             "history_price": old_price,
             "symbol": symbol,
             "datetime": now,
             "contract_address": contract_address,
-            "decimals": decimals
+            "decimal": decimals
         }
         redis_conn = RedisProvider()
         redis_conn.begin_pipe()
