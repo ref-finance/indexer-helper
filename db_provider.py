@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from config import Cfg
 import time
+from redis_provider import RedisProvider, list_history_token_price
 
 
 class Encoder(json.JSONEncoder):
@@ -49,62 +50,35 @@ def get_history_token_price(id_list: list) -> list:
             usn_flag = 2
         else:
             usn_flag = 3
+            id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usn' else i for i in
+                       id_list]
 
-    id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usn' else i for i in id_list]
-    conn = get_db_connect(Cfg.NETWORK_ID)
-    # Cursor object, set the return result with field name
-    cur = conn.cursor(cursor=pymysql.cursors.DictCursor)
-
-    # Executed SQL statement
-    # Query the latest price record according to the token
-    sql = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.`decimal`,a.`timestamp` as datetime," \
-          "1 as float_ratio from mk_history_token_price a where a.contract_address in %s " \
-          "order by a.`timestamp` desc) t GROUP BY t.contract_address"
-    # Query the price records 24 hours ago according to the token
-    sql2 = "select * from(select DISTINCT(a.contract_address) ,a.symbol,a.price,a.decimal," \
-           "from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s' ) AS datetime, 1 as float_ratio " \
-           "from mk_history_token_price a where a.contract_address in %s " \
-           "AND from_unixtime( a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') BETWEEN (CURRENT_TIMESTAMP-interval 1500 minute) " \
-           "and (CURRENT_TIMESTAMP-interval 1440 minute) " \
-           "order by from_unixtime(a.`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') desc) t GROUP BY t.contract_address"
-    # Data query
-    cur.execute(sql, (id_list,))
-    # Take out all result sets (current latest prices)
-    new_rows = cur.fetchall()
-    cur.execute(sql2, (id_list,))
-    # Take out all result sets (price records 24 hours ago)
-    old_rows = cur.fetchall()
-    # Close database link
-    conn.close()
-    for new in new_rows:
-        for old in old_rows:
-            if new['contract_address'] in old['contract_address']:
-                new_price = new['price']
-                old_price = old['price']
-                float_ratio = format_percentage(new_price, old_price)
-                new['float_ratio'] = float_ratio
-        if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in new['contract_address']:
-            if 2 == usn_flag:
-                new_usn = {
-                    "price": new['price'],
-                    "decimal": 18,
-                    "symbol": "USN",
-                    "float_ratio": new['float_ratio'],
-                    "timestamp": new['datetime'],
-                    "contract_address": "usn"
-                }
-                new_rows.append(new_usn)
-            elif 3 == usn_flag:
-                new['contract_address'] = "usn"
-                new['symbol'] = "USN"
-                new['decimal'] = 18
-
-    # Convert to JSON format
-    json_ret = json.dumps(new_rows, cls=Encoder)
-    return json_ret
+    ret = []
+    history_token_prices = list_history_token_price(Cfg.NETWORK_ID, id_list)
+    for token_price in history_token_prices:
+        if not token_price is None:
+            float_ratio = format_percentage(float(token_price['price']), float(token_price['history_price']))
+            if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in token_price['contract_address']:
+                if 2 == usn_flag:
+                    new_usn = {
+                        "price": token_price['price'],
+                        "decimal": 18,
+                        "symbol": "USN",
+                        "float_ratio": float_ratio,
+                        "timestamp": token_price['datetime'],
+                        "contract_address": "usn"
+                    }
+                    ret.append(new_usn)
+                elif 3 == usn_flag:
+                    token_price['contract_address'] = "usn"
+                    token_price['symbol'] = "USN"
+                    token_price['decimal'] = 18
+            token_price['float_ratio'] = float_ratio
+            ret.append(token_price)
+    return ret
 
 
-def add_token_price_to_db(contract_address, symbol, price, decimals):
+def add_history_token_price(contract_address, symbol, price, decimals, network_id):
     """
     Write the token price to the MySQL database
     """
@@ -114,18 +88,44 @@ def add_token_price_to_db(contract_address, symbol, price, decimals):
 
     # Get current timestamp
     now = int(time.time())
-    conn = get_db_connect(Cfg.NETWORK_ID)
+    before_time = now - (1 * 24 * 60 * 60)
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
           "`status`, `timestamp`) values(%s,%s,%s,%s, now(), now(), 1, %s) "
     par = (contract_address, symbol, price, decimals, now)
-    cursor = conn.cursor()
+    # Query the price records 24 hours ago according to the token
+    sql2 = "SELECT price FROM mk_history_token_price where contract_address = %s and `timestamp` < " \
+           "%s order by from_unixtime(`timestamp`, '%%Y-%%m-%%d %%H:%%i:%%s') desc limit 1"
+    par2 = (contract_address, before_time)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql, par)
         # Submit to database for execution
-        conn.commit()
+        db_conn.commit()
+
+        cursor.execute(sql2, par2)
+        old_rows = cursor.fetchone()
+        old_price = price
+        if old_rows is not None:
+            old_price = old_rows["price"]
+
+        history_token = {
+            "price": price,
+            "history_price": old_price,
+            "symbol": symbol,
+            "datetime": now,
+            "contract_address": contract_address,
+            "decimal": decimals
+        }
+        redis_conn = RedisProvider()
+        redis_conn.begin_pipe()
+        redis_conn.add_history_token_price(network_id, contract_address, json.dumps(history_token, cls=Encoder))
+        redis_conn.end_pipe()
+        redis_conn.close()
+
     except Exception as e:
         # Rollback on error
-        conn.rollback()
+        db_conn.rollback()
         print(e)
     finally:
         cursor.close()
@@ -157,5 +157,5 @@ def clear_token_price():
 
 if __name__ == '__main__':
     print("#########MAINNET###########")
-    clear_token_price()
-
+    # clear_token_price()
+    add_history_token_price("ref.fakes.testnet", "ref2", 1.003, 18, "MAINNET")
