@@ -54,7 +54,7 @@ def get_actions(network_id, account_id):
     cur=conn.cursor()
 
     now_time = int(time.time())
-    old_time = (now_time - (90 * 24 * 60 * 60)) * 1000000000
+    old_time = (now_time - (30 * 24 * 60 * 60)) * 1000000000
 
     sql1 = (
         "select " 
