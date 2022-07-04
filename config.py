@@ -74,6 +74,7 @@ class Cfg:
             "FARMING_CONTRACT": "v2.ref-farming.testnet",
             "REF_CONTRACT": "ref-finance-101.testnet",
             "XREF_CONTRACT": "xref.ref-dev.testnet",
+            "USDN_CONTRACT": "usdn.testnet",
             "REDIS_KEY": "FARMS_TESTNET",
             "REDIS_POOL_KEY": "POOLS_TESTNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET",
