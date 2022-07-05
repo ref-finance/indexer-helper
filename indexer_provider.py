@@ -57,40 +57,40 @@ def get_actions(network_id, account_id):
     old_time = (now_time - (30 * 24 * 60 * 60)) * 1000000000
 
     sql1 = (
-        "select " 
-        "included_in_block_timestamp as timestamp, " 
-        "originated_from_transaction_hash, "
-        "receiver_account_id, "
-        "args->>'method_name' as method_name, " 
-        "args->>'args_json' as args, " 
-        "args->>'deposit' as deposit, " 
-        "status "
-        "from action_receipt_actions join receipts using(receipt_id) "
-        "join execution_outcomes using(receipt_id) " 
-        "where action_kind = 'FUNCTION_CALL' and included_in_block_timestamp > %s and  ( " % old_time
+            "SELECT "
+            "included_in_block_timestamp as timestamp, "
+            "originated_from_transaction_hash, "
+            "receiver_account_id, "
+            "args->>'method_name' AS method_name, "
+            "args->>'args_json' AS args, "
+            "args->>'deposit' AS deposit, "
+            "status FROM (SELECT * FROM action_receipt_actions WHERE action_kind = 'FUNCTION_CALL' "
+            "AND receipt_included_in_block_timestamp > %s "
+            "AND receipt_predecessor_account_id = '%s' ) AS ara "
+            "JOIN receipts USING ( receipt_id ) "
+            "JOIN execution_outcomes USING ( receipt_id ) " % (old_time, account_id)
     )
 
-    sql2 = """(predecessor_account_id = %s and """ 
-    sql3 = "(receiver_account_id in ('%s', '%s', '%s', 'wrap.near', '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"], Cfg.NETWORK[network_id]["BOOSTFARM_CONTRACT"])
-    sql4 = "or (args->'args_json'->>'receiver_id' = 'aurora' and args->>'method_name' = 'ft_transfer_call') "
-    sql5 = "or (receiver_account_id = 'aurora' and args->>'method_name' = 'call') "
-    sql6 = "or args->'args_json'->>'receiver_id' in ('%s', '%s'))) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
-    sql7 = "or (predecessor_account_id = 'usn' and receiver_account_id = 'usn' and  args->>'method_name' in ('buy_with_price_callback', 'sell_with_price_callback') "
-    sql8 = """ and args->'args_json'->>'account' = %s )) """
-    sql9 = "order by timestamp desc limit 10"
-    sql = "%s %s %s %s %s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5, sql6, sql7, sql8, sql9)
+    sql2 = """WHERE predecessor_account_id = %s """
+    sql3 = "AND (receiver_account_id IN ('%s', '%s', '%s', 'wrap.near', '%s', '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"], Cfg.NETWORK[network_id]["BOOSTFARM_CONTRACT"], Cfg.NETWORK[network_id]["USN_CONTRACT"])
+    sql4 = "OR (args->'args_json'->>'receiver_id' IN ('aurora', '%s') AND args->>'method_name' = 'ft_transfer_call') " % Cfg.NETWORK[network_id]["USN_CONTRACT"]
+    sql5 = "OR (receiver_account_id = 'aurora' AND args->>'method_name' = 'call') "
+    sql6 = "OR args->'args_json'->>'receiver_id' IN ('%s', '%s')) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"])
+    sql7 = "order by timestamp desc limit 10"
+    sql = "%s %s %s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5, sql6, sql7)
 
-    cur.execute(sql, (account_id, account_id))
+    print("get_actions sql:", sql)
+    cur.execute(sql, (account_id, ))
     rows = cur.fetchall()
     conn.close()
 
     json_ret = json.dumps(rows, cls=DecimalEncoder)
     return json_ret
-    
+
 
 if __name__ == '__main__':
     print("#########MAINNET###########")
-    print(get_liquidity_pools("MAINNET", "reffer.near"))
-    print(get_actions("MAINNET", "reffer.near'); select version() -- "))
+    # print(get_liquidity_pools("MAINNET", "reffer.near"))
+    print(get_actions("MAINNET", "juaner.near"))
     # print("#########TESTNET###########")
     # print(get_liquidity_pools("TESTNET", "pika8.testnet"))
