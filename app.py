@@ -3,7 +3,7 @@
 __author__ = 'Marco'
 # Import flask class
 from http.client import responses
-from flask import Flask
+from flask import Flask, make_response
 from flask import request
 from flask import jsonify
 import flask_cors 
@@ -15,6 +15,7 @@ from redis_provider import list_pools_by_id_list, list_token_metadata, list_pool
 from utils import combine_pools_info
 from config import Cfg
 from db_provider import get_history_token_price
+import gzip
 
 service_version = "20220705.02"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
@@ -141,7 +142,11 @@ def handle_list_token():
     list_token
     """
     ret = list_token_metadata(Cfg.NETWORK_ID)
-    return jsonify(ret)
+    content = gzip.compress(json.dumps(ret).encode('utf8'), 5)
+    response = make_response(content)
+    response.headers['Content-length'] = len(content)
+    response.headers['Content-Encoding'] = 'gzip'
+    return response
 
 @app.route('/get-pool', methods=['GET'])
 @flask_cors.cross_origin()
