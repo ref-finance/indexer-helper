@@ -38,7 +38,7 @@ except ImportError:
 """
 
 class Cfg:
-    NETWORK_ID = "TESTNET"
+    NETWORK_ID = "MAINNET"
     REDIS = {
         "REDIS_HOST": REDIS_HOST,
         "REDIS_PORT": REDIS_PORT,
