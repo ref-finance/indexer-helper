@@ -1,4 +1,6 @@
-
+import gzip
+from flask import make_response
+import json
 
 def combine_pools_info(pools, prices, metadata):
     for pool in pools:
@@ -45,6 +47,14 @@ def combine_pools_info(pools, prices, metadata):
             else:
                 pool["token0_ref_price"] = "N/A"
     pass
+
+
+def compress_response_content(ret):
+    content = gzip.compress(json.dumps(ret).encode('utf8'), 5)
+    response = make_response(content)
+    response.headers['Content-length'] = len(content)
+    response.headers['Content-Encoding'] = 'gzip'
+    return response
 
 
 if __name__ == '__main__':
