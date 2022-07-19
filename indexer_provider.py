@@ -6,6 +6,8 @@ from config import Cfg
 import psycopg2
 import decimal
 import time
+import requests
+from redis_provider import RedisProvider
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -88,9 +90,55 @@ def get_actions(network_id, account_id):
     return json_ret
 
 
+def get_proposal_id_hash(network_id, proposal_id):
+    proposal_res_data = None
+    url = "https://api.thegraph.com/subgraphs/name/coolsnake/refsubgraph"
+
+    query = """query {
+                proposalCreates(where: {proposal_id: \"""" + str(proposal_id) + """\"}) {
+                proposal_id
+                receipt_id
+                }
+            }"""
+    ret = requests.post(url, json={'query': query}).content
+    ret_json = json.loads(ret)
+    proposal_data = ret_json["data"]["proposalCreates"]
+    if len(proposal_data) > 0:
+        receipt_id = proposal_data[0]["receipt_id"]
+        conn = psycopg2.connect(
+            database=Cfg.NETWORK[network_id]["INDEXER_DSN"],
+            user=Cfg.NETWORK[network_id]["INDEXER_UID"],
+            password=Cfg.NETWORK[network_id]["INDEXER_PWD"],
+            host=Cfg.NETWORK[network_id]["INDEXER_HOST"],
+            port=Cfg.NETWORK[network_id]["INDEXER_PORT"])
+        cur = conn.cursor()
+
+        sql = "select originated_from_transaction_hash from receipts where receipt_id = '%s'" % receipt_id
+        print("get_proposal_id_hash sql:", sql)
+        cur.execute(sql)
+        row = cur.fetchone()
+        conn.close()
+        if row is None:
+            return proposal_res_data
+        proposal_res_data = {
+                        "proposal_id": proposal_id,
+                        "receipt_id": receipt_id,
+                        "transaction_hash": "".join(row)
+                    }
+        proposal_res_data = json.dumps(proposal_res_data)
+        redis_conn = RedisProvider()
+        redis_conn.begin_pipe()
+        redis_conn.add_proposal_id_hash(network_id, proposal_id, proposal_res_data)
+        redis_conn.end_pipe()
+        redis_conn.close()
+
+    return proposal_res_data
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # print(get_liquidity_pools("MAINNET", "reffer.near"))
     print(get_actions("MAINNET", "juaner.near"))
     # print("#########TESTNET###########")
     # print(get_liquidity_pools("TESTNET", "pika8.testnet"))
+    print(get_proposal_id_hash("TESTNET"))
