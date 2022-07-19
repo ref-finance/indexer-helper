@@ -39,6 +39,7 @@ except ImportError:
 
 class Cfg:
     NETWORK_ID = "MAINNET"
+    REFSUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/coolsnake/refsubgraph"
     REDIS = {
         "REDIS_HOST": REDIS_HOST,
         "REDIS_PORT": REDIS_PORT,
