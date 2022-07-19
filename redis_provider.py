@@ -1,3 +1,5 @@
+import json
+
 from config import Cfg
 import redis
 
@@ -134,11 +136,16 @@ def list_token_metadata(network_id):
     return metadata_obj
 
 
-def get_proposal_hash_by_id(network_id, proposal_id):
+def get_proposal_hash_by_id(network_id: str, id_list: list) -> list:
+    proposal_list = []
     r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], proposal_id)
+    ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], id_list)
     r.close()
-    return ret
+    try:
+        proposal_list = [json.loads(x) if x is not None else None for x in ret]
+    except Exception as e:
+        print(e)
+    return proposal_list
 
 
 def list_whitelist(network_id):

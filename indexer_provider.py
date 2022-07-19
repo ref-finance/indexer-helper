@@ -8,6 +8,8 @@ import decimal
 import time
 import requests
 from redis_provider import RedisProvider
+from config import Cfg
+from psycopg2.extras import RealDictCursor
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
@@ -90,12 +92,12 @@ def get_actions(network_id, account_id):
     return json_ret
 
 
-def get_proposal_id_hash(network_id, proposal_id):
-    proposal_res_data = None
-    url = "https://api.thegraph.com/subgraphs/name/coolsnake/refsubgraph"
-
+def get_proposal_id_hash(network_id, id_list):
+    proposal_res_data = []
+    url = Cfg.REFSUBGRAPH_URL
+    id_list = str(id_list).replace("'", """\"""")
     query = """query {
-                proposalCreates(where: {proposal_id: \"""" + str(proposal_id) + """\"}) {
+                proposalCreates(where: {proposal_id_in: """ + id_list + """}) {
                 proposal_id
                 receipt_id
                 }
@@ -103,35 +105,38 @@ def get_proposal_id_hash(network_id, proposal_id):
     ret = requests.post(url, json={'query': query}).content
     ret_json = json.loads(ret)
     proposal_data = ret_json["data"]["proposalCreates"]
+    receipt_id_str = ""
     if len(proposal_data) > 0:
-        receipt_id = proposal_data[0]["receipt_id"]
+        for proposal in proposal_data:
+            receipt_id_str += "'" + (proposal["receipt_id"]) + "',"
+            proposal_res = {
+                                "proposal_id": proposal["proposal_id"],
+                                "receipt_id": proposal["receipt_id"],
+                                "transaction_hash": ""
+                            }
+            proposal_res_data.append(proposal_res)
         conn = psycopg2.connect(
             database=Cfg.NETWORK[network_id]["INDEXER_DSN"],
             user=Cfg.NETWORK[network_id]["INDEXER_UID"],
             password=Cfg.NETWORK[network_id]["INDEXER_PWD"],
             host=Cfg.NETWORK[network_id]["INDEXER_HOST"],
             port=Cfg.NETWORK[network_id]["INDEXER_PORT"])
-        cur = conn.cursor()
-
-        sql = "select originated_from_transaction_hash from receipts where receipt_id = '%s'" % receipt_id
-        print("get_proposal_id_hash sql:", sql)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        sql = "select receipt_id, originated_from_transaction_hash from receipts where receipt_id in (%s)" % receipt_id_str[:-1]
         cur.execute(sql)
-        row = cur.fetchone()
+        rows = cur.fetchall()
         conn.close()
-        if row is None:
-            return proposal_res_data
-        proposal_res_data = {
-                        "proposal_id": proposal_id,
-                        "receipt_id": receipt_id,
-                        "transaction_hash": "".join(row)
-                    }
-        proposal_res_data = json.dumps(proposal_res_data)
+        for proposal_pg in rows:
+            for proposal_ret in proposal_res_data:
+                if proposal_pg["receipt_id"] in proposal_ret["receipt_id"]:
+                    proposal_ret["transaction_hash"] = proposal_pg["originated_from_transaction_hash"]
+
         redis_conn = RedisProvider()
         redis_conn.begin_pipe()
-        redis_conn.add_proposal_id_hash(network_id, proposal_id, proposal_res_data)
+        for pps in proposal_res_data:
+            redis_conn.add_proposal_id_hash(network_id, pps["proposal_id"], json.dumps(pps))
         redis_conn.end_pipe()
         redis_conn.close()
-
     return proposal_res_data
 
 
