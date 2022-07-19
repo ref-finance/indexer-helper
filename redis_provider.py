@@ -133,6 +133,14 @@ def list_token_metadata(network_id):
         metadata_obj[key] = json.loads(value)
     return metadata_obj
 
+
+def get_proposal_hash_by_id(network_id, proposal_id):
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], proposal_id)
+    r.close()
+    return ret
+
+
 def list_whitelist(network_id):
     '''
     return:
@@ -217,7 +225,10 @@ class RedisProvider(object):
 
     def list_farms(self, network_id):
         return self.r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])
-    
+
+    def add_proposal_id_hash(self, network_id, proposal_id, proposal_hash):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], proposal_id, proposal_hash)
+
     def close(self):
         self.r.close()
 
