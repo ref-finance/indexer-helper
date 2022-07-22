@@ -31,7 +31,7 @@ def get_liquidity_pools(network_id: str, account_id: str) ->list:
         "select included_in_block_timestamp as timestamp, " 
         "convert_from(decode(args->>'args_base64', 'base64'), 'UTF8')::json->>'pool_id' as pool_id " 
         "from action_receipt_actions join receipts using(receipt_id) " 
-        "where (action_kind = 'FUNCTION_CALL' and args->>'method_name' = 'add_liquidity'" 
+        "where (action_kind = 'FUNCTION_CALL' and args->>'method_name' in ('add_liquidity', 'add_stable_liquidity')"
     )
     sql2 = "and receiver_account_id = '%s' " % Cfg.NETWORK[network_id]["REF_CONTRACT"]
     sql3 = """and predecessor_account_id = %s) order by timestamp desc """

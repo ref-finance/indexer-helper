@@ -20,9 +20,13 @@ def list_pools_by_id_list(network_id: str, id_list: list) ->list:
 def list_pools_by_tokens(network_id: str, token1: str, token2: str) ->list:
     import json
     list_pools = []
-    token_str = "{%s}-{%s}" % (token1, token2)
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], token_str)
+    id_list = []
+    id_list.append(token1)
+    id_list.append(token2)
+    sorted_tp = sorted(id_list)
+    key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], key)
     r.close()
     try:
         list_pools = json.loads(ret)
