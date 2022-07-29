@@ -1,3 +1,5 @@
+import json
+
 from config import Cfg
 import redis
 
@@ -18,9 +20,13 @@ def list_pools_by_id_list(network_id: str, id_list: list) ->list:
 def list_pools_by_tokens(network_id: str, token1: str, token2: str) ->list:
     import json
     list_pools = []
-    token_str = "{%s}-{%s}" % (token1, token2)
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], token_str)
+    id_list = []
+    id_list.append(token1)
+    id_list.append(token2)
+    sorted_tp = sorted(id_list)
+    key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], key)
     r.close()
     try:
         list_pools = json.loads(ret)
@@ -133,6 +139,19 @@ def list_token_metadata(network_id):
         metadata_obj[key] = json.loads(value)
     return metadata_obj
 
+
+def get_proposal_hash_by_id(network_id: str, id_list: list) -> list:
+    proposal_list = []
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], id_list)
+    r.close()
+    try:
+        proposal_list = [json.loads(x) if x is not None else None for x in ret]
+    except Exception as e:
+        print(e)
+    return proposal_list
+
+
 def list_whitelist(network_id):
     '''
     return:
@@ -217,7 +236,10 @@ class RedisProvider(object):
 
     def list_farms(self, network_id):
         return self.r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])
-    
+
+    def add_proposal_id_hash(self, network_id, proposal_id, proposal_hash):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], proposal_id, proposal_hash)
+
     def close(self):
         self.r.close()
 

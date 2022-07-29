@@ -9,15 +9,16 @@ from flask import jsonify
 import flask_cors 
 import json
 import logging
-from indexer_provider import get_actions, get_liquidity_pools
+from indexer_provider import get_actions, get_liquidity_pools, get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price 
-from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_price_by_id_list
+from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
+from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id
 from utils import combine_pools_info, compress_response_content
 from config import Cfg
 from db_provider import get_history_token_price
 
 
-service_version = "20220715.01"
+service_version = "20220729.01"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
@@ -297,7 +298,6 @@ def handle_to_coingecko():
 @app.route('/list-history-token-price-by-ids', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_history_token_price_by_ids():
-
     ids = request.args.get("ids", "")
     ids = ("|" + ids.lstrip("|").rstrip("|") + "|")
     id_str_list = ids.lstrip("|").rstrip("|").split("|")
@@ -310,6 +310,27 @@ def handle_history_token_price_by_ids():
 @flask_cors.cross_origin()
 def get_service_version():
     return jsonify(service_version)
+
+
+@app.route('/get-proposal-hash-by-id', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_proposal_hash():
+    ret = []
+    proposal_id = request.args.get("proposal_id")
+    if proposal_id is None:
+        return ret
+    proposal_id_list = []
+    ids = ("|" + proposal_id.lstrip("|").rstrip("|") + "|")
+    id_str_list = ids.lstrip("|").rstrip("|").split("|")
+    res = get_proposal_hash_by_id(Cfg.NETWORK_ID, id_str_list)
+    for proposal in res:
+        if not proposal is None:
+            proposal_id_list.append(proposal["proposal_id"])
+            ret.append(proposal)
+    difference_set = list(set(id_str_list).difference(set(proposal_id_list)))
+    if len(difference_set) > 0:
+        ret += get_proposal_id_hash(Cfg.NETWORK_ID, difference_set)
+    return compress_response_content(ret)
 
 
 if __name__ == '__main__':

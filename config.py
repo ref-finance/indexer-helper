@@ -39,6 +39,7 @@ except ImportError:
 
 class Cfg:
     NETWORK_ID = "MAINNET"
+    REFSUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/coolsnake/refsubgraph"
     REDIS = {
         "REDIS_HOST": REDIS_HOST,
         "REDIS_PORT": REDIS_PORT,
@@ -81,6 +82,7 @@ class Cfg:
             "REDIS_TOP_POOL_KEY": "TOP_POOLS_TESTNET",
             "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_TESTNET",
             "REDIS_HISTORY_TOKEN_PRICE_KEY": "HISTORY_TOKEN_PRICE_TESTNET",
+            "REDIS_PROPOSAL_ID_HASH_KEY": "PROPOSAL_ID_HASH_TESTNET",
             "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_TESTNET",
             "REDIS_WHITELIST_KEY": "WHITELIST_TESTNET",
             "INDEXER_DSN": "testnet_explorer",
@@ -107,6 +109,7 @@ class Cfg:
             "REDIS_TOP_POOL_KEY": "TOP_POOLS_MAINNET",
             "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_MAINNET",
             "REDIS_HISTORY_TOKEN_PRICE_KEY": "HISTORY_TOKEN_PRICE_MAINNET",
+            "REDIS_PROPOSAL_ID_HASH_KEY": "PROPOSAL_ID_HASH_MAINNET",
             "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_MAINNET",
             "REDIS_WHITELIST_KEY": "WHITELIST_MAINNET",
             "INDEXER_DSN": INDEXER_DSN,
@@ -174,7 +177,7 @@ class Cfg:
             {"SYMBOL": "cUSD", "NEAR_ID": "cusd.fakes.testnet", "MD_ID": "celo-dollar", "DECIMAL": 24},
             {"SYMBOL": "STNEAR", "NEAR_ID": "meta-v2.pool.testnet", "MD_ID": "ref-finance-101.testnet|568|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.testnet", "MD_ID": "ref-finance-101.testnet|571|wrap.testnet", "DECIMAL": 24},
-            {"SYMBOL": "NearX", "NEAR_ID": "nearx.stader-labs.near", "MD_ID": "dev-1656877137694-34571929023079|NA|wrap.testnet", "DECIMAL": 24},
+            {"SYMBOL": "NEARX", "NEAR_ID": "dev-1656877137694-34571929023079", "MD_ID": "dev-1656877137694-34571929023079|NA|wrap.testnet", "DECIMAL": 24},
         ],
         "MAINNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.near", "MD_ID": "near", "DECIMAL": 24},
