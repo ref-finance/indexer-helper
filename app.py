@@ -350,10 +350,3 @@ if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
     app.logger.info(Welcome)
     app.run(host='0.0.0.0', port=28080, debug=False)
-    # data = "tes<script>t"
-    # for v in data.values():
-    #     v = str(v).lower()
-    #     pattern = r"\b(<script>|</script>)\b|(\*|;)"
-    #     r = re.search(pattern, v)
-    #     if r:
-    #         print('Please enter the parameters of the specification!')
