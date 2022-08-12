@@ -16,12 +16,25 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id
 from utils import combine_pools_info, compress_response_content
 from config import Cfg
 from db_provider import get_history_token_price
+import re
 
 
-service_version = "20220729.01"
+service_version = "20220811.01"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
+
+
+@app.before_request
+def before_request():
+    # Processing get requests
+    data = request.args
+    for v in data.values():
+        v = str(v).lower()
+        pattern = r"(<script>|</script>)|(\*|;)"
+        r = re.search(pattern, v)
+        if r:
+            return 'Please enter the parameters of the specification!'
 
 
 # route()Method is used to set the route; Similar to spring routing configuration
