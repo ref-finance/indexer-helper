@@ -38,6 +38,18 @@ def pool_price(network_id, tokens):
                 except Exception as e:
                     print("get_nearx_price error:", e)
                     continue
+            elif token["NEAR_ID"] == "xtoken.ref-finance.near":
+                try:
+                    # print("statr get_virtual_price")
+                    ret = conn.view_call(src, "get_virtual_price", "NA".encode(encoding='utf-8'))
+                    # print("get_virtual_price ret:", ret)
+                    json_str = "".join([chr(x) for x in ret["result"]])
+                    # print("get_virtual_price ret result:", json_str)
+                    price = json.loads(json_str)
+                    # print("get_virtual_price price:", price)
+                except Exception as e:
+                    print("get_virtual_price error:", e)
+                    continue
             else:
                 ret = conn.view_call(
                     src,
@@ -124,6 +136,11 @@ def update_price(network_id):
 
     try:
         if len(tokens_price) > 0:
+            ref_token_price = 0
+            for token in tokens_price:
+                if token["BASE_ID"] != "":
+                    if token["BASE_ID"] in price_ref and token["NEAR_ID"] == "token.v2.ref-finance.near":
+                        ref_token_price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
             conn = RedisProvider()
             conn.begin_pipe()
             for token in tokens_price:
@@ -131,7 +148,10 @@ def update_price(network_id):
                 if token["BASE_ID"] != "":
                     if token["BASE_ID"] in price_ref:
                         # print(int(token["price"]) / int("1"*decimals[token["BASE_ID"]]))
-                        price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+                        if token["NEAR_ID"] == "xtoken.ref-finance.near":
+                            price = int(token["price"]) / 100000000 * ref_token_price
+                        else:
+                            price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
                         # print(token["NEAR_ID"], "%.08f" % price)
                         conn.add_token_price(network_id, token["NEAR_ID"], "%.08f" % price)
                     else:
