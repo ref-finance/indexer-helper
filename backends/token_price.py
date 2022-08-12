@@ -169,7 +169,10 @@ def update_price(network_id):
             for token in tokens_price:
                 if token["BASE_ID"] != "":
                     if token["BASE_ID"] in price_ref:
-                        price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+                        if token["NEAR_ID"] == "xtoken.ref-finance.near":
+                            price = int(token["price"]) / 100000000 * ref_token_price
+                        else:
+                            price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
                         add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]], network_id)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
