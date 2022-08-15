@@ -136,22 +136,19 @@ def update_price(network_id):
 
     try:
         if len(tokens_price) > 0:
-            ref_token_price = 0
-            for token in tokens_price:
-                if token["BASE_ID"] != "":
-                    if token["BASE_ID"] in price_ref and token["NEAR_ID"] == "token.v2.ref-finance.near":
-                        ref_token_price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
             conn = RedisProvider()
             conn.begin_pipe()
             for token in tokens_price:
                 # print(md2contract[md_id], str(value["usd"]))
                 if token["BASE_ID"] != "":
-                    if token["BASE_ID"] in price_ref:
-                        # print(int(token["price"]) / int("1"*decimals[token["BASE_ID"]]))
-                        if token["NEAR_ID"] == "xtoken.ref-finance.near":
+                    if token["NEAR_ID"] == "xtoken.ref-finance.near":
+                        ref_token_price = get_base_id_price(tokens_price, price_ref, decimals, token["BASE_ID"])
+                        if ref_token_price > 0:
                             price = int(token["price"]) / 100000000 * ref_token_price
-                        else:
-                            price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+                            conn.add_token_price(network_id, token["NEAR_ID"], "%.08f" % price)
+                    elif token["BASE_ID"] in price_ref:
+                        # print(int(token["price"]) / int("1"*decimals[token["BASE_ID"]]))
+                        price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
                         # print(token["NEAR_ID"], "%.08f" % price)
                         conn.add_token_price(network_id, token["NEAR_ID"], "%.08f" % price)
                     else:
@@ -168,11 +165,13 @@ def update_price(network_id):
         if len(tokens_price) > 0:
             for token in tokens_price:
                 if token["BASE_ID"] != "":
-                    if token["BASE_ID"] in price_ref:
-                        if token["NEAR_ID"] == "xtoken.ref-finance.near":
+                    if token["NEAR_ID"] == "xtoken.ref-finance.near":
+                        ref_token_price = get_base_id_price(tokens_price, price_ref, decimals, token["BASE_ID"])
+                        if ref_token_price > 0:
                             price = int(token["price"]) / 100000000 * ref_token_price
-                        else:
-                            price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+                            add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]], network_id)
+                    elif token["BASE_ID"] in price_ref:
+                        price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
                         add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]], network_id)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
@@ -180,6 +179,16 @@ def update_price(network_id):
                     add_history_token_price(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["NEAR_ID"]], network_id)
     except Exception as e:
         print("Error occurred when update to db, Error is: ", e)
+
+
+def get_base_id_price(tokens_price, price_ref, decimals, base_id):
+    ref_token_price = 0
+    for token in tokens_price:
+        if token["BASE_ID"] != "":
+            if token["BASE_ID"] in price_ref and token["NEAR_ID"] == base_id:
+                ref_token_price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(
+                    price_ref[token["BASE_ID"]])
+    return ref_token_price
 
 
 if __name__ == '__main__':
