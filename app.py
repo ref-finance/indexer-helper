@@ -18,7 +18,7 @@ from config import Cfg
 from db_provider import get_history_token_price
 
 
-service_version = "20220812.01"
+service_version = "20220815.01"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)

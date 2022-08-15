@@ -150,6 +150,7 @@ class Cfg:
             {"SYMBOL": "cUSD", "NEAR_ID": "cusd.fakes.testnet", "MD_ID": "celo-dollar", "DECIMAL": 24},
             {"SYMBOL": "STNEAR", "NEAR_ID": "meta-v2.pool.testnet", "MD_ID": "exchange.ref-dev.testnet|621|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.testnet", "MD_ID": "exchange.ref-dev.testnet|622|wrap.testnet", "DECIMAL": 24},
+            {"SYMBOL": "xREF", "NEAR_ID": "xref.ref-dev.testnet", "MD_ID": "xref.ref-dev.testnet|NA|wrap.near", "DECIMAL": 18},
         ],
         "TESTNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.testnet", "MD_ID": "near", "DECIMAL": 24},
@@ -178,6 +179,7 @@ class Cfg:
             {"SYMBOL": "STNEAR", "NEAR_ID": "meta-v2.pool.testnet", "MD_ID": "ref-finance-101.testnet|568|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.testnet", "MD_ID": "ref-finance-101.testnet|571|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "NEARX", "NEAR_ID": "dev-1656877137694-34571929023079", "MD_ID": "dev-1656877137694-34571929023079|NA|wrap.testnet", "DECIMAL": 24},
+            {"SYMBOL": "xREF", "NEAR_ID": "xref.ref-finance.testnet", "MD_ID": "xref.ref-finance.testnet|NA|wrap.near", "DECIMAL": 18},
         ],
         "MAINNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.near", "MD_ID": "near", "DECIMAL": 24},
