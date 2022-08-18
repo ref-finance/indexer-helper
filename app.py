@@ -17,12 +17,19 @@ from utils import combine_pools_info, compress_response_content
 from config import Cfg
 from db_provider import get_history_token_price
 import re
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 
-service_version = "20220815.02"
+service_version = "20220818.01"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
+limiter = Limiter(
+    app,
+    key_func=get_remote_address,
+    default_limits=["100 per minute"]
+)
 
 
 @app.before_request
@@ -42,8 +49,10 @@ def before_request():
 def hello_world():
     return Welcome
 
+
 @app.route('/timestamp', methods=['GET'])
 @flask_cors.cross_origin()
+@limiter.limit("1/5 second")
 def handle_timestamp():
     import time
     return jsonify({"ts": int(time.time())})
@@ -321,6 +330,7 @@ def handle_history_token_price_by_ids():
 
 @app.route('/get-service-version', methods=['GET'])
 @flask_cors.cross_origin()
+@limiter.limit("1/minute")
 def get_service_version():
     return jsonify(service_version)
 
