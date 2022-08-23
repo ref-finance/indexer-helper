@@ -27,9 +27,10 @@ def get_liquidity_pools(network_id: str, account_id: str) ->list:
     cur=conn.cursor() 
 
     sql1 = (
-        "select distinct pool_id from ( " 
+        "select distinct args_json, args_base64 from ( " 
         "select included_in_block_timestamp as timestamp, " 
-        "convert_from(decode(args->>'args_base64', 'base64'), 'UTF8')::json->>'pool_id' as pool_id " 
+        "args->'args_json' as args_json, "
+        "args->'args_base64' as args_base64 " 
         "from action_receipt_actions join receipts using(receipt_id) " 
         "where (action_kind = 'FUNCTION_CALL' and args->>'method_name' in ('add_liquidity', 'add_stable_liquidity')"
     )
@@ -42,7 +43,23 @@ def get_liquidity_pools(network_id: str, account_id: str) ->list:
     rows = cur.fetchall()
     conn.close()
 
-    return [row[0] for row in rows if row[0] ]
+    ids = set() 
+
+    for i,row in enumerate(rows):
+        # there is no args_json to read from
+        # then get it from ascii vec
+        if not row[0]:
+            res = ""
+            for i in row[1]:
+                res = res + chr(i)
+
+            json_ = json.loads(res)
+            ids.add(json_['pool_id'])
+        else:
+            # get value from args_json directly
+            ids.add(row[0]['pool_id'])
+
+    return list(ids)
 
 
 def get_actions(network_id, account_id):
