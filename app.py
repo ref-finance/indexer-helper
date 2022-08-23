@@ -13,11 +13,12 @@ from indexer_provider import get_actions, get_liquidity_pools, get_proposal_id_h
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price 
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id
-from utils import combine_pools_info, compress_response_content, get_remote_address
+from utils import combine_pools_info, compress_response_content
 from config import Cfg
 from db_provider import get_history_token_price
 import re
 from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 
 service_version = "20220822.01"
@@ -27,7 +28,8 @@ app = Flask(__name__)
 limiter = Limiter(
     app,
     key_func=get_remote_address,
-    default_limits=["100 per minute"]
+    default_limits=["100 per minute"],
+    storage_uri="redis://:@127.0.0.1:6379/2"
 )
 
 

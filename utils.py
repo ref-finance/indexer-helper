@@ -58,14 +58,6 @@ def compress_response_content(ret):
     return response
 
 
-def get_remote_address():
-    if request.headers.getlist("X-Forwarded-For"):
-        ip = request.headers.getlist("X-Forwarded-For")[0]
-    else:
-        ip = request.remote_addr
-    return ip
-
-
 if __name__ == '__main__':
     from config import Cfg
     from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata
