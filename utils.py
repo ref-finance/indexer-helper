@@ -1,6 +1,7 @@
 import gzip
 from flask import make_response
 import json
+from flask import request
 
 def combine_pools_info(pools, prices, metadata):
     for pool in pools:
@@ -55,6 +56,14 @@ def compress_response_content(ret):
     response.headers['Content-length'] = len(content)
     response.headers['Content-Encoding'] = 'gzip'
     return response
+
+
+def get_ip_address():
+    if request.headers.getlist("X-Forwarded-For"):
+        ip_address = request.headers.getlist("X-Forwarded-For")[0]
+    else:
+        ip_address = request.remote_addr
+    return ip_address
 
 
 if __name__ == '__main__':
