@@ -20,14 +20,14 @@ import re
 from flask_limiter import Limiter
 
 
-service_version = "20220901.01"
+service_version = "20220907.01"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
 limiter = Limiter(
     app,
     key_func=get_ip_address,
-    default_limits=["100 per minute"],
+    default_limits=["20 per second"],
     storage_uri="redis://:@127.0.0.1:6379/2"
 )
 
@@ -330,7 +330,7 @@ def handle_history_token_price_by_ids():
 
 @app.route('/get-service-version', methods=['GET'])
 @flask_cors.cross_origin()
-@limiter.limit("1/minute")
+@limiter.limit("1/second")
 def get_service_version():
     return jsonify(service_version)
 
