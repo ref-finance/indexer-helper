@@ -63,7 +63,8 @@ def get_ip_address():
         ip_address = request.headers.getlist("X-Forwarded-For")[0]
     else:
         ip_address = request.remote_addr
-    return ip_address
+    ip_address = ip_address.split(", ")
+    return ip_address[0]
 
 
 if __name__ == '__main__':
