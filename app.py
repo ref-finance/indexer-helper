@@ -134,6 +134,11 @@ def handle_list_token_price():
             "decimal": 18,
             "symbol": "USN",
         }
+        ret["usdt.tether-token.near"] = {
+            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
+            "decimal": 6,
+            "symbol": "USDt",
+        }
     # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
     if "token.v2.ref-finance.near" in ret:
         ret["rftt.tkn.near"] = {
