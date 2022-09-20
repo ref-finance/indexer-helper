@@ -52,6 +52,15 @@ def get_history_token_price(id_list: list) -> list:
             usn_flag = 3
             id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usn' else i for i in
                        id_list]
+    usdt_flag = 1
+    # Special treatment of USN to determine whether USN is included in the input parameter
+    if "usdt.tether-token.near" in id_list:
+        if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in id_list:
+            usdt_flag = 2
+        else:
+            usdt_flag = 3
+            id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usdt.tether-token.near'
+                       else i for i in id_list]
 
     ret = []
     history_token_prices = list_history_token_price(Cfg.NETWORK_ID, id_list)
@@ -62,6 +71,7 @@ def get_history_token_price(id_list: list) -> list:
                 if 2 == usn_flag:
                     new_usn = {
                         "price": token_price['price'],
+                        "history_price": token_price['history_price'],
                         "decimal": 18,
                         "symbol": "USN",
                         "float_ratio": float_ratio,
@@ -73,6 +83,22 @@ def get_history_token_price(id_list: list) -> list:
                     token_price['contract_address'] = "usn"
                     token_price['symbol'] = "USN"
                     token_price['decimal'] = 18
+
+                if 2 == usdt_flag:
+                    new_usdt = {
+                        "price": token_price['price'],
+                        "history_price": token_price['history_price'],
+                        "decimal": 6,
+                        "symbol": "USDt",
+                        "float_ratio": float_ratio,
+                        "timestamp": token_price['datetime'],
+                        "contract_address": "usdt.tether-token.near"
+                    }
+                    ret.append(new_usdt)
+                elif 3 == usdt_flag:
+                    token_price['contract_address'] = "usdt.tether-token.near"
+                    token_price['symbol'] = "USDt"
+                    token_price['decimal'] = 6
             token_price['float_ratio'] = float_ratio
             ret.append(token_price)
     return ret

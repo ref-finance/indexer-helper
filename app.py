@@ -20,7 +20,7 @@ import re
 from flask_limiter import Limiter
 
 
-service_version = "20220913.01"
+service_version = "20220920.01"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
@@ -156,6 +156,7 @@ def handle_list_token_price_by_ids():
     """
     ids = request.args.get("ids", "") 
     ids = ("|"+ids.lstrip("|").rstrip("|")+"|").replace("|usn|", "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|", "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
     id_str_list = ids.lstrip("|").rstrip("|").split("|")
 
     prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])
