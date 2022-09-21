@@ -30,7 +30,7 @@ def pool_price(network_id, tokens):
                 except Exception as e:
                     print("get_rated_pool error:", e)
                     continue
-            elif token["NEAR_ID"] == "nearx.stader-labs.near":
+            elif token["NEAR_ID"] == "nearx.stader-labs.near" or token["NEAR_ID"] == "v2-nearx.stader-labs.near":
                 try:
                     ret = conn.view_call(src, "get_nearx_price", "NA".encode(encoding='utf-8'))
                     json_str = "".join([chr(x) for x in ret["result"]])
