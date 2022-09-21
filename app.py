@@ -107,6 +107,8 @@ def handle_get_token_price():
     """
     token_contract_id = request.args.get("token_id", "N/A") 
     ret = {"token_contract_id": token_contract_id}
+    if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
+        token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
     ret["price"] = get_token_price(Cfg.NETWORK_ID, token_contract_id)
     if ret["price"] is None:
         ret["price"] = "N/A"
