@@ -130,7 +130,9 @@ def internal_get_pools(network_id: str) ->list:
             pool["token_symbols"] = []
             for x in pool["token_account_ids"]:
                 if x in token_metadata:
-                    pool["token_symbols"].append(token_metadata[x]["symbol"])
+                    if token_metadata[x] != "":
+                        pool["token_symbols"].append(token_metadata[x]["symbol"])
+                    # pool["token_symbols"].append(token_metadata[x]["symbol"])
                 else:
                     time.sleep(0.1)
                     metadata_obj = internal_get_token_metadata(conn, x)
@@ -182,7 +184,12 @@ def internal_pools_to_redis(network_id: str, pools: list):
                 # gen tops
                 # key = "{%s}-{%s}" % (pool["token_account_ids"][0], pool["token_account_ids"][1])
                 sorted_tp = sorted(pool["token_account_ids"])
-                key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
+                key = ""
+                for k in range(0, len(sorted_tp)):
+                    key = key + "{" + sorted_tp[k] + "}-"
+                    if k == len(sorted_tp) - 1:
+                        key = key[:-1]
+                # key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
                 pool["id"] = "%s" % i
                 if key in tops:
                     max_k = int(tops[key]["amounts"][0]) * int(tops[key]["amounts"][1])

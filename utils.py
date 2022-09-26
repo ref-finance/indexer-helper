@@ -12,7 +12,11 @@ def combine_pools_info(pools, prices, metadata):
         valid_token_tvl = 0
         valid_token_price = 0
         for i in range(len(tokens)):
-            balance = float(pool['amounts'][i]) / (10 ** metadata[tokens[i]]["decimals"])
+            if metadata[tokens[i]] != "":
+                balance = float(pool['amounts'][i]) / (10 ** metadata[tokens[i]]["decimals"])
+            else:
+                balance = 0
+            # balance = float(pool['amounts'][i]) / (10 ** metadata[tokens[i]]["decimals"])
             token_balances.append(balance)
             if tokens[i] in prices:
                 # record latest valid token_price
