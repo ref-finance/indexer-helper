@@ -20,7 +20,7 @@ import re
 from flask_limiter import Limiter
 
 
-service_version = "20220920.01"
+service_version = "20220927.01"
 Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
