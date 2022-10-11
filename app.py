@@ -1,27 +1,28 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
+
 # Import flask class
 from http.client import responses
 from flask import Flask
 from flask import request
 from flask import jsonify
-import flask_cors 
+import flask_cors
 import json
 import logging
 from indexer_provider import get_actions, get_liquidity_pools, get_proposal_id_hash
-from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price 
+from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id
-from utils import combine_pools_info, compress_response_content, get_ip_address
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter
 from config import Cfg
 from db_provider import get_history_token_price
 import re
 from flask_limiter import Limiter
 
-
-service_version = "20220927.01"
-Welcome = 'Welcome to ref datacenter API server, version '+service_version+', indexer %s' % Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
+service_version = "20221011.01"
+Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
+          Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
 limiter = Limiter(
@@ -70,7 +71,7 @@ def handle_latest_actions(account_id):
         json_obj = json.loads(ret)
     except Exception as e:
         print("Exception when get_actions: ", e)
-        
+
     return compress_response_content(json_obj)
 
 
@@ -87,8 +88,9 @@ def handle_liquidity_pools(account_id):
             ret = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_list])
     except Exception as e:
         print("Exception when get_liquidity_pools: ", e)
-    
+
     return compress_response_content(ret)
+
 
 @app.route('/list-farms', methods=['GET'])
 @flask_cors.cross_origin()
@@ -99,13 +101,14 @@ def handle_list_farms():
     ret = list_farms(Cfg.NETWORK_ID)
     return compress_response_content(ret)
 
+
 @app.route('/get-token-price', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_get_token_price():
     """
     list_token_price
     """
-    token_contract_id = request.args.get("token_id", "N/A") 
+    token_contract_id = request.args.get("token_id", "N/A")
     ret = {"token_contract_id": token_contract_id}
     if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
         token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
@@ -113,6 +116,7 @@ def handle_get_token_price():
     if ret["price"] is None:
         ret["price"] = "N/A"
     return compress_response_content(ret)
+
 
 @app.route('/list-token-price', methods=['GET'])
 @flask_cors.cross_origin()
@@ -125,14 +129,14 @@ def handle_list_token_price():
     for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
         if token["NEAR_ID"] in prices:
             ret[token["NEAR_ID"]] = {
-                "price": prices[token["NEAR_ID"]], 
+                "price": prices[token["NEAR_ID"]],
                 "decimal": token["DECIMAL"],
                 "symbol": token["SYMBOL"],
             }
     # if usdt exists, mirror its price to USN
     if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
         ret["usn"] = {
-            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"], 
+            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
             "decimal": 18,
             "symbol": "USN",
         }
@@ -144,11 +148,12 @@ def handle_list_token_price():
     # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
     if "token.v2.ref-finance.near" in ret:
         ret["rftt.tkn.near"] = {
-            "price": prices["token.v2.ref-finance.near"], 
+            "price": prices["token.v2.ref-finance.near"],
             "decimal": 8,
             "symbol": "RFTT",
         }
     return compress_response_content(ret)
+
 
 @app.route('/list-token-price-by-ids', methods=['GET'])
 @flask_cors.cross_origin()
@@ -156,15 +161,18 @@ def handle_list_token_price_by_ids():
     """
     list_token_price_by_ids
     """
-    ids = request.args.get("ids", "") 
-    ids = ("|"+ids.lstrip("|").rstrip("|")+"|").replace("|usn|", "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
-    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|", "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    ids = request.args.get("ids", "")
+    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|",
+                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|",
+                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
     id_str_list = ids.lstrip("|").rstrip("|").split("|")
 
     prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])
     ret = ["N/A" if i is None else i for i in prices]
 
     return compress_response_content(ret)
+
 
 @app.route('/list-token', methods=['GET'])
 @flask_cors.cross_origin()
@@ -175,21 +183,23 @@ def handle_list_token():
     ret = list_token_metadata(Cfg.NETWORK_ID)
     return compress_response_content(ret)
 
+
 @app.route('/get-pool', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_get_pool():
     """
     get_pool
     """
-    pool_id = request.args.get("pool_id", "N/A") 
+    pool_id = request.args.get("pool_id", "N/A")
     pool = get_pool(Cfg.NETWORK_ID, pool_id)
 
     if pool:
         prices = list_token_price(Cfg.NETWORK_ID)
         metadata = list_token_metadata(Cfg.NETWORK_ID)
-        combine_pools_info([pool,], prices, metadata)
+        combine_pools_info([pool, ], prices, metadata)
 
     return compress_response_content(pool)
+
 
 @app.route('/list-top-pools', methods=['GET'])
 @flask_cors.cross_origin()
@@ -206,19 +216,24 @@ def handle_list_top_pools():
 
     return compress_response_content(pools)
 
+
 @app.route('/list-pools', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_list_pools():
     """
     list_pools
     """
+    tvl = request.args.get("tvl")
     pools = list_pools(Cfg.NETWORK_ID)
     prices = list_token_price(Cfg.NETWORK_ID)
     metadata = list_token_metadata(Cfg.NETWORK_ID)
 
     combine_pools_info(pools, prices, metadata)
+    if not tvl is None:
+        pools = pools_filter(pools, tvl)
 
     return compress_response_content(pools)
+
 
 @app.route('/list-pools-by-tokens', methods=['GET'])
 @flask_cors.cross_origin()
@@ -226,8 +241,8 @@ def handle_list_pools_by_tokens():
     """
     list_pools_by_tokens
     """
-    token0 = request.args.get("token0", "N/A") 
-    token1 = request.args.get("token1", "N/A") 
+    token0 = request.args.get("token0", "N/A")
+    token1 = request.args.get("token1", "N/A")
 
     pools = list_pools_by_tokens(Cfg.NETWORK_ID, token0, token1)
     prices = list_token_price(Cfg.NETWORK_ID)
@@ -244,7 +259,7 @@ def handle_list_pools_by_ids():
     """
     list_pools_by_ids
     """
-    ids = request.args.get("ids", "") 
+    ids = request.args.get("ids", "")
     id_str_list = ids.split("|")
 
     pools = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_str_list])
@@ -273,17 +288,18 @@ def handle_whitelisted_active_pools():
             continue
         if token0 in whitelist and token1 in whitelist:
             ret.append({
-                "pool_id": pool["id"], 
+                "pool_id": pool["id"],
                 "token_symbols": pool["token_symbols"],
                 "token_decimals": [whitelist[token0]["decimals"], whitelist[token1]["decimals"]],
                 "token_names": [whitelist[token0]["name"], whitelist[token1]["name"]],
                 "liquidity_amounts": pool["amounts"],
                 "vol_token0_token1": pool["vol01"],
                 "vol_token1_token0": pool["vol10"],
-                })
+            })
 
     return compress_response_content(ret)
-    
+
+
 @app.route('/to-coingecko', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_to_coingecko():
@@ -304,14 +320,14 @@ def handle_to_coingecko():
             continue
         if token0 in whitelist and token1 in whitelist:
             (balance0, balance1) = (
-                float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]), 
+                float(pool['amounts'][0]) / (10 ** metadata[token0]["decimals"]),
                 float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
             )
             key = "%s-%s" % (pool["token_symbols"][0], pool["token_symbols"][1])
             # add token0_ref_price = token1_price * token1_balance / token0_balance 
             if balance0 > 0 and balance1 > 0:
                 ret[key] = {
-                    "pool_id": pool["id"], 
+                    "pool_id": pool["id"],
                     "token_symbol": pool["token_symbols"][0],
                     "other_token": pool["token_symbols"][1],
                     "token_decimals": [whitelist[token0]["decimals"], whitelist[token1]["decimals"]],
@@ -320,7 +336,7 @@ def handle_to_coingecko():
                     "price_in_other_token": str(balance1 / balance0),
                     "vol_to_other_token": pool["vol01"],
                     "vol_from_other_token": pool["vol10"],
-                    }
+                }
 
     return compress_response_content(ret)
 
