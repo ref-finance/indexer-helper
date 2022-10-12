@@ -224,13 +224,13 @@ def handle_list_pools():
     list_pools
     """
     tvl = request.args.get("tvl")
+    amounts = request.args.get("amounts")
     pools = list_pools(Cfg.NETWORK_ID)
     prices = list_token_price(Cfg.NETWORK_ID)
     metadata = list_token_metadata(Cfg.NETWORK_ID)
 
     combine_pools_info(pools, prices, metadata)
-    if not tvl is None:
-        pools = pools_filter(pools, tvl)
+    pools = pools_filter(pools, tvl, amounts)
 
     return compress_response_content(pools)
 

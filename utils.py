@@ -71,12 +71,20 @@ def get_ip_address():
     return ip_address[0]
 
 
-def pools_filter(pools, tvl):
+def pools_filter(pools, tvl, amounts):
     ret_pools = []
     for pool in pools:
         try:
-            if float(pool["tvl"]) > float(tvl):
-                ret_pools.append(pool)
+            if not tvl is None and "" != tvl:
+                if float(pool["tvl"]) <= float(tvl):
+                    continue
+            if not amounts is None and "" != amounts:
+                amount_count = float(0)
+                for amount in pool["amounts"]:
+                    amount_count = amount_count + float(amount)
+                if float(amount_count) <= float(amounts):
+                    continue
+            ret_pools.append(pool)
         except Exception as e:
             print("pools filter error:", e)
             print("error content:", pool)
