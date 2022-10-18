@@ -299,8 +299,8 @@ if __name__ == "__main__":
         network_id = str(sys.argv[1]).upper()
         number = str(sys.argv[2]).upper()
         if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-            print("Staring update_farms ...")
-            update_farms(network_id)
+            # print("Staring update_farms ...")
+            # update_farms(network_id)
             print("Staring update_pools ...")
             update_pools(network_id, number)
             end_time = int(time.time())
