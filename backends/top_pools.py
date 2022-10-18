@@ -2,7 +2,7 @@ import sys
 
 sys.path.append('../')
 from near_multinode_rpc_provider import MultiNodeJsonProviderError, MultiNodeJsonProvider
-from redis_provider import RedisProvider, list_token_metadata, list_farms, list_whitelist
+from redis_provider import RedisProvider, list_token_metadata, list_farms, list_pools
 from config import Cfg
 import json
 import time
@@ -185,11 +185,16 @@ def internal_add_volume_info(top_pools: dict):
     pass
 
 
-def internal_pools_to_redis(network_id: str, pools: list, number: int):
-    # pools_by_tokens = {}
-    # tops = {}
+def update_top_pools(network_id: str):
+    start_time_1 = int(time.time())
+    pools = list_pools(network_id)
+    end_time_1 = int(time.time())
+    print("list_pools consuming time:{}", start_time_1 - end_time_1)
+    pools_by_tokens = {}
+    tops = {}
     try:
         if len(pools) > 0:
+            start_time_2 = int(time.time())
             conn = RedisProvider()
 
             # pour pools data to redis
@@ -205,42 +210,53 @@ def internal_pools_to_redis(network_id: str, pools: list, number: int):
                     if k == len(sorted_tp) - 1:
                         key = key[:-1]
                 # key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
-                pool_id = int(number) + i
-                pool["id"] = "%s" % pool_id
-                # if key in tops:
-                #     max_k = int(tops[key]["amounts"][0]) * int(tops[key]["amounts"][1])
-                #     cur_k = int(pool["amounts"][0]) * int(pool["amounts"][1])
-                #     if cur_k > max_k:
-                #         tops[key] = pool
-                # else:
-                #     tops[key] = pool
+                # pool_id = int(number) + i
+                # pool["id"] = "%s" % pool_id
+                if key in tops:
+                    max_k = int(tops[key]["amounts"][0]) * int(tops[key]["amounts"][1])
+                    cur_k = int(pool["amounts"][0]) * int(pool["amounts"][1])
+                    if cur_k > max_k:
+                        tops[key] = pool
+                else:
+                    tops[key] = pool
                 # gen pools_by_tokens
-                # if key in pools_by_tokens:
-                #     pools_by_tokens[key].append(pool)
-                # else:
-                #     pools_by_tokens[key] = [pool, ]
+                if key in pools_by_tokens:
+                    pools_by_tokens[key].append(pool)
+                else:
+                    pools_by_tokens[key] = [pool, ]
                 # pour to redis of pools
-                conn.add_pool(network_id, "%s" % pool_id, json.dumps(pools[i]))
+                # conn.add_pool(network_id, "%s" % pool_id, json.dumps(pools[i]))
             conn.end_pipe()
-            print("Import Pools to Redis OK.")
+            end_time_2 = int(time.time())
+            print("time_2 consuming time:{}", start_time_2 - end_time_2)
+            # print("Import Pools to Redis OK.")
 
             # add vol info into top-pools
+            # start_time_3 = int(time.time())
             # internal_add_volume_info(tops)
+            # end_time_3 = int(time.time())
+            # print("internal_add_volume_info consuming time:{}", start_time_3 - end_time_3)
             # pour top-pools data to redis
-            # conn.begin_pipe()
-            # for key, top_pool in tops.items():
-            #     conn.add_top_pool(network_id, key, json.dumps(top_pool))
+            conn.begin_pipe()
+            start_time_4 = int(time.time())
+            for key, top_pool in tops.items():
+                conn.add_top_pool(network_id, key, json.dumps(top_pool))
                 # print("%s" % (top_pool,))
-            # conn.end_pipe()
-            # print("Import Top-Pools to Redis OK.")
+            conn.end_pipe()
+            print("Import Top-Pools to Redis OK.")
+            end_time_4 = int(time.time())
+            print("add_top_pools consuming time:{}", start_time_4 - end_time_4)
 
             # pour pools_by_tokens data to redis
-            # conn.begin_pipe()
-            # for key, pool_list in pools_by_tokens.items():
-            #     conn.add_pools_by_tokens(network_id, key, json.dumps(pool_list))
+            conn.begin_pipe()
+            start_time_5 = int(time.time())
+            for key, pool_list in pools_by_tokens.items():
+                conn.add_pools_by_tokens(network_id, key, json.dumps(pool_list))
                 # print("%s" % (top_pool,))
-            # conn.end_pipe()
-            # print("Import pools_by_tokens to Redis OK.")
+            conn.end_pipe()
+            end_time_5 = int(time.time())
+            print("add_pools_by_tokens consuming time:{}", start_time_5 - end_time_5)
+            print("Import pools_by_tokens to Redis OK.")
 
             conn.close()
 
@@ -248,61 +264,16 @@ def internal_pools_to_redis(network_id: str, pools: list, number: int):
         print("Error occurred when update Pools to Redis, cancel pipe. Error is: ", e)
 
 
-def update_pools(network_id, number):
-    pools = internal_get_pools(network_id, number)
-    internal_pools_to_redis(network_id, pools, number)
-
-
-def update_whitelist(network_id):
-    token_metadata = {}
-    prev_whitelist = {}
-    try:
-        token_metadata = list_token_metadata(network_id)
-        prev_whitelist = list_whitelist(network_id)
-    except Exception as e:
-        print("Error occurred when fetch token_metadata from Redis. Error is: ", e)
-
-    whitelist_tokens = []
-    contract = Cfg.NETWORK[network_id]["REF_CONTRACT"]
-    try:
-        conn = MultiNodeJsonProvider(network_id)
-        ret = conn.view_call(contract, "get_whitelisted_tokens", b'')
-        json_str = "".join([chr(x) for x in ret["result"]])
-        whitelist_tokens = json.loads(json_str)
-    except MultiNodeJsonProviderError as e:
-        print("RPC Error: ", e)
-    except Exception as e:
-        print("Error: ", e)
-
-    whitelist = {}
-    for token in whitelist_tokens:
-        if token in token_metadata and token not in prev_whitelist:
-            whitelist[token] = token_metadata[token]
-
-    try:
-        if len(whitelist) > 0:
-            conn = RedisProvider()
-            conn.begin_pipe()
-            for key, item in whitelist.items():
-                conn.add_whitelist(network_id, key, json.dumps(item))
-            conn.end_pipe()
-            conn.close()
-            print("add %s tokens into whitelist." % len(whitelist))
-    except Exception as e:
-        print("Error occurred when update whitelist to Redis, cancel pipe. Error is: ", e)
-
-
 if __name__ == "__main__":
 
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 2:
         start_time = int(time.time())
         network_id = str(sys.argv[1]).upper()
-        number = str(sys.argv[2]).upper()
         if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-            print("Staring update_pools ...")
-            update_pools(network_id, number)
+            print("Staring update_top_pools ...")
+            update_top_pools(network_id)
             end_time = int(time.time())
-            print("update_pools consuming time:{}", start_time - end_time)
+            print("update_top_pools consuming time:{}", start_time - end_time)
         else:
             print("Error, network_id should be MAINNET, TESTNET or DEVNET")
             exit(1)
