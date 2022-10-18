@@ -27,14 +27,14 @@ def update_farms(network_id):
 
     try:
         conn = MultiNodeJsonProvider(network_id)
-        ret = conn.view_call(Cfg.NETWORK[network_id]["FARMING_CONTRACT"], 
+        ret = conn.view_call(Cfg.NETWORK[network_id]["FARMING_CONTRACT"],
             "list_seeds", b'{"from_index": 0, "limit": 100}')
         json_str = "".join([chr(x) for x in ret["result"]])
         seeds = json.loads(json_str)
 
         for seed in seeds.keys():
             time.sleep(0.1)
-            ret = conn.view_call(Cfg.NETWORK[network_id]["FARMING_CONTRACT"], 
+            ret = conn.view_call(Cfg.NETWORK[network_id]["FARMING_CONTRACT"],
                 "list_farms_by_seed", ('{"seed_id": "%s"}' % seed).encode(encoding='utf-8'))
             json_str = "".join([chr(x) for x in ret["result"]])
             seed_farms = json.loads(json_str)
@@ -55,7 +55,7 @@ def update_farms(network_id):
             conn.close()
     except Exception as e:
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
-        
+
 def internal_get_token_metadata(conn, contract_id):
     metadata_obj = {
         "spec":"", 
@@ -85,7 +85,7 @@ def internal_get_token_metadata(conn, contract_id):
 
     return metadata_obj
 
-def internal_get_pools(network_id: str) ->list:
+def internal_get_pools(network_id: str, number: int) ->list:
     pools = []
     token_metadata = {}
     seeds = set()
@@ -99,22 +99,32 @@ def internal_get_pools(network_id: str) ->list:
 
     try:
         conn = MultiNodeJsonProvider(network_id)
-        ret = conn.view_call(contract, "get_number_of_pools", b'')
-        pool_num = int("".join([chr(x) for x in ret["result"]]))
-        print(pool_num)
+        # ret = conn.view_call(contract, "get_number_of_pools", b'')
+        # pool_num = int("".join([chr(x) for x in ret["result"]]))
+        # print(pool_num)
 
         base_index = 0
+        # while base_index < pool_num :
+        #     time.sleep(0.1)
+        #     ret = conn.view_call(contract,
+        #         "get_pools", ('{"from_index": %s, "limit": 200}' % base_index).encode(encoding='utf-8'))
+        #     json_str = "".join([chr(x) for x in ret["result"]])
+        #     batch_pools = json.loads(json_str)
+        #     base_index += len(batch_pools)
+        #     for pool in batch_pools:
+        #         pools.append(pool)
 
-        while base_index < pool_num :
+        while base_index < 5:
             time.sleep(0.1)
-            ret = conn.view_call(contract, 
-                "get_pools", ('{"from_index": %s, "limit": 200}' % base_index).encode(encoding='utf-8'))
+            print("index_number:", number)
+            ret = conn.view_call(contract,
+                "get_pools", ('{"from_index": %s, "limit": 200}' % number).encode(encoding='utf-8'))
             json_str = "".join([chr(x) for x in ret["result"]])
             batch_pools = json.loads(json_str)
-            base_index += len(batch_pools)
+            base_index += 1
+            number = int(number) + 200
             for pool in batch_pools:
                 pools.append(pool)
-        
         print("Update total %s pools" % len(pools))
 
         # add token info to pools
@@ -231,10 +241,10 @@ def internal_pools_to_redis(network_id: str, pools: list):
     except Exception as e:
         print("Error occurred when update Pools to Redis, cancel pipe. Error is: ", e)
 
-def update_pools(network_id):
-    pools = internal_get_pools(network_id)
+def update_pools(network_id, number):
+    pools = internal_get_pools(network_id, number)
     internal_pools_to_redis(network_id, pools)
-    
+
 def update_whitelist(network_id):
 
     token_metadata = {}
@@ -256,12 +266,12 @@ def update_whitelist(network_id):
         print("RPC Error: ", e)
     except Exception as e:
         print("Error: ", e)
-    
+
     whitelist = {}
     for token in whitelist_tokens:
         if token in token_metadata and token not in prev_whitelist:
             whitelist[token] = token_metadata[token]
-    
+
     try:
         if len(whitelist) > 0:
             conn = RedisProvider()
@@ -277,15 +287,15 @@ def update_whitelist(network_id):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
+        start_time = int(time.time())
         network_id = str(sys.argv[1]).upper()
+        number = str(sys.argv[2]).upper()
         if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-            print("Staring update_farms ...")
-            update_farms(network_id)
-            # print("Staring update_pools ...")
-            # update_pools(network_id)
-            print("Staring update_whitelist ...")
-            update_whitelist(network_id)
+            print("Staring update_pools ...")
+            update_pools(network_id, number)
+            end_time = int(time.time())
+            print("update_pools consuming time:{}", start_time - end_time)
         else:
             print("Error, network_id should be MAINNET, TESTNET or DEVNET")
             exit(1)
