@@ -186,15 +186,15 @@ def internal_add_volume_info(top_pools: dict):
 
 
 def update_top_pools(network_id: str):
-    start_time_1 = int(time.time())
+    # start_time_1 = int(time.time())
     pools = list_pools(network_id)
-    end_time_1 = int(time.time())
-    print("list_pools consuming time:{}", start_time_1 - end_time_1)
+    # end_time_1 = int(time.time())
+    # print("list_pools consuming time:{}", start_time_1 - end_time_1)
     pools_by_tokens = {}
     tops = {}
     try:
         if len(pools) > 0:
-            start_time_2 = int(time.time())
+            # start_time_2 = int(time.time())
             conn = RedisProvider()
 
             # pour pools data to redis
@@ -227,8 +227,8 @@ def update_top_pools(network_id: str):
                 # pour to redis of pools
                 # conn.add_pool(network_id, "%s" % pool_id, json.dumps(pools[i]))
             conn.end_pipe()
-            end_time_2 = int(time.time())
-            print("time_2 consuming time:{}", start_time_2 - end_time_2)
+            # end_time_2 = int(time.time())
+            # print("time_2 consuming time:{}", start_time_2 - end_time_2)
             # print("Import Pools to Redis OK.")
 
             # add vol info into top-pools
@@ -238,24 +238,24 @@ def update_top_pools(network_id: str):
             # print("internal_add_volume_info consuming time:{}", start_time_3 - end_time_3)
             # pour top-pools data to redis
             conn.begin_pipe()
-            start_time_4 = int(time.time())
+            # start_time_4 = int(time.time())
             for key, top_pool in tops.items():
                 conn.add_top_pool(network_id, key, json.dumps(top_pool))
                 # print("%s" % (top_pool,))
             conn.end_pipe()
             print("Import Top-Pools to Redis OK.")
-            end_time_4 = int(time.time())
-            print("add_top_pools consuming time:{}", start_time_4 - end_time_4)
+            # end_time_4 = int(time.time())
+            # print("add_top_pools consuming time:{}", start_time_4 - end_time_4)
 
             # pour pools_by_tokens data to redis
             conn.begin_pipe()
-            start_time_5 = int(time.time())
+            # start_time_5 = int(time.time())
             for key, pool_list in pools_by_tokens.items():
                 conn.add_pools_by_tokens(network_id, key, json.dumps(pool_list))
                 # print("%s" % (top_pool,))
             conn.end_pipe()
-            end_time_5 = int(time.time())
-            print("add_pools_by_tokens consuming time:{}", start_time_5 - end_time_5)
+            # end_time_5 = int(time.time())
+            # print("add_pools_by_tokens consuming time:{}", start_time_5 - end_time_5)
             print("Import pools_by_tokens to Redis OK.")
 
             conn.close()
