@@ -20,7 +20,7 @@ from db_provider import get_history_token_price
 import re
 from flask_limiter import Limiter
 
-service_version = "20221011.01"
+service_version = "20221019.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
