@@ -13,7 +13,7 @@ import logging
 from indexer_provider import get_actions, get_liquidity_pools, get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
-from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_dcl_pools_volume_list
+from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_dcl_pools_volume_list, get_24h_pool_volume_list
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter
 from config import Cfg
 from db_provider import get_history_token_price
@@ -397,6 +397,13 @@ def handle_dcl_pools_volume():
     if pool_id is None:
         return ''
     res = get_dcl_pools_volume_list(Cfg.NETWORK_ID, pool_id)
+    return compress_response_content(res)
+
+
+@app.route('/get-24h-volume-list', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_24h_pool_volume_list():
+    res = get_24h_pool_volume_list(Cfg.NETWORK_ID)
     return compress_response_content(res)
 
 

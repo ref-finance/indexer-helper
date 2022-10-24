@@ -196,6 +196,20 @@ def get_dcl_pools_volume_list(network_id, redis_key):
     return dcl_pools_volume_list
 
 
+def get_24h_pool_volume_list(network_id):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"])
+    r.close()
+    dcl_pool_list = []
+    for key, value in ret.items():
+        dcl_pool = {
+            "pool_id": key,
+            "volume": value,
+        }
+        dcl_pool_list.append(dcl_pool)
+    return dcl_pool_list
+
+
 class RedisProvider(object):
 
     def __init__(self):
