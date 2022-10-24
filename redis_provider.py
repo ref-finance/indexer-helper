@@ -179,6 +179,23 @@ def list_whitelist(network_id):
     return whitelist_obj
 
 
+def get_24h_pool_volume(network_id, pool_id):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_id)
+    r.close()
+    return json.loads(ret)
+
+
+def get_dcl_pools_volume_list(network_id, redis_key):
+
+    import json
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
+    r.close()
+    dcl_pools_volume_list = [json.loads(x) for x in ret.values()]
+    return dcl_pools_volume_list
+
+
 class RedisProvider(object):
 
     def __init__(self):
@@ -239,6 +256,12 @@ class RedisProvider(object):
 
     def add_proposal_id_hash(self, network_id, proposal_id, proposal_hash):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], proposal_id, proposal_hash)
+
+    def add_twenty_four_hour_pools_data(self, network_id, pool_id, volume):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_id, volume)
+
+    def add_dcl_pools_data(self, network_id, pool_id, volume, redis_key):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key, pool_id, volume)
 
     def close(self):
         self.r.close()

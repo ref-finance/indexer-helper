@@ -181,7 +181,153 @@ def clear_token_price():
         cursor.close()
 
 
+def handle_dcl_pools(data_list, network_id):
+    old_pools_data = query_dcl_pools(network_id)
+    for old_pool in old_pools_data:
+        for pool in data_list:
+            if old_pool["pool_id"] == pool["pool_id"]:
+                # print("old_pool:", old_pool["volume_x_in"])
+                # print("pool:", pool["volume_x_in"])
+                pool["volume_x_in_grow"] = str(int(pool["volume_x_in"]) - int(old_pool["volume_x_in"]))
+                pool["volume_y_in_grow"] = str(int(pool["volume_y_in"]) - int(old_pool["volume_y_in"]))
+                pool["volume_x_out_grow"] = str(int(pool["volume_x_out"]) - int(old_pool["volume_x_out"]))
+                pool["volume_y_out_grow"] = str(int(pool["volume_y_out"]) - int(old_pool["volume_y_out"]))
+                pool["total_order_x_grow"] = str(int(pool["total_order_x"]) - int(old_pool["total_order_x"]))
+                pool["total_order_y_grow"] = str(int(pool["total_order_y"]) - int(old_pool["total_order_y"]))
+    add_dcl_pools_to_db(data_list, network_id)
+
+
+def query_dcl_pools(network_id):
+    db_conn = get_db_connect(network_id)
+
+    sql = "SELECT id, pool_id, volume_x_in, volume_y_in, volume_x_out, volume_y_out, total_order_x, total_order_y " \
+          "FROM t_dcl_pools_data WHERE id IN ( SELECT max(id) FROM t_dcl_pools_data GROUP BY pool_id )"
+
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+
+        cursor.execute(sql)
+        old_pools_data = cursor.fetchall()
+        return old_pools_data
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("query dcl_pools to db error:", e)
+    finally:
+        cursor.close()
+
+
+def add_dcl_pools_to_db(data_list, network_id):
+    now = int(time.time())
+    db_conn = get_db_connect(network_id)
+
+    sql = "insert into t_dcl_pools_data(pool_id, token_x, token_y, volume_x_in, volume_y_in, volume_x_out, " \
+          "volume_y_out, total_order_x, total_order_y, total_x, total_y, volume_x_in_grow, volume_y_in_grow, " \
+          "volume_x_out_grow, volume_y_out_grow, total_order_x_grow, total_order_y_grow, timestamp, create_time) " \
+          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())"
+
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["pool_id"], data["token_x"], data["token_y"], data["volume_x_in"],
+                                data["volume_y_in"], data["volume_x_out"], data["volume_y_out"], data["total_order_x"],
+                                data["total_order_y"], data["total_x"], data["total_y"], data["volume_x_in_grow"],
+                                data["volume_y_in_grow"], data["volume_x_out_grow"], data["volume_y_out_grow"],
+                                data["total_order_x_grow"], data["total_order_y_grow"], now))
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+        handle_dcl_pools_to_redis_data(network_id)
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert dcl_pools to db error:", e)
+        print("insert dcl_pools to db insert_data:", insert_data)
+    finally:
+        cursor.close()
+
+
+def handle_dcl_pools_to_redis_data(network_id):
+    now = int(time.time())
+    zero_point = int(time.time()) - int(time.time() - time.timezone) % 86400
+    before_time = now - (1 * 24 * 60 * 60)
+    db_conn = get_db_connect(network_id)
+
+    sql = "SELECT pool_id, SUM(volume_x_in_grow) AS volume_x_in_grow, SUM(volume_y_in_grow) AS volume_y_in_grow, " \
+          "SUM(volume_x_out_grow) AS volume_x_out_grow , SUM(volume_y_out_grow) AS volume_y_out_grow, " \
+          "SUM(total_order_x_grow) AS total_order_x_grow, SUM(total_order_y_grow) AS total_order_y_grow " \
+          "FROM t_dcl_pools_data WHERE `timestamp` >= %s GROUP BY pool_id"
+
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+
+        cursor.execute(sql, before_time)
+        twenty_four_hour_pools_data = cursor.fetchall()
+        add_24h_dcl_pools_to_redis(network_id, twenty_four_hour_pools_data)
+        cursor.execute(sql, zero_point)
+        zero_point_pools_data = cursor.fetchall()
+        add_list_dcl_pools_to_redis(network_id, zero_point_pools_data, zero_point)
+
+    except Exception as e:
+        print("query dcl_pools to db error:", e)
+    finally:
+        cursor.close()
+
+
+def add_24h_dcl_pools_to_redis(network_id, dcl_pools_data):
+    try:
+        redis_conn = RedisProvider()
+        for pool_data in dcl_pools_data:
+            volume_x = int(pool_data["volume_x_in_grow"]) + int(pool_data["volume_x_out_grow"]) + int(pool_data["total_order_x_grow"])
+            volume_y = int(pool_data["volume_y_in_grow"]) + int(pool_data["volume_y_out_grow"]) + int(pool_data["total_order_y_grow"])
+            if volume_x > volume_y:
+                volume = volume_x
+            else:
+                volume = volume_y
+            redis_conn.begin_pipe()
+            redis_conn.add_twenty_four_hour_pools_data(network_id, pool_data["pool_id"], volume)
+            redis_conn.end_pipe()
+
+        redis_conn.close()
+    except Exception as e:
+        print("add dcl_pools to redis error:", e)
+    finally:
+        redis_conn.close()
+
+
+def add_list_dcl_pools_to_redis(network_id, dcl_pools_data, zero_point):
+    try:
+        time_array = time.localtime(zero_point)
+        check_point = time.strftime("%Y-%m-%d", time_array)
+        redis_conn = RedisProvider()
+        for pool_data in dcl_pools_data:
+            pool_id = pool_data["pool_id"] + "_" + check_point
+            volume_x = int(pool_data["volume_x_in_grow"]) + int(pool_data["volume_x_out_grow"]) + int(pool_data["total_order_x_grow"])
+            volume_y = int(pool_data["volume_y_in_grow"]) + int(pool_data["volume_y_out_grow"]) + int(pool_data["total_order_y_grow"])
+            if volume_x > volume_y:
+                volume = volume_x
+            else:
+                volume = volume_y
+            pool_volume_data = {
+                "pool_id": pool_data["pool_id"],
+                "dateString": check_point,
+                "volume": volume
+            }
+            redis_conn.begin_pipe()
+            redis_conn.add_dcl_pools_data(network_id, pool_id, json.dumps(pool_volume_data, cls=Encoder), pool_data["pool_id"])
+            redis_conn.end_pipe()
+
+        redis_conn.close()
+    except Exception as e:
+        print("add dcl_pools to redis error:", e)
+    finally:
+        redis_conn.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
-    add_history_token_price("ref.fakes.testnet", "ref2", 1.003, 18, "MAINNET")
+    # add_history_token_price("ref.fakes.testnet", "ref2", 1.003, 18, "MAINNET")
+    handle_dcl_pools_to_redis_data("TESTNET")
