@@ -19,6 +19,8 @@ from config import Cfg
 from db_provider import get_history_token_price
 import re
 from flask_limiter import Limiter
+from loguru import logger
+
 
 service_version = "20221019.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -81,6 +83,10 @@ def handle_liquidity_pools(account_id):
     """
     get user's liqudity pools
     """
+    if account_id == "v2.ref-finance.near":
+        ip_address = get_ip_address()
+        logger.info("request ip:{}", ip_address)
+        return ""
     ret = []
     try:
         id_list = get_liquidity_pools(Cfg.NETWORK_ID, account_id)
@@ -380,6 +386,7 @@ def handle_proposal_hash():
     return compress_response_content(ret)
 
 
+logger.add("app.log")
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
     app.logger.info(Welcome)
