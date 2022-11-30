@@ -3,28 +3,29 @@ import os
 import json
 import shutil
 import sys
+
 sys.path.append('../')
-from db_provider import add_pool_assets_data, get_token_price, handle_account_pool_assets_data
+from db_provider import add_account_assets_data, get_token_price, handle_account_pool_assets_data
 import decimal
 
-
-AWS_REGION_NAME = 'us-east-1'  # 区域
+AWS_REGION_NAME = 'us-east-1'
 
 '''
-BUCKET_NAME = "stateparser-bucket"  # Dev存储桶名称
+BUCKET_NAME = "stateparser-bucket"  
 AWS_S3_AKI = 'AKIAYQWJUBPWS5CMQOVZ' #aws_access_key_id
 AWS_S3_SAK = 'D3aMuKhGR6lx1fCzocZa7bd4pSqg2/EaSWB2QZIy' #aws_secret_access_key
 '''
 
-BUCKET_NAME = "prod-stateparser-bucket"  # Prod存储桶名称
+BUCKET_NAME = "prod-stateparser-bucket"
 AWS_S3_AKI = 'AKIAQVRJFS5CVPUL4KVM'  # aws_access_key_id
 AWS_S3_SAK = '5/fHaluNWA841u0jco1qLgk6ArzlwAuoyLMvfxRJ'  # aws_secret_access_key
 
-# s3 实例
+# s3
 s3 = boto3.client('s3', region_name=AWS_REGION_NAME, aws_access_key_id=AWS_S3_AKI, aws_secret_access_key=AWS_S3_SAK)
 
 ctx = decimal.Context()
 ctx.prec = 20
+
 
 # return all objects using paging
 def get_last_block_height_from_all_s3_folders_list(Prefix=None):
@@ -90,7 +91,7 @@ def download_file_s3():
     # last_modified = s3.head_object(Bucket=BUCKET_NAME, Key=file_list[0])['LastModified']
     # print("last_modified =", last_modified)
     for file_name in file_list:
-        if "ex_pool" in file_name or "farm_accounts" in file_name or "farm_seeds" in file_name or "farmv2_accounts" in file_name or "farmv2_seeds" in file_name:
+        if "ex_pool" in file_name or "farm_accounts" in file_name or "farmv2_accounts" in file_name or "ex_accounts" in file_name:
             loc = file_name.find('/') + 1
             path_local = "./" + file_name[loc:len(file_name)]
             print(path_local)
@@ -103,28 +104,154 @@ def add_data_to_db(block_height_folder_name):
     # path_to_jsonfiles = "C:\\Users\\sjl\\Desktop\\portfolio\\" + block_height_folder_name
     path_to_jsonfiles = "/www/wwwroot/mainnet-indexer.ref-finance.com/indexer-helper/backends/" + block_height_folder_name
     tokens_price = get_token_price()
+    pool_data_list = {}
     for file in os.listdir(path_to_jsonfiles):
-        pool_assets_data_list = []
+        account_assets_data_list = []
         full_filename = "%s/%s" % (path_to_jsonfiles, file)
-        with open(full_filename, 'r') as fi:
-            dict = json.load(fi)
-            if "ex_pool" in file:
+        if "ex_pool" in file:
+            with open(full_filename, 'r') as fi:
+                pool_dict = json.load(fi)
                 pool_id = str(re.findall("ex_pool_(.*?).json", file)[0])
-                pool_shares = dict["shares"]
-                pool_shares_total_supply = dict["shares_total_supply"]
-                token_account_ids = dict["token_account_ids"]
-                pool_amounts = dict["amounts"]
+                pool_shares = pool_dict["shares"]
+                pool_shares_total_supply = pool_dict["shares_total_supply"]
+                token_account_ids = pool_dict["token_account_ids"]
+                pool_amounts = pool_dict["amounts"]
                 for account, amount in pool_shares.items():
-                    token_data = count_account_amount(tokens_price, pool_amounts, pool_shares_total_supply, amount, token_account_ids)
-                    pool_assets_data = {"pool_id": pool_id, "account_id": account,
-                                        "tokens": str(dict["token_account_ids"]), "token_amounts": token_data["token_amounts"],
+                    token_data = count_account_amount(tokens_price, pool_amounts, pool_shares_total_supply, amount,
+                                                      token_account_ids)
+                    pool_assets_data = {"type": "pool", "pool_id": pool_id, "farm_id": "", "account_id": account,
+                                        "tokens": str(pool_dict["token_account_ids"]),
+                                        "token_amounts": token_data["token_amounts"],
                                         "token_decimals": token_data["token_decimals"],
                                         "token_prices": token_data["token_prices"], "amount": token_data["amount"]}
-                    pool_assets_data_list.append(pool_assets_data)
-        if len(pool_assets_data_list) > 0:
-            add_pool_assets_data(pool_assets_data_list)
-            # print("pool_assets_data_list", pool_assets_data_list)
+                    account_assets_data_list.append(pool_assets_data)
+                pool_data_list[pool_id] = {
+                    "shares_total_supply": pool_shares_total_supply,
+                    "token_account_ids": token_account_ids,
+                    "pool_amounts": pool_amounts
+                }
+        if len(account_assets_data_list) > 0:
+            add_account_assets_data(account_assets_data_list)
+            # print("ex_pool:", account_assets_data_list)
+
+    for file in os.listdir(path_to_jsonfiles):
+        account_assets_data_list = []
+        full_filename = "%s/%s" % (path_to_jsonfiles, file)
+        if "ex_accounts" in file:
+            with open(full_filename, 'r') as fi:
+                ex_accounts_dict = json.load(fi)
+                for account, account_data in ex_accounts_dict.items():
+                    tokens = []
+                    token_amounts = []
+                    token_decimals = []
+                    token_prices = []
+                    near_amount = account_data["near_amount"]
+                    near_price = float(tokens_price["wrap.near"]["price"])
+                    near_decimal = tokens_price["wrap.near"]["decimal"]
+                    tokens.append("wrap.near")
+                    token_amounts.append(near_amount)
+                    token_decimals.append(near_decimal)
+                    token_prices.append(near_price)
+                    dis = int("1" + "0" * near_decimal)
+                    amount = near_amount / dis * near_price
+                    account_tokens = account_data["tokens"]
+                    account_assets_data_list.append(handle_tokens_data(account_tokens, tokens_price,
+                                                                       "ex_fixed_assets", account, tokens,
+                                                                       token_amounts, token_decimals, token_prices, amount))
+        if "farm_accounts" in file:
+            with open(full_filename, 'r') as fi:
+                farm_dict = json.load(fi)
+                for account, account_data in farm_dict.items():
+                    tokens = []
+                    token_amounts = []
+                    token_decimals = []
+                    token_prices = []
+                    near_amount = account_data["amount"]
+                    near_price = float(tokens_price["wrap.near"]["price"])
+                    near_decimal = tokens_price["wrap.near"]["decimal"]
+                    tokens.append("wrap.near")
+                    token_amounts.append(near_amount)
+                    token_decimals.append(near_decimal)
+                    token_prices.append(near_price)
+                    dis = int("1" + "0" * near_decimal)
+                    amount = near_amount / dis * near_price
+                    rewards_tokens = account_data["rewards"]
+                    account_assets_data_list.append(handle_tokens_data(rewards_tokens, tokens_price,
+                                                                       "farm_rewards_assets", account, tokens,
+                                                                       token_amounts, token_decimals, token_prices, amount))
+                    farm_seeds = account_data["seeds"]
+                    for farm_id, farm_amount in farm_seeds.items():
+                        pool_id = farm_id.split("@")[1]
+                        if pool_id in pool_data_list:
+                            pool_data = pool_data_list[pool_id]
+                            token_data = count_account_amount(tokens_price, pool_data["pool_amounts"],
+                                                              pool_data["shares_total_supply"], farm_amount,
+                                                              pool_data["token_account_ids"])
+                            farm_assets_data = {"type": "farm", "pool_id": pool_id, "farm_id": farm_id, "account_id": account,
+                                                "tokens": str(pool_data["token_account_ids"]),
+                                                "token_amounts": token_data["token_amounts"],
+                                                "token_decimals": token_data["token_decimals"],
+                                                "token_prices": token_data["token_prices"], "amount": token_data["amount"]}
+                            account_assets_data_list.append(farm_assets_data)
+        if "farmv2_accounts" in file:
+            with open(full_filename, 'r') as fi:
+                farmv2_dict = json.load(fi)
+                for account, account_data in farmv2_dict.items():
+                    tokens = []
+                    token_amounts = []
+                    token_decimals = []
+                    token_prices = []
+                    amount = 0
+                    rewards_tokens = account_data["rewards"]
+                    account_assets_data_list.append(handle_tokens_data(rewards_tokens, tokens_price,
+                                                                       "farmv2_rewards_assets", account, tokens,
+                                                                       token_amounts, token_decimals, token_prices, amount))
+                    farmv2_seeds = account_data["seeds"]
+                    for farm_id, farmv2_seed_data in farmv2_seeds.items():
+                        pool_id = farm_id.split("@")[1]
+                        if pool_id in pool_data_list:
+                            pool_data = pool_data_list[pool_id]
+                            token_data = count_account_amount(tokens_price, pool_data["pool_amounts"],
+                                                              pool_data["shares_total_supply"], farmv2_seed_data["free_amount"],
+                                                              pool_data["token_account_ids"])
+                            farm_assets_data = {"type": "farmv2", "pool_id": pool_id, "farm_id": farm_id,
+                                                "account_id": account,
+                                                "tokens": str(pool_data["token_account_ids"]),
+                                                "token_amounts": token_data["token_amounts"],
+                                                "token_decimals": token_data["token_decimals"],
+                                                "token_prices": token_data["token_prices"],
+                                                "amount": token_data["amount"]}
+                            account_assets_data_list.append(farm_assets_data)
+        if len(account_assets_data_list) > 0:
+            add_account_assets_data(account_assets_data_list)
+            # print("account_assets_data_list", account_assets_data_list)
+
     return path_to_jsonfiles
+
+
+def handle_tokens_data(rewards_tokens, tokens_price, assets_type, account, tokens, token_amounts, token_decimals,
+                       token_prices, amount):
+    for token, token_amount in rewards_tokens.items():
+        tokens.append(token)
+        token_amounts.append(token_amount)
+        if token in tokens_price:
+            token_price = float(tokens_price[token]["price"])
+            token_decimal = tokens_price[token]["decimal"]
+            token_decimals.append(token_decimal)
+            token_prices.append(token_price)
+            dis = int("1" + "0" * token_decimal)
+            amount = amount + (token_amount / dis * token_price)
+        else:
+            token_decimals.append(0)
+            token_prices.append(0)
+            amount = amount + 0
+    fixed_assets_data = {"type": assets_type, "pool_id": "", "farm_id": "", "account_id": account,
+                         "tokens": str(tokens),
+                         "token_amounts": str(token_amounts),
+                         "token_decimals": str(token_decimals),
+                         "token_prices": str(token_prices),
+                         "amount": amount}
+    return fixed_assets_data
 
 
 def count_account_amount(tokens_price, pool_amounts, pool_shares_total_supply, amount, token_account_ids):
@@ -134,7 +261,7 @@ def count_account_amount(tokens_price, pool_amounts, pool_shares_total_supply, a
     token_amounts = []
     for i in range(0, len(pool_amounts)):
         token_amount = amount * pool_amounts[i] / pool_shares_total_supply
-        token_amounts.append(float_to_str(token_amount))
+        token_amounts.append(int(float(float_to_str(token_amount))))
         if token_account_ids[i] in tokens_price:
             token_price = float(tokens_price[token_account_ids[i]]["price"])
             token_decimal = tokens_price[token_account_ids[i]]["decimal"]
@@ -189,10 +316,9 @@ if __name__ == "__main__":
         print("Error, must put NETWORK_ID as arg")
         exit(1)
 
-    # folder_path = add_data_to_db("height_7")
+    # folder_path = add_data_to_db("height_9")
     # print("start clear_folder")
     # clear_folder(folder_path)
     # print("start handle_account_pool_assets_data")
     # handle_account_pool_assets_data("MAINNET")
     # print("analysis_pool_and_farm_data end")
-

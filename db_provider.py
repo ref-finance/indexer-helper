@@ -181,26 +181,27 @@ def clear_token_price():
         cursor.close()
 
 
-def add_pool_assets_data(data_list):
+def add_account_assets_data(data_list):
     now_time = int(time.time())
     db_conn = get_db_connect(Cfg.NETWORK_ID)
 
-    sql = "insert into t_account_assets_pool(pool_id, account_id, tokens, token_amounts, token_decimals, " \
-          "token_prices, amount, `timestamp`, create_time) values(%s,%s,%s,%s,%s,%s,%s,%s,now())"
+    sql = "insert into t_account_assets_data(type, pool_id, farm_id, account_id, tokens, token_amounts, " \
+          "token_decimals, token_prices, amount, `timestamp`, create_time) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())"
 
     insert_data = []
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         for data in data_list:
-            insert_data.append((data["pool_id"], data["account_id"], data["tokens"], data["token_amounts"],
-                                data["token_decimals"], data["token_prices"], data["amount"], now_time))
+            insert_data.append((data["type"], data["pool_id"], data["farm_id"], data["account_id"], data["tokens"],
+                                data["token_amounts"], data["token_decimals"], data["token_prices"],
+                                data["amount"], now_time))
 
         cursor.executemany(sql, insert_data)
         db_conn.commit()
 
     except Exception as e:
-        print("insert pool assets log to db error:", e)
-        print("insert pool assets log to db insert_data:", insert_data)
+        print("insert account assets assets log to db error:", e)
+        print("insert account assets assets log to db insert_data:", insert_data)
     finally:
         cursor.close()
 
@@ -240,7 +241,7 @@ class DecimalEncoder(json.JSONEncoder):
 def handle_account_pool_assets_data(network_id):
     now_time = int(time.time())
     db_conn = get_db_connect(Cfg.NETWORK_ID)
-    sql = "select account_id,sum(amount) as amount from t_account_assets_pool where `status` = 1 group by account_id"
+    sql = "select account_id,sum(amount) as amount from t_account_assets_data where `status` = 1 group by account_id"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -249,6 +250,7 @@ def handle_account_pool_assets_data(network_id):
             handle_account_pool_assets_h_data(network_id, now_time, row)
             handle_account_pool_assets_w_data(network_id, now_time, row)
             handle_account_pool_assets_m_data(network_id, now_time, row)
+            handle_account_pool_assets_all_data(network_id, now_time, row)
         update_account_pool_assets_status()
     except Exception as e:
         print(e)
@@ -320,6 +322,29 @@ def handle_account_pool_assets_m_data(network_id, now_time, row):
     add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(pool_assets, cls=DecimalEncoder, ensure_ascii=False))
 
 
+def handle_account_pool_assets_all_data(network_id, now_time, row):
+    redis_key = row["account_id"] + "_all"
+    amount = row["amount"]
+    ret_pool_assets = get_account_pool_assets(network_id, redis_key)
+    time_array = time.localtime(now_time)
+    now_date_time_all = time.strftime("%Y-%m-%d", time_array)
+    pool_assets = []
+    pool_asset_data = {
+        "date_itme": now_date_time_all,
+        "assets": amount
+    }
+    data_flag = True
+    if ret_pool_assets is not None:
+        pool_assets = json.loads(ret_pool_assets)
+        for asset in pool_assets:
+            if now_date_time_all == asset["date_itme"]:
+                data_flag = False
+                asset["assets"] = amount
+    if data_flag:
+        pool_assets.append(pool_asset_data)
+    add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(pool_assets, cls=DecimalEncoder, ensure_ascii=False))
+
+
 def add_account_pool_assets_to_redis(network_id, key, values):
     redis_conn = RedisProvider()
     redis_conn.begin_pipe()
@@ -332,7 +357,7 @@ def update_account_pool_assets_status():
     db_conn = get_db_connect(Cfg.NETWORK_ID)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        sql = "update t_account_assets_pool set `status` = 2 where `status` = 1"
+        sql = "update t_account_assets_data set `status` = 2 where `status` = 1"
         cursor.execute(sql)
         # Submit to database for execution
         db_conn.commit()
