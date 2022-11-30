@@ -179,6 +179,13 @@ def list_whitelist(network_id):
     return whitelist_obj
 
 
+def get_account_pool_assets(network_id, key):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], key)
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
@@ -239,6 +246,9 @@ class RedisProvider(object):
 
     def add_proposal_id_hash(self, network_id, proposal_id, proposal_hash):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], proposal_id, proposal_hash)
+
+    def add_account_pool_assets(self, network_id, account_id, value):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], account_id, value)
 
     def close(self):
         self.r.close()
