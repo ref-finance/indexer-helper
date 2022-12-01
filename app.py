@@ -386,9 +386,9 @@ def handle_proposal_hash():
     return compress_response_content(ret)
 
 
-@app.route('/get-pool-assets-by-account', methods=['GET'])
+@app.route('/get-assets-by-account', methods=['GET'])
 @flask_cors.cross_origin()
-def handle_pool_assets_by_account():
+def handle_assets_by_account():
     account_id = request.args.get("account_id")
     dimension = request.args.get("dimension")
     if account_id is None or dimension is None:
