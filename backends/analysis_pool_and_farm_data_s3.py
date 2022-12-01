@@ -11,14 +11,14 @@ import decimal
 AWS_REGION_NAME = 'us-east-1'
 
 '''
-BUCKET_NAME = "stateparser-bucket"  
-AWS_S3_AKI = 'AKIAYQWJUBPWS5CMQOVZ' #aws_access_key_id
-AWS_S3_SAK = 'D3aMuKhGR6lx1fCzocZa7bd4pSqg2/EaSWB2QZIy' #aws_secret_access_key
+BUCKET_NAME = "xxxxxxxxxx"  
+AWS_S3_AKI = 'xxxxxxxxxx' #aws_access_key_id
+AWS_S3_SAK = 'xxxxxxxxxx' #aws_secret_access_key
 '''
 
-BUCKET_NAME = "prod-stateparser-bucket"
-AWS_S3_AKI = 'AKIAQVRJFS5CVPUL4KVM'  # aws_access_key_id
-AWS_S3_SAK = '5/fHaluNWA841u0jco1qLgk6ArzlwAuoyLMvfxRJ'  # aws_secret_access_key
+BUCKET_NAME = "xxxxxxxxxx"
+AWS_S3_AKI = 'xxxxxxxxxx'  # aws_access_key_id
+AWS_S3_SAK = 'xxxxxxxxxx'  # aws_secret_access_key
 
 # s3
 s3 = boto3.client('s3', region_name=AWS_REGION_NAME, aws_access_key_id=AWS_S3_AKI, aws_secret_access_key=AWS_S3_SAK)
