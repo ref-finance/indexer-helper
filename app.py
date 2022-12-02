@@ -22,7 +22,7 @@ from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20221028.01"
+service_version = "20221203.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -270,6 +270,9 @@ def handle_list_pools_by_ids():
 
     pools = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_str_list])
     prices = list_token_price(Cfg.NETWORK_ID)
+    if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in prices:
+        prices["usn"] = prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
+        prices["usdt.tether-token.near"] = prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
     metadata = list_token_metadata(Cfg.NETWORK_ID)
 
     combine_pools_info(pools, prices, metadata)
