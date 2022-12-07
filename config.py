@@ -123,6 +123,7 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "BLOCK_HEIGHT_FOLDER_PATH": "/www/wwwroot/mainnet-indexer.ref-finance.com/indexer-helper/backends/",
         }
     }
     TOKENS = {

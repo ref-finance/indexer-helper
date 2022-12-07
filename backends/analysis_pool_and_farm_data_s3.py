@@ -7,6 +7,7 @@ import sys
 sys.path.append('../')
 from db_provider import add_account_assets_data, get_token_price, handle_account_pool_assets_data
 import decimal
+from config import Cfg
 
 AWS_REGION_NAME = 'us-east-1'
 
@@ -99,10 +100,10 @@ def download_file_s3():
     return block_height_folder_name
 
 
-def add_data_to_db(block_height_folder_name):
+def add_data_to_db(block_height_folder_name, network_id):
     import re
     # path_to_jsonfiles = "C:\\Users\\sjl\\Desktop\\portfolio\\" + block_height_folder_name
-    path_to_jsonfiles = "/www/wwwroot/mainnet-indexer.ref-finance.com/indexer-helper/backends/" + block_height_folder_name
+    path_to_jsonfiles = Cfg.NETWORK[network_id]["BLOCK_HEIGHT_FOLDER_PATH"] + block_height_folder_name
     tokens_price = get_token_price()
     pool_data_list = {}
     for file in os.listdir(path_to_jsonfiles):
@@ -298,23 +299,28 @@ def clear_folder(path):
 
 if __name__ == "__main__":
     print("#########analysis_pool_and_farm_data###########")
-    if len(sys.argv) == 2:
-        network_id = str(sys.argv[1]).upper()
-        if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-            height_folder_name = download_file_s3()
-            print("start add_data_to_db")
-            folder_path = add_data_to_db(height_folder_name)
-            print("start clear_folder")
-            clear_folder(folder_path)
-            print("start handle_account_pool_assets_data")
-            handle_account_pool_assets_data(network_id)
-            print("analysis_pool_and_farm_data end")
+    height_folder_name = ""
+    try:
+        if len(sys.argv) == 2:
+            network_id = str(sys.argv[1]).upper()
+            if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
+                height_folder_name = download_file_s3()
+                print("start add_data_to_db")
+                folder_path = add_data_to_db(height_folder_name, network_id)
+                print("start clear_folder")
+                clear_folder(folder_path)
+                print("start handle_account_pool_assets_data")
+                handle_account_pool_assets_data(network_id)
+                print("analysis_pool_and_farm_data end")
+            else:
+                print("Error, network_id should be MAINNET, TESTNET or DEVNET")
+                exit(1)
         else:
-            print("Error, network_id should be MAINNET, TESTNET or DEVNET")
+            print("Error, must put NETWORK_ID as arg")
             exit(1)
-    else:
-        print("Error, must put NETWORK_ID as arg")
-        exit(1)
+    except Exception as e:
+        print("analysis pool and farm data error,height folder name:", height_folder_name)
+        print(e)
 
     # folder_path = add_data_to_db("height_9")
     # print("start clear_folder")
