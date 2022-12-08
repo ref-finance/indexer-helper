@@ -29,6 +29,8 @@ def update_dcl_pools(network_id):
                 "total_order_y": pool["total_order_y"],
                 "total_x": pool["total_x"],
                 "total_y": pool["total_y"],
+                "total_fee_x_charged": pool["total_fee_x_charged"],
+                "total_fee_y_charged": pool["total_fee_y_charged"],
                 "volume_x_in_grow": "0",
                 "volume_y_in_grow": "0",
                 "volume_x_out_grow": "0",
