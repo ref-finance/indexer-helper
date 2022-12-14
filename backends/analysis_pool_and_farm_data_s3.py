@@ -92,7 +92,7 @@ def download_file_s3():
     # last_modified = s3.head_object(Bucket=BUCKET_NAME, Key=file_list[0])['LastModified']
     # print("last_modified =", last_modified)
     for file_name in file_list:
-        if "ex_pool" in file_name or "farm_accounts" in file_name or "farmv2_accounts" in file_name or "ex_accounts" in file_name:
+        if "ex_pool" in file_name or "farm_accounts" in file_name or "farmv2_accounts" in file_name or "ex_accounts" in file_name or "farmv2_seeds" in file_name:
             loc = file_name.find('/') + 1
             path_local = "./" + file_name[loc:len(file_name)]
             print(path_local)
@@ -102,10 +102,12 @@ def download_file_s3():
 
 def add_data_to_db(block_height_folder_name, network_id):
     import re
+    import math
     # path_to_jsonfiles = "C:\\Users\\sjl\\Desktop\\portfolio\\" + block_height_folder_name
     path_to_jsonfiles = Cfg.NETWORK[network_id]["BLOCK_HEIGHT_FOLDER_PATH"] + block_height_folder_name
     tokens_price = get_token_price()
     pool_data_list = {}
+    farm_data_list = {}
     for file in os.listdir(path_to_jsonfiles):
         account_assets_data_list = []
         full_filename = "%s/%s" % (path_to_jsonfiles, file)
@@ -134,6 +136,17 @@ def add_data_to_db(block_height_folder_name, network_id):
         if len(account_assets_data_list) > 0:
             add_account_assets_data(account_assets_data_list)
             # print("ex_pool:", account_assets_data_list)
+        if "farmv2_seeds" in file:
+            with open(full_filename, 'r') as fi:
+                farmv2_seeds = json.load(fi)
+                for seed_id, seed_data in farmv2_seeds.items():
+                    farms = seed_data["farms"]
+                    for farm in farms:
+                        farm_data_list[farm["farm_id"]] = {
+                            "reward_token": farm["terms"]["reward_token"],
+                            "rps": farm["rps"]
+                        }
+            print("farm_data_list", farm_data_list)
 
     for file in os.listdir(path_to_jsonfiles):
         account_assets_data_list = []
@@ -156,7 +169,8 @@ def add_data_to_db(block_height_folder_name, network_id):
                     dis = int("1" + "0" * near_decimal)
                     amount = near_amount / dis * near_price
                     account_tokens = account_data["tokens"]
-                    account_assets_data_list.append(handle_tokens_data(account_tokens, tokens_price,
+                    if len(account_tokens) > 0:
+                        account_assets_data_list.append(handle_tokens_data(account_tokens, tokens_price,
                                                                        "ex_fixed_assets", account, tokens,
                                                                        token_amounts, token_decimals, token_prices, amount))
         if "farm_accounts" in file:
@@ -177,7 +191,8 @@ def add_data_to_db(block_height_folder_name, network_id):
                     dis = int("1" + "0" * near_decimal)
                     amount = near_amount / dis * near_price
                     rewards_tokens = account_data["rewards"]
-                    account_assets_data_list.append(handle_tokens_data(rewards_tokens, tokens_price,
+                    if len(rewards_tokens) > 0:
+                        account_assets_data_list.append(handle_tokens_data(rewards_tokens, tokens_price,
                                                                        "farm_rewards_assets", account, tokens,
                                                                        token_amounts, token_decimals, token_prices, amount))
                     farm_seeds = account_data["seeds"]
@@ -204,11 +219,13 @@ def add_data_to_db(block_height_folder_name, network_id):
                     token_prices = []
                     amount = 0
                     rewards_tokens = account_data["rewards"]
-                    account_assets_data_list.append(handle_tokens_data(rewards_tokens, tokens_price,
+                    if len(rewards_tokens) > 0:
+                        account_assets_data_list.append(handle_tokens_data(rewards_tokens, tokens_price,
                                                                        "farmv2_rewards_assets", account, tokens,
                                                                        token_amounts, token_decimals, token_prices, amount))
                     farmv2_seeds = account_data["seeds"]
                     for farm_id, farmv2_seed_data in farmv2_seeds.items():
+                        farmer_seed_power = farmv2_seed_data["free_amount"] + farmv2_seed_data["x_locked_amount"]
                         pool_id = farm_id.split("@")[1]
                         if pool_id in pool_data_list:
                             pool_data = pool_data_list[pool_id]
@@ -223,6 +240,36 @@ def add_data_to_db(block_height_folder_name, network_id):
                                                 "token_prices": token_data["token_prices"],
                                                 "amount": token_data["amount"]}
                             account_assets_data_list.append(farm_assets_data)
+                        user_rps = farmv2_seed_data["user_rps"]
+                        for user_farm_id, user_farm_rps in user_rps.items():
+                            farm_unclaimed_count_amount = 0
+                            farm_unclaimed_tokens = []
+                            farm_unclaimed_amounts = []
+                            farm_unclaimed_decimals = []
+                            farm_unclaimed_prices = []
+                            reward_amount = (farm_data_list[user_farm_id]["rps"] - user_farm_rps) * farmer_seed_power / math.pow(10, 27)
+                            reward_token = farm_data_list[user_farm_id]["reward_token"]
+                            farm_unclaimed_tokens.append(reward_token)
+                            farm_unclaimed_amounts.append(float_to_str(reward_amount))
+                            if reward_token in tokens_price:
+                                token_price = float(tokens_price[reward_token]["price"])
+                                token_decimal = tokens_price[reward_token]["decimal"]
+                                farm_unclaimed_decimals.append(token_decimal)
+                                farm_unclaimed_prices.append(token_price)
+                                dis = int("1" + "0" * token_decimal)
+                                farm_unclaimed_count_amount = reward_amount / dis * token_price
+                            else:
+                                farm_unclaimed_decimals.append(0)
+                                farm_unclaimed_prices.append(0)
+                            farm_assets_data = {"type": "farm_unclaimed_rewards_assets", "pool_id": "", "farm_id": user_farm_id,
+                                                "account_id": account,
+                                                "tokens": str(farm_unclaimed_tokens),
+                                                "token_amounts": str(farm_unclaimed_amounts),
+                                                "token_decimals": str(farm_unclaimed_decimals),
+                                                "token_prices": str(farm_unclaimed_prices),
+                                                "amount": str(farm_unclaimed_count_amount)}
+                            account_assets_data_list.append(farm_assets_data)
+
         if len(account_assets_data_list) > 0:
             add_account_assets_data(account_assets_data_list)
             # print("account_assets_data_list", account_assets_data_list)
@@ -322,7 +369,7 @@ if __name__ == "__main__":
         print("analysis pool and farm data error,height folder name:", height_folder_name)
         print(e)
 
-    # folder_path = add_data_to_db("height_9")
+    # folder_path = add_data_to_db("height_9", "MAINNET")
     # print("start clear_folder")
     # clear_folder(folder_path)
     # print("start handle_account_pool_assets_data")
