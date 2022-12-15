@@ -233,7 +233,7 @@ def add_dcl_pools_to_db(data_list, network_id):
     insert_data = []
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        token_price = get_token_price(network_id)
+        token_price = get_dcl_token_price(network_id)
         for data in data_list:
             token_x_price = 0
             token_y_price = 0
@@ -376,7 +376,7 @@ def add_dcl_pools_tvl_to_redis(network_id, pool_id, pool_tvl_data):
         redis_conn.close()
 
 
-def get_token_price(network_id):
+def get_dcl_token_price(network_id):
     token_price_list = {}
     prices = list_token_price(network_id)
     for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
