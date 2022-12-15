@@ -146,7 +146,7 @@ def add_data_to_db(block_height_folder_name, network_id):
                             "reward_token": farm["terms"]["reward_token"],
                             "rps": farm["rps"]
                         }
-            print("farm_data_list", farm_data_list)
+            # print("farm_data_list:", farm_data_list)
 
     for file in os.listdir(path_to_jsonfiles):
         account_assets_data_list = []
@@ -247,28 +247,31 @@ def add_data_to_db(block_height_folder_name, network_id):
                             farm_unclaimed_amounts = []
                             farm_unclaimed_decimals = []
                             farm_unclaimed_prices = []
-                            reward_amount = (farm_data_list[user_farm_id]["rps"] - user_farm_rps) * farmer_seed_power / math.pow(10, 27)
-                            reward_token = farm_data_list[user_farm_id]["reward_token"]
-                            farm_unclaimed_tokens.append(reward_token)
-                            farm_unclaimed_amounts.append(float_to_str(reward_amount))
-                            if reward_token in tokens_price:
-                                token_price = float(tokens_price[reward_token]["price"])
-                                token_decimal = tokens_price[reward_token]["decimal"]
-                                farm_unclaimed_decimals.append(token_decimal)
-                                farm_unclaimed_prices.append(token_price)
-                                dis = int("1" + "0" * token_decimal)
-                                farm_unclaimed_count_amount = reward_amount / dis * token_price
-                            else:
-                                farm_unclaimed_decimals.append(0)
-                                farm_unclaimed_prices.append(0)
-                            farm_assets_data = {"type": "farm_unclaimed_rewards_assets", "pool_id": "", "farm_id": user_farm_id,
-                                                "account_id": account,
-                                                "tokens": str(farm_unclaimed_tokens),
-                                                "token_amounts": str(farm_unclaimed_amounts),
-                                                "token_decimals": str(farm_unclaimed_decimals),
-                                                "token_prices": str(farm_unclaimed_prices),
-                                                "amount": str(farm_unclaimed_count_amount)}
-                            account_assets_data_list.append(farm_assets_data)
+                            if user_farm_id in farm_data_list:
+                                reward_amount = (farm_data_list[user_farm_id][
+                                                     "rps"] - user_farm_rps) * farmer_seed_power / math.pow(10, 27)
+                                reward_token = farm_data_list[user_farm_id]["reward_token"]
+                                farm_unclaimed_tokens.append(reward_token)
+                                farm_unclaimed_amounts.append(float_to_str(reward_amount))
+                                if reward_token in tokens_price:
+                                    token_price = float(tokens_price[reward_token]["price"])
+                                    token_decimal = tokens_price[reward_token]["decimal"]
+                                    farm_unclaimed_decimals.append(token_decimal)
+                                    farm_unclaimed_prices.append(token_price)
+                                    dis = int("1" + "0" * token_decimal)
+                                    farm_unclaimed_count_amount = reward_amount / dis * token_price
+                                else:
+                                    farm_unclaimed_decimals.append(0)
+                                    farm_unclaimed_prices.append(0)
+                                farm_assets_data = {"type": "farm_unclaimed_rewards_assets", "pool_id": "",
+                                                    "farm_id": user_farm_id,
+                                                    "account_id": account,
+                                                    "tokens": str(farm_unclaimed_tokens),
+                                                    "token_amounts": str(farm_unclaimed_amounts),
+                                                    "token_decimals": str(farm_unclaimed_decimals),
+                                                    "token_prices": str(farm_unclaimed_prices),
+                                                    "amount": str(farm_unclaimed_count_amount)}
+                                account_assets_data_list.append(farm_assets_data)
 
         if len(account_assets_data_list) > 0:
             add_account_assets_data(account_assets_data_list)
