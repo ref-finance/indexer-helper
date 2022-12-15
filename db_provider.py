@@ -199,9 +199,12 @@ def handle_dcl_pools(data_list, network_id):
 
 def query_dcl_pools(network_id):
     db_conn = get_db_connect(network_id)
+    db_table = "t_dcl_pools_data"
+    if network_id == "MAINNET":
+        db_table = "t_dcl_pools_data_mainnet"
 
     sql = "SELECT id, pool_id, volume_x_in, volume_y_in, volume_x_out, volume_y_out, total_order_x, total_order_y " \
-          "FROM t_dcl_pools_data WHERE id IN ( SELECT max(id) FROM t_dcl_pools_data GROUP BY pool_id )"
+          "FROM " + db_table + " WHERE id IN ( SELECT max(id) FROM " + db_table + " GROUP BY pool_id )"
 
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
@@ -224,7 +227,11 @@ def add_dcl_pools_to_db(data_list, network_id):
     check_point = time.strftime("%Y-%m-%d", time_array)
     db_conn = get_db_connect(network_id)
 
-    sql = "insert into t_dcl_pools_data(pool_id, token_x, token_y, volume_x_in, volume_y_in, volume_x_out, " \
+    db_table = "t_dcl_pools_data"
+    if network_id == "MAINNET":
+        db_table = "t_dcl_pools_data_mainnet"
+
+    sql = "insert into " + db_table + "(pool_id, token_x, token_y, volume_x_in, volume_y_in, volume_x_out, " \
           "volume_y_out, total_order_x, total_order_y, total_x, total_y, total_fee_x_charged, total_fee_y_charged, " \
           "volume_x_in_grow, volume_y_in_grow, volume_x_out_grow, volume_y_out_grow, total_order_x_grow, " \
           "total_order_y_grow, token_x_price, token_y_price, token_x_decimal, token_y_decimal, timestamp, create_time) " \
@@ -282,12 +289,15 @@ def handle_dcl_pools_to_redis_data(network_id, zero_point):
     now = int(time.time())
     before_time = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
+    db_table = "t_dcl_pools_data"
+    if network_id == "MAINNET":
+        db_table = "t_dcl_pools_data_mainnet"
 
     sql = "SELECT pool_id, SUM(volume_x_in_grow) AS volume_x_in_grow, SUM(volume_y_in_grow) AS volume_y_in_grow, " \
           "SUM(volume_x_out_grow) AS volume_x_out_grow , SUM(volume_y_out_grow) AS volume_y_out_grow, " \
           "SUM(total_order_x_grow) AS total_order_x_grow, SUM(total_order_y_grow) AS total_order_y_grow, " \
           "token_x_price, token_y_price, token_x_decimal, token_y_decimal " \
-          "FROM t_dcl_pools_data WHERE `timestamp` >= %s GROUP BY pool_id"
+          "FROM " + db_table + " WHERE `timestamp` >= %s GROUP BY pool_id"
 
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
