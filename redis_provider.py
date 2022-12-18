@@ -81,6 +81,9 @@ def list_token_price(network_id):
     r=redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"])
     r.close()
+    if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
+        ret["usn"] = ret["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
+        ret["usdt.tether-token.near"] = ret["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
     return ret
 
 def list_token_price_by_id_list(network_id: str, id_list: list) ->list:
