@@ -13,7 +13,8 @@ import logging
 from indexer_provider import get_actions, get_liquidity_pools, get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
-from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id
+from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume
+from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter
 from config import Cfg
 from db_provider import get_history_token_price
@@ -22,7 +23,7 @@ from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20221218.01"
+service_version = "20221219.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -384,6 +385,43 @@ def handle_proposal_hash():
     if len(difference_set) > 0:
         ret += get_proposal_id_hash(Cfg.NETWORK_ID, difference_set)
     return compress_response_content(ret)
+
+
+@app.route('/get-24h-volume-by-id', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_24h_pool_volume():
+    pool_id = request.args.get("pool_id")
+    if pool_id is None:
+        return ''
+    res = get_24h_pool_volume(Cfg.NETWORK_ID, pool_id)
+    return compress_response_content(res)
+
+
+@app.route('/get-dcl-pools-volume', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_dcl_pools_volume():
+    pool_id = request.args.get("pool_id")
+    if pool_id is None:
+        return ''
+    res = get_dcl_pools_volume_list(Cfg.NETWORK_ID, pool_id)
+    return compress_response_content(res)
+
+
+@app.route('/get-24h-volume-list', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_24h_pool_volume_list():
+    res = get_24h_pool_volume_list(Cfg.NETWORK_ID)
+    return compress_response_content(res)
+
+
+@app.route('/get-dcl-pools-tvl-list', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_dcl_pools_tvl_list():
+    pool_id = request.args.get("pool_id")
+    if pool_id is None:
+        return ''
+    res = get_dcl_pools_tvl_list(Cfg.NETWORK_ID, pool_id)
+    return compress_response_content(res)
 
 
 logger.add("app.log")
