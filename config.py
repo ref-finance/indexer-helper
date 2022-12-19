@@ -107,7 +107,7 @@ class Cfg:
             "XREF_CONTRACT": "xtoken.ref-finance.near",
             "BOOSTFARM_CONTRACT": "boostfarm.ref-finance.near",
             "USN_CONTRACT": "usn",
-            "DCL_POOL_CONTRACT": "dclv1.ref-labs.near",
+            "DCL_POOL_CONTRACT": "dcl.ref-labs.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",
