@@ -314,12 +314,17 @@ def handle_account_pool_assets_m_data(network_id, now_time, row):
             if now_date_time_m == asset["date_itme"]:
                 data_flag = False
                 asset["assets"] = amount
-        if len(pool_assets) >= 30:
+        if len(pool_assets) >= 30 and data_flag:
             pool_assets.pop(0)
-            data_flag = True
     if data_flag:
         pool_assets.append(pool_asset_data)
-    add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(pool_assets, cls=DecimalEncoder, ensure_ascii=False))
+    set_lst = set()
+    new_pool_assets = []
+    for pool in pool_assets:
+        if pool["date_itme"] not in set_lst:
+            set_lst.add(pool["date_itme"])
+            new_pool_assets.append(pool)
+    add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(new_pool_assets, cls=DecimalEncoder, ensure_ascii=False))
 
 
 def handle_account_pool_assets_all_data(network_id, now_time, row):
@@ -373,4 +378,10 @@ if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
     # add_history_token_price("ref.fakes.testnet", "ref2", 1.003, 18, "MAINNET")
-    handle_account_pool_assets_data("MAINNET")
+    # handle_account_pool_assets_data("MAINNET")
+    now_time = int(time.time())
+    row = {
+        "account_id": "juaner.near",
+        "amount": 10
+    }
+    handle_account_pool_assets_m_data("MAINNET", now_time, row)
