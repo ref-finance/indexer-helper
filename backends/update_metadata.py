@@ -24,7 +24,7 @@ def internal_update_token_metadata(conn, contract_id, metadata):
 
     # print(metadata_obj)
     
-    if ret:
+    if ret is True:
         if metadata != metadata_obj:
             redis_conn = RedisProvider()
             redis_conn.add_token_metadata(network_id, contract_id, json.dumps(metadata_obj))
