@@ -18,6 +18,7 @@ def internal_update_token_metadata(conn, contract_id, metadata):
             ret = True
         else:
             print("Does not got token metadata  %s" % contract_id)
+            ret = False
 
     except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
