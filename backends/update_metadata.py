@@ -18,13 +18,14 @@ def internal_update_token_metadata(conn, contract_id, metadata):
             ret = True
         else:
             print("Does not got token metadata  %s" % contract_id)
+            ret = False
 
     except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
 
     # print(metadata_obj)
     
-    if ret:
+    if ret is True:
         if metadata != metadata_obj:
             redis_conn = RedisProvider()
             redis_conn.add_token_metadata(network_id, contract_id, json.dumps(metadata_obj))
