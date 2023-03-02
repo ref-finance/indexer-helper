@@ -76,10 +76,10 @@ def get_actions(network_id, account_id):
     )
 
     sql2 = """WHERE predecessor_account_id = %s """
-    sql3 = "AND (receiver_account_id IN ('%s', '%s', '%s', 'wrap.near', '%s', '%s', '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"], Cfg.NETWORK[network_id]["BOOSTFARM_CONTRACT"], Cfg.NETWORK[network_id]["USN_CONTRACT"], Cfg.NETWORK[network_id]["DCL_CONTRACT"])
+    sql3 = "AND (receiver_account_id IN ('%s', '%s', '%s', 'wrap.near', '%s', '%s', '%s', '%s') " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["FARMING_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"], Cfg.NETWORK[network_id]["BOOSTFARM_CONTRACT"], Cfg.NETWORK[network_id]["USN_CONTRACT"], Cfg.NETWORK[network_id]["DCL_CONTRACT"], Cfg.NETWORK[network_id]["ORDERLY_CONTRACT"])
     sql4 = "OR (args->'args_json'->>'receiver_id' IN ('aurora', '%s') AND args->>'method_name' = 'ft_transfer_call') " % Cfg.NETWORK[network_id]["USN_CONTRACT"]
     sql5 = "OR (receiver_account_id = 'aurora' AND args->>'method_name' = 'call') "
-    sql6 = "OR args->'args_json'->>'receiver_id' IN ('%s', '%s', '%s')) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"], Cfg.NETWORK[network_id]["DCL_CONTRACT"])
+    sql6 = "OR args->'args_json'->>'receiver_id' IN ('%s', '%s', '%s', '%s')) " % (Cfg.NETWORK[network_id]["REF_CONTRACT"], Cfg.NETWORK[network_id]["XREF_CONTRACT"], Cfg.NETWORK[network_id]["DCL_CONTRACT"], Cfg.NETWORK[network_id]["ORDERLY_CONTRACT"])
     sql7 = "order by timestamp desc limit 10"
     sql = "%s %s %s %s %s %s %s" % (sql1, sql2, sql3, sql4, sql5, sql6, sql7)
 
