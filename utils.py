@@ -4,6 +4,7 @@ import json
 from flask import request
 
 def combine_pools_info(pools, prices, metadata):
+    ret_pools = []
     for pool in pools:
         tokens = pool['token_account_ids']
         token_balances = []
@@ -11,10 +12,16 @@ def combine_pools_info(pools, prices, metadata):
         token_tvls = []
         valid_token_tvl = 0
         valid_token_price = 0
+        token_metadata_flag = True
         for i in range(len(tokens)):
             if metadata[tokens[i]] != "":
-                balance = float(pool['amounts'][i]) / (10 ** metadata[tokens[i]]["decimals"])
+                token_decimals = metadata[tokens[i]]["decimals"]
+                token_symbol = metadata[tokens[i]]["symbol"]
+                if token_decimals is None or token_symbol is None or token_decimals == "" or token_symbol == "":
+                    token_metadata_flag = False
+                balance = float(pool['amounts'][i]) / (10 ** token_decimals)
             else:
+                token_metadata_flag = False
                 balance = 0
             # balance = float(pool['amounts'][i]) / (10 ** metadata[tokens[i]]["decimals"])
             token_balances.append(balance)
@@ -51,6 +58,11 @@ def combine_pools_info(pools, prices, metadata):
                 pool["token0_ref_price"] = str(float(token_prices[1]) * token_balances[1] / token_balances[0])
             else:
                 pool["token0_ref_price"] = "N/A"
+        if token_metadata_flag:
+            ret_pools.append(pool)
+    pools.clear()
+    for ret_pool in ret_pools:
+        pools.append(ret_pool)
     pass
 
 
