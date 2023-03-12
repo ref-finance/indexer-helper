@@ -32,6 +32,16 @@ def get_db_connect(network_id: str):
     return conn
 
 
+def get_near_lake_connect(network_id: str):
+    conn = pymysql.connect(
+        host=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_HOST"],
+        port=int(Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PORT"]),
+        user=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PWD"],
+        db=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_DSN"])
+    return conn
+
+
 def get_history_token_price(id_list: list) -> list:
     """
     Batch query historical price
@@ -397,6 +407,38 @@ def get_dcl_token_price(network_id):
                 "symbol": token["SYMBOL"],
             }
     return token_price_list
+
+
+def query_limit_order_log(owner_id):
+    db_conn = get_near_lake_connect()
+    sql = "select order_id, tx_id from near_lake_limit_order_mainnet where type = 'order_added' and owner_id = '%s'" % owner_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        limit_order_data = cursor.fetchall()
+        return limit_order_data
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("query limit_order_log to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_limit_order_swap(owner_id):
+    db_conn = get_near_lake_connect()
+    sql = "select token_in,token_out,pool_id,point,timestamp from near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        limit_order_data = cursor.fetchall()
+        return limit_order_data
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("query limit_order_log to db error:", e)
+    finally:
+        cursor.close()
 
 
 if __name__ == '__main__':
