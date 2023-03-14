@@ -112,6 +112,7 @@ class Cfg:
             "USN_CONTRACT": "usn",
             "DCL_POOL_CONTRACT": "dclv2.ref-labs.near",
             "DCL_CONTRACT": "dclv2.ref-labs.near",
+            "ORDERLY_CONTRACT": "asset-manager.orderly-network.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",
