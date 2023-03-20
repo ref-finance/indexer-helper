@@ -151,7 +151,7 @@ class Cfg:
             "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
             "NEAR_LAKE_DB_HOST": NEAR_LAKE_DB_HOST,
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
-            "BLOCK_HEIGHT_FOLDER_PATH": "/www/wwwroot/mainnet-indexer.ref-finance.com/indexer-helper/backends/",
+            "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
         }
     }
     TOKENS = {

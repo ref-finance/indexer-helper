@@ -3,6 +3,7 @@ import os
 import json
 import shutil
 import sys
+from db_info import BUCKET_NAME, AWS_S3_AKI, AWS_S3_SAK
 
 sys.path.append('../')
 from db_provider import add_account_assets_data, get_token_price, handle_account_pool_assets_data
@@ -13,15 +14,6 @@ import math
 AWS_REGION_NAME = 'us-east-1'
 CONSTANT_D = 1.0001
 
-'''
-BUCKET_NAME = "xxxxxxxxxx"  
-AWS_S3_AKI = 'xxxxxxxxxx' #aws_access_key_id
-AWS_S3_SAK = 'xxxxxxxxxx' #aws_secret_access_key
-'''
-
-BUCKET_NAME = "xxxxxxxxxx"
-AWS_S3_AKI = 'xxxxxxxxxx'  # aws_access_key_id
-AWS_S3_SAK = 'xxxxxxxxxx'  # aws_secret_access_key
 
 # s3
 s3 = boto3.client('s3', region_name=AWS_REGION_NAME, aws_access_key_id=AWS_S3_AKI, aws_secret_access_key=AWS_S3_SAK)
