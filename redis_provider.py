@@ -81,6 +81,9 @@ def list_token_price(network_id):
     r=redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"])
     r.close()
+    if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
+        ret["usn"] = ret["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
+        ret["usdt.tether-token.near"] = ret["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
     return ret
 
 def list_token_price_by_id_list(network_id: str, id_list: list) ->list:
@@ -179,6 +182,47 @@ def list_whitelist(network_id):
     return whitelist_obj
 
 
+def get_24h_pool_volume(network_id, pool_id):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_id)
+    r.close()
+    return json.loads(ret)
+
+
+def get_dcl_pools_volume_list(network_id, redis_key):
+
+    import json
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
+    r.close()
+    dcl_pools_volume_list = [json.loads(x) for x in ret.values()]
+    return dcl_pools_volume_list
+
+
+def get_24h_pool_volume_list(network_id):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"])
+    r.close()
+    dcl_pool_list = []
+    for key, value in ret.items():
+        dcl_pool = {
+            "pool_id": key,
+            "volume": value,
+        }
+        dcl_pool_list.append(dcl_pool)
+    return dcl_pool_list
+
+
+def get_dcl_pools_tvl_list(network_id, redis_key):
+
+    import json
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_TVL_LIST_KEY"] + "_" + redis_key)
+    r.close()
+    dcl_pools_tvl_list = [json.loads(x) for x in ret.values()]
+    return dcl_pools_tvl_list
+
+
 def get_account_pool_assets(network_id, key):
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hget(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], key)
@@ -246,6 +290,15 @@ class RedisProvider(object):
 
     def add_proposal_id_hash(self, network_id, proposal_id, proposal_hash):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], proposal_id, proposal_hash)
+
+    def add_twenty_four_hour_pools_data(self, network_id, pool_id, volume):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_id, volume)
+
+    def add_dcl_pools_data(self, network_id, pool_id, volume, redis_key):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key, pool_id, volume)
+
+    def add_dcl_pools_tvl_data(self, network_id, redis_key, pool_id, tvl_data):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_TVL_LIST_KEY"] + "_" + redis_key, pool_id, tvl_data)
 
     def add_account_pool_assets(self, network_id, account_id, value):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], account_id, value)

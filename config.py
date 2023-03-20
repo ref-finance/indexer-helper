@@ -33,6 +33,16 @@ except ImportError:
     DB_HOST = "127.0.0.1"
     DB_PORT = "3306"
 
+
+try:
+    from db_info import NEAR_LAKE_DB_DSN, NEAR_LAKE_DB_UID, NEAR_LAKE_DB_PWD, NEAR_LAKE_DB_HOST, NEAR_LAKE_DB_PORT
+except ImportError:
+    NEAR_LAKE_DB_DSN = "ref"
+    NEAR_LAKE_DB_UID = "root"
+    NEAR_LAKE_DB_PWD = "root"
+    NEAR_LAKE_DB_HOST = "127.0.0.1"
+    NEAR_LAKE_DB_PORT = "3306"
+
 """
 
 """
@@ -51,6 +61,7 @@ class Cfg:
             "REF_CONTRACT": "exchange.ref-dev.testnet",
             "XREF_CONTRACT": "xref.ref-dev.testnet",
             "BOOSTFARM_CONTRACT": "boostfarm.ref-dev.testnet",
+            "ORDERLY_CONTRACT": "asset-manager.orderly.testnet",
             "REDIS_KEY": "FARMS_TESTNET_DEV",
             "REDIS_POOL_KEY": "POOLS_TESTNET_DEV",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET_DEV",
@@ -76,6 +87,9 @@ class Cfg:
             "REF_CONTRACT": "ref-finance-101.testnet",
             "XREF_CONTRACT": "xref.ref-dev.testnet",
             "USN_CONTRACT": "usdn.testnet",
+            "DCL_POOL_CONTRACT": "dcl.ref-dev.testnet",
+            "DCL_CONTRACT": "dcl.ref-dev.testnet",
+            "ORDERLY_CONTRACT": "asset-manager.orderly.testnet",
             "REDIS_KEY": "FARMS_TESTNET",
             "REDIS_POOL_KEY": "POOLS_TESTNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET",
@@ -85,6 +99,9 @@ class Cfg:
             "REDIS_PROPOSAL_ID_HASH_KEY": "PROPOSAL_ID_HASH_TESTNET",
             "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_TESTNET",
             "REDIS_WHITELIST_KEY": "WHITELIST_TESTNET",
+            "REDIS_DCL_POOLS_VOLUME_24H_KEY": "DCL_POOLS_VOLUME_24H_TESTNET",
+            "REDIS_DCL_POOLS_VOLUME_LIST_KEY": "DCL_POOLS_VOLUME_LIST_TESTNET",
+            "REDIS_DCL_POOLS_TVL_LIST_KEY": "DCL_POOLS_TVL_LIST_TESTNET",
             "INDEXER_DSN": "testnet_explorer",
             "INDEXER_UID": "public_readonly",
             "INDEXER_PWD": "nearprotocol",
@@ -103,6 +120,9 @@ class Cfg:
             "XREF_CONTRACT": "xtoken.ref-finance.near",
             "BOOSTFARM_CONTRACT": "boostfarm.ref-finance.near",
             "USN_CONTRACT": "usn",
+            "DCL_POOL_CONTRACT": "dclv2.ref-labs.near",
+            "DCL_CONTRACT": "dclv2.ref-labs.near",
+            "ORDERLY_CONTRACT": "asset-manager.orderly-network.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",
@@ -112,6 +132,9 @@ class Cfg:
             "REDIS_PROPOSAL_ID_HASH_KEY": "PROPOSAL_ID_HASH_MAINNET",
             "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_MAINNET",
             "REDIS_WHITELIST_KEY": "WHITELIST_MAINNET",
+            "REDIS_DCL_POOLS_VOLUME_24H_KEY": "DCL_POOLS_VOLUME_24H_MAINNET",
+            "REDIS_DCL_POOLS_VOLUME_LIST_KEY": "DCL_POOLS_VOLUME_LIST_MAINNET",
+            "REDIS_DCL_POOLS_TVL_LIST_KEY": "DCL_POOLS_TVL_LIST_MAINNET",
             "REDIS_ACCOUNT_POOL_ASSETS_KEY": "ACCOUNT_POOL_ASSETS_MAINNET",
             "INDEXER_DSN": INDEXER_DSN,
             "INDEXER_UID": INDEXER_UID,
@@ -123,6 +146,11 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "NEAR_LAKE_DB_DSN": NEAR_LAKE_DB_DSN,
+            "NEAR_LAKE_DB_UID": NEAR_LAKE_DB_UID,
+            "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
+            "NEAR_LAKE_DB_HOST": NEAR_LAKE_DB_HOST,
+            "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
             "BLOCK_HEIGHT_FOLDER_PATH": "/www/wwwroot/mainnet-indexer.ref-finance.com/indexer-helper/backends/",
         }
     }
@@ -231,6 +259,9 @@ class Cfg:
             {"SYMBOL": "SWEAT", "NEAR_ID": "token.sweat", "MD_ID": "v2.ref-finance.near|3667|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "NearX", "NEAR_ID": "v2-nearx.stader-labs.near", "MD_ID": "v2-nearx.stader-labs.near|NA|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "SEAT", "NEAR_ID": "token.stlb.near", "MD_ID": "v2.ref-finance.near|3714|wrap.near", "DECIMAL": 5},
+            {"SYMBOL": "NEKO", "NEAR_ID": "ftv2.nekotoken.near", "MD_ID": "v2.ref-finance.near|3804|a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near", "DECIMAL": 24},
+            {"SYMBOL": "UMINT", "NEAR_ID": "e99de844ef3ef72806cf006224ef3b813e82662f.factory.bridge.near", "MD_ID": "v2.ref-finance.near|3815|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "pNEAR", "NEAR_ID": "phoenix-bonds.near", "MD_ID": "v2.ref-finance.near|3819|wrap.near", "DECIMAL": 24},
         ],
     }
     MARKET_URL = "api.coingecko.com"
