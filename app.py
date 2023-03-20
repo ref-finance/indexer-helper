@@ -427,14 +427,14 @@ def handle_dcl_pools_tvl_list():
 @app.route('/get-limit-order-log-by-account/<account_id>', methods=['GET'])
 @flask_cors.cross_origin()
 def get_limit_order_log_by_account(account_id):
-    res = query_limit_order_log(account_id)
+    res = query_limit_order_log(Cfg.NETWORK_ID, account_id)
     return compress_response_content(res)
 
 
 @app.route('/get-limit-order-swap-by-account/<account_id>', methods=['GET'])
 @flask_cors.cross_origin()
 def get_limit_order_swap_by_account(account_id):
-    res = query_limit_order_swap(account_id)
+    res = query_limit_order_swap(Cfg.NETWORK_ID, account_id)
     return compress_response_content(res)
 
 

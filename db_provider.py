@@ -409,8 +409,8 @@ def get_dcl_token_price(network_id):
     return token_price_list
 
 
-def query_limit_order_log(owner_id):
-    db_conn = get_near_lake_connect()
+def query_limit_order_log(network_id, owner_id):
+    db_conn = get_near_lake_connect(network_id)
     sql = "select order_id, tx_id from near_lake_limit_order_mainnet where type = 'order_added' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
@@ -425,8 +425,8 @@ def query_limit_order_log(owner_id):
         cursor.close()
 
 
-def query_limit_order_swap(owner_id):
-    db_conn = get_near_lake_connect()
+def query_limit_order_swap(network_id, owner_id):
+    db_conn = get_near_lake_connect(network_id)
     sql = "select token_in,token_out,pool_id,point,timestamp from near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
