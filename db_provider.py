@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from config import Cfg
 import time
-from redis_provider import RedisProvider, list_history_token_price, list_token_price
+from redis_provider import RedisProvider, list_history_token_price, list_token_price, get_account_pool_assets
 
 
 class Encoder(json.JSONEncoder):
@@ -24,10 +24,10 @@ class Encoder(json.JSONEncoder):
 
 def get_db_connect(network_id: str):
     conn = pymysql.connect(
-        host=Cfg.NETWORK[network_id]["DB_HOST"], 
-        port=int(Cfg.NETWORK[network_id]["DB_PORT"]), 
-        user=Cfg.NETWORK[network_id]["DB_UID"], 
-        passwd=Cfg.NETWORK[network_id]["DB_PWD"], 
+        host=Cfg.NETWORK[network_id]["DB_HOST"],
+        port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
+        user=Cfg.NETWORK[network_id]["DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
         db=Cfg.NETWORK[network_id]["DB_DSN"])
     return conn
 
@@ -441,15 +441,207 @@ def query_limit_order_swap(network_id, owner_id):
         cursor.close()
 
 
+def add_account_assets_data(data_list):
+    now_time = int(time.time())
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
+
+    sql = "insert into t_account_assets_data(type, pool_id, farm_id, account_id, tokens, token_amounts, " \
+          "token_decimals, token_prices, amount, `timestamp`, create_time) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())"
+
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["type"], data["pool_id"], data["farm_id"], data["account_id"], data["tokens"],
+                                data["token_amounts"], data["token_decimals"], data["token_prices"],
+                                data["amount"], now_time))
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+
+    except Exception as e:
+        print("insert account assets assets log to db error:", e)
+        print("insert account assets assets log to db insert_data:", insert_data)
+    finally:
+        cursor.close()
+
+
+def get_token_price():
+    tokens = {}
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
+    sql = "select contract_address,price,`decimal` from mk_history_token_price where id in " \
+          "(select max(id) from mk_history_token_price group by contract_address)"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        for row in rows:
+            contract_address = row["contract_address"]
+            token_data = {
+                "contract_address": contract_address,
+                "price": row["price"],
+                "decimal": row["decimal"]
+            }
+            tokens[contract_address] = token_data
+        return tokens
+    except Exception as e:
+        # Rollback on error
+        print(e)
+    finally:
+        cursor.close()
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return float(o)
+        super(DecimalEncoder, self).default(o)
+
+
+def handle_account_pool_assets_data(network_id):
+    now_time = int(time.time())
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
+    sql = "select account_id,sum(amount) as amount from t_account_assets_data where `status` = 1 group by account_id"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        for row in rows:
+            handle_account_pool_assets_h_data(network_id, now_time, row)
+            handle_account_pool_assets_w_data(network_id, now_time, row)
+            handle_account_pool_assets_m_data(network_id, now_time, row)
+            handle_account_pool_assets_all_data(network_id, now_time, row)
+        update_account_pool_assets_status()
+    except Exception as e:
+        print(e)
+    finally:
+        cursor.close()
+
+
+def handle_account_pool_assets_h_data(network_id, now_time, row):
+    redis_key = row["account_id"] + "_h"
+    amount = row["amount"]
+    ret_pool_assets = get_account_pool_assets(network_id, redis_key)
+    time_array = time.localtime(now_time)
+    now_date_time_h = time.strftime("%Y-%m-%d %H", time_array)
+    pool_assets = []
+    pool_asset_data = {
+        "date_itme": now_date_time_h,
+        "assets": amount
+    }
+    if ret_pool_assets is not None:
+        pool_assets = json.loads(ret_pool_assets)
+        if len(pool_assets) >= 24:
+            pool_assets.pop(0)
+    pool_assets.append(pool_asset_data)
+    add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(pool_assets, cls=DecimalEncoder, ensure_ascii=False))
+
+
+def handle_account_pool_assets_w_data(network_id, now_time, row):
+    redis_key = row["account_id"] + "_w"
+    amount = row["amount"]
+    ret_pool_assets = get_account_pool_assets(network_id, redis_key)
+    time_array = time.localtime(now_time)
+    now_date_time_w = time.strftime("%Y-%m-%d %H", time_array)
+    pool_assets = []
+    pool_asset_data = {
+        "date_itme": now_date_time_w,
+        "assets": amount
+    }
+    if ret_pool_assets is not None:
+        pool_assets = json.loads(ret_pool_assets)
+        if len(pool_assets) >= 168:
+            pool_assets.pop(0)
+    pool_assets.append(pool_asset_data)
+    add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(pool_assets, cls=DecimalEncoder, ensure_ascii=False))
+
+
+def handle_account_pool_assets_m_data(network_id, now_time, row):
+    redis_key = row["account_id"] + "_m"
+    amount = row["amount"]
+    ret_pool_assets = get_account_pool_assets(network_id, redis_key)
+    time_array = time.localtime(now_time)
+    now_date_time_m = time.strftime("%Y-%m-%d", time_array)
+    pool_assets = []
+    pool_asset_data = {
+        "date_itme": now_date_time_m,
+        "assets": amount
+    }
+    data_flag = True
+    if ret_pool_assets is not None:
+        pool_assets = json.loads(ret_pool_assets)
+        for asset in pool_assets:
+            if now_date_time_m == asset["date_itme"]:
+                data_flag = False
+                asset["assets"] = amount
+        if len(pool_assets) >= 30 and data_flag:
+            pool_assets.pop(0)
+    if data_flag:
+        pool_assets.append(pool_asset_data)
+    set_lst = set()
+    new_pool_assets = []
+    for pool in pool_assets:
+        if pool["date_itme"] not in set_lst:
+            set_lst.add(pool["date_itme"])
+            new_pool_assets.append(pool)
+    add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(new_pool_assets, cls=DecimalEncoder, ensure_ascii=False))
+
+
+def handle_account_pool_assets_all_data(network_id, now_time, row):
+    redis_key = row["account_id"] + "_all"
+    amount = row["amount"]
+    ret_pool_assets = get_account_pool_assets(network_id, redis_key)
+    time_array = time.localtime(now_time)
+    now_date_time_all = time.strftime("%Y-%m-%d", time_array)
+    pool_assets = []
+    pool_asset_data = {
+        "date_itme": now_date_time_all,
+        "assets": amount
+    }
+    data_flag = True
+    if ret_pool_assets is not None:
+        pool_assets = json.loads(ret_pool_assets)
+        for asset in pool_assets:
+            if now_date_time_all == asset["date_itme"]:
+                data_flag = False
+                asset["assets"] = amount
+    if data_flag:
+        pool_assets.append(pool_asset_data)
+    add_account_pool_assets_to_redis(network_id, redis_key, json.dumps(pool_assets, cls=DecimalEncoder, ensure_ascii=False))
+
+
+def add_account_pool_assets_to_redis(network_id, key, values):
+    redis_conn = RedisProvider()
+    redis_conn.begin_pipe()
+    redis_conn.add_account_pool_assets(network_id, key, values)
+    redis_conn.end_pipe()
+    redis_conn.close()
+
+
+def update_account_pool_assets_status():
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        sql = "update t_account_assets_data set `status` = 2 where `status` = 1"
+        cursor.execute(sql)
+        # Submit to database for execution
+        db_conn.commit()
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print(e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
     # add_history_token_price("ref.fakes.testnet", "ref2", 1.003, 18, "MAINNET")
-    # zero_point = int(time.time()) - int(time.time() - time.timezone) % 86400
-    # handle_dcl_pools_to_redis_data("TESTNET", zero_point)
-    tvl_data = {
-        "pool_id": "ref.fakes.testnet|usdt.fakes.testnet|2000",
-        "dateString": "2022-10-24",
-        "tvl": "57671.51154471094"
+    # handle_account_pool_assets_data("MAINNET")
+    now_time = int(time.time())
+    row = {
+        "account_id": "juaner.near",
+        "amount": 10
     }
-    add_dcl_pools_tvl_to_redis("TESTNET", "ref.fakes.testnet|usdt.fakes.testnet|2000_2022-10-24", tvl_data)
+    handle_account_pool_assets_m_data("MAINNET", now_time, row)

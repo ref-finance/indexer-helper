@@ -135,6 +135,7 @@ class Cfg:
             "REDIS_DCL_POOLS_VOLUME_24H_KEY": "DCL_POOLS_VOLUME_24H_MAINNET",
             "REDIS_DCL_POOLS_VOLUME_LIST_KEY": "DCL_POOLS_VOLUME_LIST_MAINNET",
             "REDIS_DCL_POOLS_TVL_LIST_KEY": "DCL_POOLS_TVL_LIST_MAINNET",
+            "REDIS_ACCOUNT_POOL_ASSETS_KEY": "ACCOUNT_POOL_ASSETS_MAINNET",
             "INDEXER_DSN": INDEXER_DSN,
             "INDEXER_UID": INDEXER_UID,
             "INDEXER_PWD": INDEXER_PWD,
@@ -150,6 +151,7 @@ class Cfg:
             "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
             "NEAR_LAKE_DB_HOST": NEAR_LAKE_DB_HOST,
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
+            "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
         }
     }
     TOKENS = {
