@@ -23,7 +23,7 @@ from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20230131.01"
+service_version = "20230321.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
