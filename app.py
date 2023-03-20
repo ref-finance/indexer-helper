@@ -17,7 +17,7 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id,
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter
 from config import Cfg
-from db_provider import get_history_token_price
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap
 import re
 from flask_limiter import Limiter
 from loguru import logger
@@ -421,6 +421,20 @@ def handle_dcl_pools_tvl_list():
     if pool_id is None:
         return ''
     res = get_dcl_pools_tvl_list(Cfg.NETWORK_ID, pool_id)
+    return compress_response_content(res)
+
+
+@app.route('/get-limit-order-log-by-account/<account_id>', methods=['GET'])
+@flask_cors.cross_origin()
+def get_limit_order_log_by_account(account_id):
+    res = query_limit_order_log(Cfg.NETWORK_ID, account_id)
+    return compress_response_content(res)
+
+
+@app.route('/get-limit-order-swap-by-account/<account_id>', methods=['GET'])
+@flask_cors.cross_origin()
+def get_limit_order_swap_by_account(account_id):
+    res = query_limit_order_swap(Cfg.NETWORK_ID, account_id)
     return compress_response_content(res)
 
 

@@ -33,6 +33,16 @@ except ImportError:
     DB_HOST = "127.0.0.1"
     DB_PORT = "3306"
 
+
+try:
+    from db_info import NEAR_LAKE_DB_DSN, NEAR_LAKE_DB_UID, NEAR_LAKE_DB_PWD, NEAR_LAKE_DB_HOST, NEAR_LAKE_DB_PORT
+except ImportError:
+    NEAR_LAKE_DB_DSN = "ref"
+    NEAR_LAKE_DB_UID = "root"
+    NEAR_LAKE_DB_PWD = "root"
+    NEAR_LAKE_DB_HOST = "127.0.0.1"
+    NEAR_LAKE_DB_PORT = "3306"
+
 """
 
 """
@@ -135,6 +145,11 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "NEAR_LAKE_DB_DSN": NEAR_LAKE_DB_DSN,
+            "NEAR_LAKE_DB_UID": NEAR_LAKE_DB_UID,
+            "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
+            "NEAR_LAKE_DB_HOST": NEAR_LAKE_DB_HOST,
+            "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
         }
     }
     TOKENS = {
