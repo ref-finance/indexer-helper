@@ -13,17 +13,17 @@ import logging
 from indexer_provider import get_actions, get_liquidity_pools, get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
-from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume
+from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter
 from config import Cfg
-from db_provider import get_history_token_price
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap
 import re
 from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20230131.01"
+service_version = "20230321.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -422,6 +422,34 @@ def handle_dcl_pools_tvl_list():
         return ''
     res = get_dcl_pools_tvl_list(Cfg.NETWORK_ID, pool_id)
     return compress_response_content(res)
+
+
+@app.route('/get-limit-order-log-by-account/<account_id>', methods=['GET'])
+@flask_cors.cross_origin()
+def get_limit_order_log_by_account(account_id):
+    res = query_limit_order_log(Cfg.NETWORK_ID, account_id)
+    return compress_response_content(res)
+
+
+@app.route('/get-limit-order-swap-by-account/<account_id>', methods=['GET'])
+@flask_cors.cross_origin()
+def get_limit_order_swap_by_account(account_id):
+    res = query_limit_order_swap(Cfg.NETWORK_ID, account_id)
+    return compress_response_content(res)
+
+
+@app.route('/get-assets-by-account', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_assets_by_account():
+    account_id = request.args.get("account_id")
+    dimension = request.args.get("dimension")
+    if account_id is None or dimension is None:
+        return ""
+    redis_key = account_id + "_" + dimension.lower()
+    ret = get_account_pool_assets(Cfg.NETWORK_ID, redis_key)
+    if ret is None:
+        return ""
+    return compress_response_content(json.loads(ret))
 
 
 logger.add("app.log")

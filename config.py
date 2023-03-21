@@ -33,6 +33,16 @@ except ImportError:
     DB_HOST = "127.0.0.1"
     DB_PORT = "3306"
 
+
+try:
+    from db_info import NEAR_LAKE_DB_DSN, NEAR_LAKE_DB_UID, NEAR_LAKE_DB_PWD, NEAR_LAKE_DB_HOST, NEAR_LAKE_DB_PORT
+except ImportError:
+    NEAR_LAKE_DB_DSN = "ref"
+    NEAR_LAKE_DB_UID = "root"
+    NEAR_LAKE_DB_PWD = "root"
+    NEAR_LAKE_DB_HOST = "127.0.0.1"
+    NEAR_LAKE_DB_PORT = "3306"
+
 """
 
 """
@@ -51,6 +61,7 @@ class Cfg:
             "REF_CONTRACT": "exchange.ref-dev.testnet",
             "XREF_CONTRACT": "xref.ref-dev.testnet",
             "BOOSTFARM_CONTRACT": "boostfarm.ref-dev.testnet",
+            "ORDERLY_CONTRACT": "asset-manager.orderly.testnet",
             "REDIS_KEY": "FARMS_TESTNET_DEV",
             "REDIS_POOL_KEY": "POOLS_TESTNET_DEV",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET_DEV",
@@ -78,6 +89,7 @@ class Cfg:
             "USN_CONTRACT": "usdn.testnet",
             "DCL_POOL_CONTRACT": "dcl.ref-dev.testnet",
             "DCL_CONTRACT": "dcl.ref-dev.testnet",
+            "ORDERLY_CONTRACT": "asset-manager.orderly.testnet",
             "REDIS_KEY": "FARMS_TESTNET",
             "REDIS_POOL_KEY": "POOLS_TESTNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_TESTNET",
@@ -110,6 +122,7 @@ class Cfg:
             "USN_CONTRACT": "usn",
             "DCL_POOL_CONTRACT": "dclv2.ref-labs.near",
             "DCL_CONTRACT": "dclv2.ref-labs.near",
+            "ORDERLY_CONTRACT": "asset-manager.orderly-network.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",
@@ -122,6 +135,7 @@ class Cfg:
             "REDIS_DCL_POOLS_VOLUME_24H_KEY": "DCL_POOLS_VOLUME_24H_MAINNET",
             "REDIS_DCL_POOLS_VOLUME_LIST_KEY": "DCL_POOLS_VOLUME_LIST_MAINNET",
             "REDIS_DCL_POOLS_TVL_LIST_KEY": "DCL_POOLS_TVL_LIST_MAINNET",
+            "REDIS_ACCOUNT_POOL_ASSETS_KEY": "ACCOUNT_POOL_ASSETS_MAINNET",
             "INDEXER_DSN": INDEXER_DSN,
             "INDEXER_UID": INDEXER_UID,
             "INDEXER_PWD": INDEXER_PWD,
@@ -132,6 +146,12 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "NEAR_LAKE_DB_DSN": NEAR_LAKE_DB_DSN,
+            "NEAR_LAKE_DB_UID": NEAR_LAKE_DB_UID,
+            "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
+            "NEAR_LAKE_DB_HOST": NEAR_LAKE_DB_HOST,
+            "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
+            "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
         }
     }
     TOKENS = {
