@@ -118,7 +118,7 @@ class Cfg:
             "FARMING_CONTRACT": "v2.ref-farming.near",
             "REF_CONTRACT": "v2.ref-finance.near",
             "XREF_CONTRACT": "xtoken.ref-finance.near",
-            "BOOSTFARM_CONTRACT": "boostfarm.ref-finance.near",
+            "BOOSTFARM_CONTRACT": "boostfarm.ref-labs.near",
             "USN_CONTRACT": "usn",
             "DCL_POOL_CONTRACT": "dclv2.ref-labs.near",
             "DCL_CONTRACT": "dclv2.ref-labs.near",
