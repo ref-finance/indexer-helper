@@ -23,7 +23,7 @@ from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20230321.01"
+service_version = "20230323.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -421,20 +421,6 @@ def handle_dcl_pools_tvl_list():
     if pool_id is None:
         return ''
     res = get_dcl_pools_tvl_list(Cfg.NETWORK_ID, pool_id)
-    return compress_response_content(res)
-
-
-@app.route('/get-limit-order-log-by-account/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
-def get_limit_order_log_by_account(account_id):
-    res = query_limit_order_log(Cfg.NETWORK_ID, account_id)
-    return compress_response_content(res)
-
-
-@app.route('/get-limit-order-swap-by-account/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
-def get_limit_order_swap_by_account(account_id):
-    res = query_limit_order_swap(Cfg.NETWORK_ID, account_id)
     return compress_response_content(res)
 
 
