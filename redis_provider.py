@@ -223,6 +223,13 @@ def get_dcl_pools_tvl_list(network_id, redis_key):
     return dcl_pools_tvl_list
 
 
+def get_account_pool_assets(network_id, key):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], key)
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
@@ -292,6 +299,9 @@ class RedisProvider(object):
 
     def add_dcl_pools_tvl_data(self, network_id, redis_key, pool_id, tvl_data):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_TVL_LIST_KEY"] + "_" + redis_key, pool_id, tvl_data)
+
+    def add_account_pool_assets(self, network_id, account_id, value):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], account_id, value)
 
     def close(self):
         self.r.close()
