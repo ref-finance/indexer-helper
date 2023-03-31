@@ -136,7 +136,7 @@ def get_proposal_id_hash(network_id, id_list):
         redis_conn = RedisProvider()
         redis_conn.begin_pipe()
         for pps in proposal_res_data:
-            if not pps["transaction_hash"] is "":
+            if pps["transaction_hash"] != "":
                 redis_conn.add_proposal_id_hash(network_id, pps["proposal_id"], json.dumps(pps))
         redis_conn.end_pipe()
         redis_conn.close()

@@ -10,20 +10,20 @@ from flask import jsonify
 import flask_cors
 import json
 import logging
-from indexer_provider import get_actions, get_liquidity_pools, get_proposal_id_hash
+from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id
 from config import Cfg
-from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions
 import re
 from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20230323.01"
+service_version = "20230331.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -72,6 +72,9 @@ def handle_latest_actions(account_id):
     try:
         ret = get_actions(Cfg.NETWORK_ID, account_id)
         json_obj = json.loads(ret)
+        for obj in json_obj:
+            if obj[1] == "":
+                obj[1] = get_tx_id(obj[7], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when get_actions: ", e)
 
