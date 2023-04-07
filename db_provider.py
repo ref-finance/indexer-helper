@@ -427,8 +427,7 @@ def query_limit_order_log(network_id, owner_id):
 
 def query_limit_order_swap(network_id, owner_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp from " \
-          "near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
+    sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp from near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -623,7 +622,7 @@ def update_account_pool_assets_status():
     db_conn = get_db_connect(Cfg.NETWORK_ID)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        sql = "update t_account_assets_data set `status` = 2 where `status` = '1'"
+        sql = "update t_account_assets_data set `status` = '2' where `status` = '1'"
         cursor.execute(sql)
         # Submit to database for execution
         db_conn.commit()
