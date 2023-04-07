@@ -4,6 +4,7 @@ import json
 import shutil
 import sys
 from db_info import BUCKET_NAME, AWS_S3_AKI, AWS_S3_SAK
+import time
 
 sys.path.append('../')
 from db_provider import add_account_assets_data, get_token_price, handle_account_pool_assets_data
@@ -34,8 +35,8 @@ def get_last_block_height_from_all_s3_folders_list(Prefix=None):
             loc = pathname.find('_') + 1
             block_height = pathname[loc:len(pathname) - 1]
             folders_list.append(int(block_height))
-
-    return max(folders_list)
+    sorted_folders_list = sorted(folders_list)
+    return sorted_folders_list[-2]
 
 
 def get_all_files_list(Prefix=None):
@@ -89,7 +90,7 @@ def download_file_s3():
         if "ex_pool" in file_name or "farm_accounts" in file_name or "farmv2_accounts" in file_name or "ex_accounts" in file_name or "farmv2_seeds" in file_name or "dcl_pool" in file_name or "dcl_user_assets" in file_name or "dcl_user_liquidities" in file_name or "xref_accounts" in file_name:
             loc = file_name.find('/') + 1
             path_local = "./" + file_name[loc:len(file_name)]
-            print(path_local)
+            # print(path_local)
             download_file_local(file_name, path_local)
     return block_height_folder_name
 
@@ -141,7 +142,7 @@ def add_data_to_db(block_height_folder_name, network_id):
                             "rps": farm["rps"]
                         }
             # print("farm_data_list:", farm_data_list)
-        if "dcl_pool" in file:
+        if "dcl_pool.json" in file:
             with open(full_filename, 'r') as fi:
                 dcl_pool_data = json.load(fi)
                 for pool_id, pool_data in dcl_pool_data.items():
@@ -372,7 +373,7 @@ def add_data_to_db(block_height_folder_name, network_id):
                             "token_x_amount"] * float(tokens_price[token_x]["price"])
                         dcl_user_pool_count_amount = dcl_user_pool_count_amount + pool_liquidity_amount_data[
                             "token_y_amount"] * float(tokens_price[token_y]["price"])
-                        print("pool_liquidity_amount_data:", pool_liquidity_amount_data)
+                        # print("pool_liquidity_amount_data:", pool_liquidity_amount_data)
 
                     dcl_account_assets_data = {"type": "dcl_unclaimed_fee_assets", "pool_id": pool_id,
                                                "farm_id": "",
@@ -562,7 +563,7 @@ def clear_folder(path):
 
 
 if __name__ == "__main__":
-    print("#########analysis_pool_and_farm_data###########")
+    print("#########analysis_pool_and_farm_data start###########")
     height_folder_name = ""
     try:
         if len(sys.argv) == 2:
@@ -585,7 +586,12 @@ if __name__ == "__main__":
     except Exception as e:
         print("analysis pool and farm data error,height folder name:", height_folder_name)
         print(e)
-
+    now_time = int(time.time())
+    time_array = time.localtime(now_time)
+    now_date_time_h = time.strftime("%Y-%m-%d %H:%M:%S", time_array)
+    print("now_date_time:", now_date_time_h)
+    print("height folder name:", height_folder_name)
+    print("#########analysis_pool_and_farm_data end###########")
     # folder_path = add_data_to_db("height_7", "MAINNET")
     # print("start clear_folder")
     # clear_folder(folder_path)
