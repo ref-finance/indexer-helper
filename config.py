@@ -271,7 +271,7 @@ class Cfg:
             {"SYMBOL": "DEIP", "NEAR_ID": "deip-token.near", "MD_ID": "v2.ref-finance.near|3076|wrap.near", "DECIMAL": 18},
             # {"SYMBOL": "FAR", "NEAR_ID": "far.tokens.fewandfar.near", "MD_ID": "v2.ref-finance.near|1932|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "BSTN", "NEAR_ID": "059a1f1dea1020297588c316ffc30a58a1a0d4a2.factory.bridge.near", "MD_ID": "bastion-protocol", "DECIMAL": 18},
-            {"SYMBOL": "TAO", "NEAR_ID": "fusotao-token.near", "MD_ID": "v2.ref-finance.near|3638|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "TAO", "NEAR_ID": "fusotao-token.near", "MD_ID": "fusotao", "DECIMAL": 18},
             {"SYMBOL": "DISC", "NEAR_ID": "discovol-token.near", "MD_ID": "v2.ref-finance.near|3657|wrap.near", "DECIMAL": 14},
             {"SYMBOL": "APYS", "NEAR_ID": "apys.token.a11bd.near", "MD_ID": "v2.ref-finance.near|3599|wrap.near", "DECIMAL": 24},
         ],
