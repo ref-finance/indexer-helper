@@ -263,6 +263,17 @@ class Cfg:
             {"SYMBOL": "UMINT", "NEAR_ID": "e99de844ef3ef72806cf006224ef3b813e82662f.factory.bridge.near", "MD_ID": "v2.ref-finance.near|3815|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "pNEAR", "NEAR_ID": "phoenix-bonds.near", "MD_ID": "v2.ref-finance.near|3819|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "1MIL", "NEAR_ID": "a4ef4b0b23c1fc81d3f9ecf93510e64f58a4a016.factory.bridge.near", "MD_ID": "v2.ref-finance.near|276|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "CUCUMBER", "NEAR_ID": "farm.berryclub.ek.near", "MD_ID": "v2.ref-finance.near|35|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "POTATO", "NEAR_ID": "v1.dacha-finance.near", "MD_ID": "v2.ref-finance.near|1857|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "OIN", "NEAR_ID": "9aeb50f542050172359a0e1a25a9933bc8c01259.factory.bridge.near", "MD_ID": "oin-finance", "DECIMAL": 8},
+            {"SYMBOL": "UST", "NEAR_ID": "ust.token.a11bd.near", "MD_ID": "v2.ref-finance.near|2985|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "LUNA", "NEAR_ID": "luna.token.a11bd.near", "MD_ID": "terra-luna-2", "DECIMAL": 24},
+            {"SYMBOL": "DEIP", "NEAR_ID": "deip-token.near", "MD_ID": "v2.ref-finance.near|3076|wrap.near", "DECIMAL": 18},
+            # {"SYMBOL": "FAR", "NEAR_ID": "far.tokens.fewandfar.near", "MD_ID": "v2.ref-finance.near|1932|wrap.near", "DECIMAL": 8},
+            {"SYMBOL": "BSTN", "NEAR_ID": "059a1f1dea1020297588c316ffc30a58a1a0d4a2.factory.bridge.near", "MD_ID": "bastion-protocol", "DECIMAL": 18},
+            {"SYMBOL": "TAO", "NEAR_ID": "fusotao-token.near", "MD_ID": "fusotao", "DECIMAL": 18},
+            {"SYMBOL": "DISC", "NEAR_ID": "discovol-token.near", "MD_ID": "v2.ref-finance.near|3657|wrap.near", "DECIMAL": 14},
+            {"SYMBOL": "APYS", "NEAR_ID": "apys.token.a11bd.near", "MD_ID": "v2.ref-finance.near|3599|wrap.near", "DECIMAL": 24},
         ],
     }
     MARKET_URL = "api.coingecko.com"
