@@ -573,7 +573,7 @@ class DecimalEncoder(json.JSONEncoder):
 
 
 def handle_account_pool_assets_data(network_id):
-    now_time = int(time.time())
+    now_time = int(time.time()) - 60 * 60
     db_conn = get_db_connect(Cfg.NETWORK_ID)
     sql = "select account_id,sum(amount) as amount from t_account_assets_data where `status` = '1' group by account_id"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
