@@ -42,6 +42,80 @@ def get_near_lake_connect(network_id: str):
     return conn
 
 
+def get_liquidity_pools(network_id, account_id):
+    ret = []
+    db_conn = get_near_lake_connect(network_id)
+    sql = "select DISTINCT(pool_id) as pool_id from near_lake_liquidity_pools where account_id = '%s'" % account_id
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        return [row[0] for row in rows if row[0]]
+    except Exception as e:
+        print("query liquidity pools to db error:", e)
+    finally:
+        cursor.close()
+    return ret
+
+
+def get_actions(network_id, account_id):
+    json_ret = []
+    db_conn = get_near_lake_connect(network_id)
+    sql = "select `timestamp`,tx_id,receiver_account_id,method_name,args,deposit,`status`,receipt_id " \
+          "from near_lake_latest_actions where predecessor_account_id = '%s' order by id desc limit 10" % account_id
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        json_ret = json.dumps(rows, cls=DecimalEncoder)
+    except Exception as e:
+        print("query liquidity pools to db error:", e)
+    finally:
+        cursor.close()
+    return json_ret
+
+
+def add_tx_receipt(data_list, network_id):
+    db_conn = get_near_lake_connect(network_id)
+
+    sql = "insert into t_tx_receipt(tx_id, receipt_id) values(%s,%s)"
+
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["tx_id"], data["receipt_id"]))
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert tx receipt log to db error:", e)
+        print("insert tx receipt log to db insert_data:", insert_data)
+    finally:
+        cursor.close()
+
+
+def query_tx_by_receipt(receipt_id, network_id):
+    db_conn = get_near_lake_connect(network_id)
+    sql = "SELECT tx_id FROM t_tx_receipt WHERE receipt_id = '%s'" % receipt_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        tx_data = cursor.fetchone()
+        if tx_data is None:
+            return ""
+        else:
+            tx_id = tx_data["tx_id"]
+            return tx_id
+    except Exception as e:
+        print("query tx to db error:", e)
+    finally:
+        cursor.close()
+
+
 def get_history_token_price(id_list: list) -> list:
     """
     Batch query historical price
