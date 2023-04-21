@@ -133,12 +133,7 @@ def handle_token_price_ratio_report_w(network_id, token_pair, token_price_data, 
     else:
         redis_values = json.loads(ret)
         price_list = redis_values["price_list"]
-        if len(price_list) < 2:
-            last_time1 = price_list[-1]["date_time"]
-            new_time = last_time1 + 14400
-            if new_time != handle_hour_stamp(now_time):
-                price_list.pop(-1)
-        else:
+        if len(price_list) >= 2:
             last_time2 = price_list[-2]["date_time"]
             last_time1 = price_list[-1]["date_time"]
             new_time = last_time2 + 14400
@@ -223,12 +218,7 @@ def handle_token_price_ratio_report_y(network_id, token_pair, token_price_data, 
     else:
         redis_values = json.loads(ret)
         price_list = redis_values["price_list"]
-        if len(price_list) < 2:
-            last_time1 = price_list[-1]["date_time"]
-            new_time = last_time1 + 259200
-            if new_time != handle_day_stamp(now_time):
-                price_list.pop(-1)
-        else:
+        if len(price_list) >= 2:
             last_time2 = price_list[-2]["date_time"]
             last_time1 = price_list[-1]["date_time"]
             new_time = last_time2 + 259200
@@ -270,12 +260,7 @@ def handle_token_price_ratio_report_all(network_id, token_pair, token_price_data
     else:
         redis_values = json.loads(ret)
         price_list = redis_values["price_list"]
-        if len(price_list) < 2:
-            last_time1 = price_list[-1]["date_time"]
-            new_time = last_time1 + 259200
-            if new_time != handle_day_stamp(now_time):
-                price_list.pop(-1)
-        else:
+        if len(price_list) >= 2:
             last_time2 = price_list[-2]["date_time"]
             last_time1 = price_list[-1]["date_time"]
             new_time = last_time2 + 259200
