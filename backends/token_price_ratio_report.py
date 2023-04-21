@@ -225,7 +225,7 @@ def handle_token_price_ratio_report_y(network_id, token_pair, token_price_data, 
         price_list = redis_values["price_list"]
         if len(price_list) < 2:
             last_time1 = price_list[-1]["date_time"]
-            new_time = last_time1 + 86400
+            new_time = last_time1 + 259200
             if new_time != handle_day_stamp(now_time):
                 price_list.pop(-1)
         else:
@@ -272,7 +272,7 @@ def handle_token_price_ratio_report_all(network_id, token_pair, token_price_data
         price_list = redis_values["price_list"]
         if len(price_list) < 2:
             last_time1 = price_list[-1]["date_time"]
-            new_time = last_time1 + 86400
+            new_time = last_time1 + 259200
             if new_time != handle_day_stamp(now_time):
                 price_list.pop(-1)
         else:
