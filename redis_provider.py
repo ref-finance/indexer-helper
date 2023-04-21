@@ -230,6 +230,13 @@ def get_account_pool_assets(network_id, key):
     return ret
 
 
+def get_token_price_ratio_report(network_id, key):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget("TOKEN_PRICE_RATIO_REPORT_MAINNET", key)
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
