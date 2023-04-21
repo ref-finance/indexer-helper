@@ -232,7 +232,7 @@ def get_account_pool_assets(network_id, key):
 
 def get_token_price_ratio_report(network_id, key):
     r = redis.StrictRedis(connection_pool=pool)
-    ret = r.hget("TOKEN_PRICE_RATIO_REPORT_MAINNET", key)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key)
     r.close()
     return ret
 
@@ -309,6 +309,9 @@ class RedisProvider(object):
 
     def add_account_pool_assets(self, network_id, account_id, value):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], account_id, value)
+
+    def add_token_ratio_report(self, network_id, key, value):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key, value)
 
     def close(self):
         self.r.close()
