@@ -2,6 +2,68 @@ import gzip
 from flask import make_response
 import json
 from flask import request
+import requests
+from db_provider import add_tx_receipt, query_tx_by_receipt
+
+
+def get_tx_id(receipt_id, network_id):
+    tx_id = query_tx_by_receipt(receipt_id, network_id)
+    if tx_id == "":
+        try:
+            tx_id = near_explorer_tx(receipt_id, network_id)
+        except Exception as e:
+            print("explorer error:", e)
+            tx_id = near_block_tx(receipt_id, network_id)
+    return tx_id
+
+
+def near_explorer_tx(receipt_id, network_id):
+    import re
+    tx_receipt_data_list = []
+    tx_id = ""
+    tx_receipt_data = {
+        "tx_id": "",
+        "receipt_id": receipt_id
+    }
+    explorer_query_tx_id_url = "https://explorer.near.org/?query=" + receipt_id
+    requests.packages.urllib3.disable_warnings()
+    explorer_tx_ret = requests.get(url=explorer_query_tx_id_url, verify=False)
+    explorer_tx_data = str(explorer_tx_ret.text)
+    tx_ret_list = re.findall("<a class=\"(.*?)</a>", explorer_tx_data)
+    if len(tx_ret_list) > 0:
+        for tx_ret in tx_ret_list:
+            tx_list = re.findall("href=\"/transactions/(.*?)#" + receipt_id, tx_ret)
+            if len(tx_list) > 0:
+                tx_id = str(tx_list[0])
+        tx_receipt_data["tx_id"] = tx_id
+        if tx_receipt_data["tx_id"] != "":
+            tx_receipt_data_list.append(tx_receipt_data)
+            add_tx_receipt(tx_receipt_data_list, network_id)
+    return tx_id
+
+
+def near_block_tx(receipt_id, network_id):
+    tx_receipt_data_list = []
+    tx_id = ""
+    tx_receipt_data = {
+        "tx_id": "",
+        "receipt_id": receipt_id
+    }
+    blocks_query_tx_id_url = "https://api.nearblocks.io/v1/search/?keyword=" + receipt_id
+    requests.packages.urllib3.disable_warnings()
+    blocks_tx_ret = requests.get(url=blocks_query_tx_id_url, verify=False)
+    blocks_tx_data = json.loads(blocks_tx_ret.text)
+    for receipt in blocks_tx_data["receipts"]:
+        if receipt["receipt_id"] == receipt_id:
+            tx_id = receipt["originated_from_transaction_hash"]
+            tx_receipt_data["tx_id"] = tx_id
+            if tx_receipt_data["tx_id"] != "":
+                tx_receipt_data_list.append(tx_receipt_data)
+                add_tx_receipt(tx_receipt_data_list, network_id)
+            else:
+                print("blocks_tx_data:", blocks_tx_data)
+    return tx_id
+
 
 def combine_pools_info(pools, prices, metadata):
     ret_pools = []
