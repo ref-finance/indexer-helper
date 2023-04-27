@@ -42,6 +42,16 @@ def get_near_lake_connect(network_id: str):
     return conn
 
 
+def get_near_lake_dcl_connect(network_id: str):
+    conn = pymysql.connect(
+        host=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_HOST"],
+        port=int(Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PORT"]),
+        user=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PWD"],
+        db=Cfg.NETWORK[network_id]["NEAR_LAKE_DCL_DB_DSN"])
+    return conn
+
+
 def get_liquidity_pools(network_id, account_id):
     ret = []
     db_conn = get_near_lake_connect(network_id)
@@ -708,14 +718,82 @@ def update_account_pool_assets_status():
         cursor.close()
 
 
+def query_dcl_pool_log(network_id, start_block_id, end_block_id):
+    db_conn = get_near_lake_dcl_connect(network_id)
+    sql = "select * from (select tla.event_method, tla.pool_id, '' as order_id, tla.lpt_id, '' as swapper, " \
+          "'' as token_in, '' as token_out, '' as amount_in, '' as amount_out, '' as created_at, '' as cancel_at, " \
+          "'' as completed_at, tla.owner_id, '' as `point`, '' as sell_token, '' as buy_token, " \
+          "'' as request_cancel_amount, '' as actual_cancel_amount, '' as original_amount, '' as cancel_amount, " \
+          "'' as remain_amount, '' as bought_amount, '' as original_deposit_amount, '' as swap_earn_amount, " \
+          "tla.left_point, tla.right_point, tla.added_amount, '' as removed_amount, tla.cur_amount, " \
+          "tla.paid_token_x, tla.paid_token_y, '' as refund_token_x, '' as refund_token_y, tla.tx_id, " \
+          "tla.block_id, tla.`timestamp`, tla.args,tla.predecessor_id,tla.receiver_id, tla.create_time from " \
+          "t_liquidity_added tla union all select 'liquidity_removed' as event_method, tlr.pool_id, '' as order_id, " \
+          "tlr.lpt_id, '' as swapper, '' as token_in, '' as token_out, '' as amount_in, '' as amount_out, " \
+          "'' as created_at, '' as cancel_at, '' as completed_at, tlr.owner_id, '' as `point`, '' as sell_token, " \
+          "'' as buy_token, '' as request_cancel_amount, '' as actual_cancel_amount, '' as original_amount, " \
+          "'' as cancel_amount, '' as remain_amount, '' as bought_amount, '' as original_deposit_amount, " \
+          "'' as swap_earn_amount, tlr.left_point, tlr.right_point, '' as added_amount, tlr.removed_amount, " \
+          "tlr.cur_amount, '' as paid_token_x, '' as paid_token_y, tlr.refund_token_x, tlr.refund_token_y, " \
+          "tlr.tx_id, tlr.block_id, tlr.`timestamp`, tlr.args,tlr.predecessor_id,tlr.receiver_id, create_time " \
+          "from t_liquidity_removed tlr union all select 'order_added' as event_method, toa.pool_id, toa.order_id, " \
+          "'' as lpt_id, '' as swapper, '' as token_in, '' as token_out, '' as amount_in, '' as amount_out, " \
+          "toa.created_at, '' as cancel_at, '' as completed_at, toa.owner_id, toa.`point`, toa.sell_token, " \
+          "toa.buy_token, '' as request_cancel_amount, '' as actual_cancel_amount, toa.original_amount, " \
+          "'' as cancel_amount, '' as remain_amount, '' as bought_amount, toa.original_deposit_amount, " \
+          "toa.swap_earn_amount, '' as left_point, '' as right_point, '' as added_amount, '' as removed_amount, " \
+          "'' as cur_amount, '' as paid_token_x, '' as paid_token_y, '' as refund_token_x, '' as refund_token_y, " \
+          "toa.tx_id, toa.block_id, toa.`timestamp`, toa.args,toa.predecessor_id,toa.receiver_id, create_time from " \
+          "t_order_added toa union all select 'order_cancelled' as event_method, toc.pool_id, toc.order_id, " \
+          "'' as lpt_id, '' as swapper, '' as token_in, '' as token_out, '' as amount_in, '' as amount_out, " \
+          "toc.created_at, toc.cancel_at, '' as completed_at, toc.owner_id, toc.`point`, toc.sell_token, " \
+          "toc.buy_token, toc.request_cancel_amount, toc.actual_cancel_amount, toc.original_amount, " \
+          "toc.cancel_amount, toc.remain_amount, toc.bought_amount, '' as original_deposit_amount, " \
+          "'' as swap_earn_amount, '' as left_point, '' as right_point, '' as added_amount, '' as removed_amount, " \
+          "'' as cur_amount, '' as paid_token_x, '' as paid_token_y, '' as refund_token_x, '' as refund_token_y, " \
+          "toc.tx_id, toc.block_id, toc.`timestamp`, toc.args,toc.predecessor_id,toc.receiver_id, create_time " \
+          "from t_order_cancelled toc union all select 'order_completed' as event_method, tocd.pool_id, " \
+          "tocd.order_id, '' as lpt_id, '' as swapper, '' as token_in, '' as token_out, '' as amount_in, " \
+          "'' as amount_out, tocd.created_at, '' as cancel_at, tocd.completed_at, tocd.owner_id, tocd.`point`, " \
+          "tocd.sell_token, tocd.buy_token, '' as request_cancel_amount, '' as actual_cancel_amount, " \
+          "tocd.original_amount, tocd.cancel_amount, '' as remain_amount, tocd.bought_amount, " \
+          "tocd.original_deposit_amount, tocd.swap_earn_amount, '' as left_point, '' as right_point, " \
+          "'' as added_amount, '' as removed_amount, '' as cur_amount, '' as paid_token_x, '' as paid_token_y, " \
+          "'' as refund_token_x, '' as refund_token_y, tocd.tx_id, tocd.block_id, tocd.`timestamp`, " \
+          "tocd.args,tocd.predecessor_id,tocd.receiver_id, create_time from t_order_completed tocd union all " \
+          "select 'swap' as event_method, '' as pool_id, '' as order_id, '' as lpt_id, ts.swapper, " \
+          "ts.token_in, ts.token_out, ts.amount_in, ts.amount_out, '' as created_at, '' as cancel_at, " \
+          "'' as completed_at, ts.swapper as owner_id, '' as `point`, '' as sell_token, '' as buy_token, " \
+          "'' as request_cancel_amount, '' as actual_cancel_amount, '' as original_amount, '' as cancel_amount, " \
+          "'' as remain_amount, '' as bought_amount, '' as original_deposit_amount, '' as swap_earn_amount, " \
+          "'' as left_point, '' as right_point, '' as added_amount, '' as removed_amount, '' as cur_amount, " \
+          "'' as paid_token_x, '' as paid_token_y, '' as refund_token_x, '' as refund_token_y, ts.tx_id, " \
+          "ts.block_id, ts.`timestamp`, ts.args,ts.predecessor_id,ts.receiver_id, create_time from t_swap ts) as " \
+          "all_data where block_id >= '%s' and block_id <= '%s' order by `timestamp`" % (start_block_id, end_block_id)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        dcl_pool_log_data = cursor.fetchall()
+        return dcl_pool_log_data
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("query query_dcl_pool_log to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
     # add_history_token_price("ref.fakes.testnet", "ref2", 1.003, 18, "MAINNET")
     # handle_account_pool_assets_data("MAINNET")
-    now_time = int(time.time())
-    row = {
-        "account_id": "juaner.near",
-        "amount": 10
-    }
-    handle_account_pool_assets_m_data("MAINNET", now_time, row)
+    # now_time = int(time.time())
+    # row = {
+    #     "account_id": "juaner.near",
+    #     "amount": 10
+    # }
+    # handle_account_pool_assets_m_data("MAINNET", now_time, row)
+
+    ret_data = query_dcl_pool_log("MAINNET", "82253864", "82253911")
+    print(ret_data)

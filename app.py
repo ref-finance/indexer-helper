@@ -15,9 +15,9 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log
 from config import Cfg
-from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 import re
 from flask_limiter import Limiter
 from loguru import logger
@@ -453,6 +453,20 @@ def handle_assets_by_account():
     if ret is None:
         return ""
     return compress_response_content(json.loads(ret))
+
+
+@app.route('/get-dcl-pool-log', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_dcl_pool_log():
+    start_block_id = request.args.get("start_block_id")
+    end_block_id = request.args.get("end_block_id")
+    if start_block_id is None or end_block_id is None:
+        return "[]"
+    ret = query_dcl_pool_log(Cfg.NETWORK_ID, start_block_id, end_block_id)
+    if ret is None:
+        return "[]"
+    dcl_pool_log_data = combine_dcl_pool_log(ret)
+    return compress_response_content(dcl_pool_log_data)
 
 
 logger.add("app.log")

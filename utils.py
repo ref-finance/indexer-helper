@@ -168,6 +168,70 @@ def pools_filter(pools, tvl, amounts):
     return ret_pools
 
 
+def combine_dcl_pool_log(ret):
+    ret_data_list = []
+    for data in ret:
+        args_data = json.loads(data["args"])
+        args = args_data[0]
+        flag = False
+        if "msg" in data["args"]:
+            amount = args["amount"]
+            msg = args["msg"]
+            ret_msg_data = {
+                "event_method": data["event_method"],
+                "tx": data["tx_id"],
+                # "index_in_chunk": index_data_list[mysql_data["tx_id"]]["index_in_chunk"],
+                "block_no": data["block_id"],
+                "operator": data["owner_id"],
+                "token_contract": data["predecessor_id"],
+                "receiver_id": data["receiver_id"],
+                "amount": amount,
+                "msg": msg
+            }
+            ret_data_list.append(ret_msg_data)
+        else:
+            ret_msg_data = {
+                "event_method": data["event_method"],
+                "tx": data["tx_id"],
+                # "index_in_chunk": index_data_list[mysql_data["tx_id"]]["index_in_chunk"],
+                "block_no": data["block_id"],
+                "operator": data["owner_id"],
+            }
+            if "pool_id" in args:
+                ret_msg_data["pool_id"] = args["pool_id"]
+                flag = True
+            if "lpt_id" in args:
+                ret_msg_data["lpt_id"] = args["lpt_id"]
+                flag = True
+            if "order_id" in args:
+                ret_msg_data["order_id"] = args["order_id"]
+            if "amount" in args:
+                ret_msg_data["amount"] = args["amount"]
+                flag = True
+            if "left_point" in args:
+                ret_msg_data["left_point"] = args["left_point"]
+                flag = True
+            if "right_point" in args:
+                ret_msg_data["right_point"] = args["right_point"]
+                flag = True
+            if "amount_x" in args:
+                ret_msg_data["amount_x"] = args["amount_x"]
+                flag = True
+            if "amount_y" in args:
+                ret_msg_data["amount_y"] = args["amount_y"]
+                flag = True
+            if "min_amount_x" in args:
+                ret_msg_data["min_amount_x"] = args["min_amount_x"]
+                flag = True
+            if "min_amount_y" in args:
+                ret_msg_data["min_amount_y"] = args["min_amount_y"]
+                flag = True
+            if flag is False:
+                ret_msg_data["amount"] = "None"
+            ret_data_list.append(ret_msg_data)
+    return ret_data_list
+
+
 if __name__ == '__main__':
     from config import Cfg
     from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata

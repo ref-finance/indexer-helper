@@ -35,13 +35,14 @@ except ImportError:
 
 
 try:
-    from db_info import NEAR_LAKE_DB_DSN, NEAR_LAKE_DB_UID, NEAR_LAKE_DB_PWD, NEAR_LAKE_DB_HOST, NEAR_LAKE_DB_PORT
+    from db_info import NEAR_LAKE_DB_DSN, NEAR_LAKE_DB_UID, NEAR_LAKE_DB_PWD, NEAR_LAKE_DB_HOST, NEAR_LAKE_DB_PORT, NEAR_LAKE_DCL_DB_DSN
 except ImportError:
     NEAR_LAKE_DB_DSN = "ref"
     NEAR_LAKE_DB_UID = "root"
     NEAR_LAKE_DB_PWD = "root"
     NEAR_LAKE_DB_HOST = "127.0.0.1"
     NEAR_LAKE_DB_PORT = "3306"
+    NEAR_LAKE_DCL_DB_DSN = "ref_dcl_mainnet"
 
 """
 
@@ -151,6 +152,7 @@ class Cfg:
             "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
             "NEAR_LAKE_DB_HOST": NEAR_LAKE_DB_HOST,
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
+            "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
         }
     }
