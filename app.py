@@ -120,8 +120,8 @@ def handle_get_token_price():
     """
     token_contract_id = request.args.get("token_id", "N/A")
     ret = {"token_contract_id": token_contract_id}
-    if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
-        token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
+    # if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
+    #     token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
     ret["price"] = get_token_price(Cfg.NETWORK_ID, token_contract_id)
     if ret["price"] is None:
         ret["price"] = "N/A"
@@ -144,24 +144,24 @@ def handle_list_token_price():
                 "symbol": token["SYMBOL"],
             }
     # if usdt exists, mirror its price to USN
-    if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
-        ret["usn"] = {
-            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
-            "decimal": 18,
-            "symbol": "USN",
-        }
-        ret["usdt.tether-token.near"] = {
-            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
-            "decimal": 6,
-            "symbol": "USDt",
-        }
-    # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
-    if "token.v2.ref-finance.near" in ret:
-        ret["rftt.tkn.near"] = {
-            "price": prices["token.v2.ref-finance.near"],
-            "decimal": 8,
-            "symbol": "RFTT",
-        }
+    # if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
+    #     ret["usn"] = {
+    #         "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
+    #         "decimal": 18,
+    #         "symbol": "USN",
+    #     }
+    #     ret["usdt.tether-token.near"] = {
+    #         "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
+    #         "decimal": 6,
+    #         "symbol": "USDt",
+    #     }
+    # # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
+    # if "token.v2.ref-finance.near" in ret:
+    #     ret["rftt.tkn.near"] = {
+    #         "price": prices["token.v2.ref-finance.near"],
+    #         "decimal": 8,
+    #         "symbol": "RFTT",
+    #     }
     return compress_response_content(ret)
 
 
@@ -172,10 +172,10 @@ def handle_list_token_price_by_ids():
     list_token_price_by_ids
     """
     ids = request.args.get("ids", "")
-    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|",
-                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
-    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|",
-                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    # ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|",
+    #                                                         "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    # ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|",
+    #                                                         "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
     id_str_list = ids.lstrip("|").rstrip("|").split("|")
 
     prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])

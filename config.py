@@ -275,6 +275,8 @@ class Cfg:
             {"SYMBOL": "TAO", "NEAR_ID": "fusotao-token.near", "MD_ID": "fusotao", "DECIMAL": 18},
             {"SYMBOL": "DISC", "NEAR_ID": "discovol-token.near", "MD_ID": "v2.ref-finance.near|3657|wrap.near", "DECIMAL": 14},
             {"SYMBOL": "APYS", "NEAR_ID": "apys.token.a11bd.near", "MD_ID": "v2.ref-finance.near|3599|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "USDt", "NEAR_ID": "usdt.tether-token.near", "MD_ID": "tether", "DECIMAL": 6},
+            {"SYMBOL": "USN", "NEAR_ID": "usn", "MD_ID": "v2.ref-finance.near|3269|wrap.near", "DECIMAL": 18},
         ],
     }
     MARKET_URL = "api.coingecko.com"
