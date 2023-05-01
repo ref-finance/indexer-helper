@@ -14,7 +14,7 @@ from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
-from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
+from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions
@@ -23,7 +23,7 @@ from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20230421.01"
+service_version = "20230428.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -120,8 +120,8 @@ def handle_get_token_price():
     """
     token_contract_id = request.args.get("token_id", "N/A")
     ret = {"token_contract_id": token_contract_id}
-    if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
-        token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
+    # if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
+    #     token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
     ret["price"] = get_token_price(Cfg.NETWORK_ID, token_contract_id)
     if ret["price"] is None:
         ret["price"] = "N/A"
@@ -144,24 +144,24 @@ def handle_list_token_price():
                 "symbol": token["SYMBOL"],
             }
     # if usdt exists, mirror its price to USN
-    if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
-        ret["usn"] = {
-            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
-            "decimal": 18,
-            "symbol": "USN",
-        }
-        ret["usdt.tether-token.near"] = {
-            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
-            "decimal": 6,
-            "symbol": "USDt",
-        }
-    # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
-    if "token.v2.ref-finance.near" in ret:
-        ret["rftt.tkn.near"] = {
-            "price": prices["token.v2.ref-finance.near"],
-            "decimal": 8,
-            "symbol": "RFTT",
-        }
+    # if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
+    #     ret["usn"] = {
+    #         "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
+    #         "decimal": 18,
+    #         "symbol": "USN",
+    #     }
+    #     ret["usdt.tether-token.near"] = {
+    #         "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
+    #         "decimal": 6,
+    #         "symbol": "USDt",
+    #     }
+    # # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
+    # if "token.v2.ref-finance.near" in ret:
+    #     ret["rftt.tkn.near"] = {
+    #         "price": prices["token.v2.ref-finance.near"],
+    #         "decimal": 8,
+    #         "symbol": "RFTT",
+    #     }
     return compress_response_content(ret)
 
 
@@ -172,10 +172,10 @@ def handle_list_token_price_by_ids():
     list_token_price_by_ids
     """
     ids = request.args.get("ids", "")
-    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|",
-                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
-    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|",
-                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    # ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|",
+    #                                                         "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    # ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|",
+    #                                                         "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
     id_str_list = ids.lstrip("|").rstrip("|").split("|")
 
     prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])
@@ -452,6 +452,21 @@ def handle_assets_by_account():
     ret = get_account_pool_assets(Cfg.NETWORK_ID, redis_key)
     if ret is None:
         return ""
+    return compress_response_content(json.loads(ret))
+
+
+@app.route('/token-price-report', methods=['GET'])
+@flask_cors.cross_origin()
+def token_price_ratio_report():
+    token = request.args.get("token")
+    base_token = request.args.get("base_token")
+    dimension = request.args.get("dimension")
+    if token is None or base_token is None or dimension is None:
+        return "null"
+    redis_key = token + "->" + base_token + "_" + dimension.lower()
+    ret = get_token_price_ratio_report(Cfg.NETWORK_ID, redis_key)
+    if ret is None:
+        return "null"
     return compress_response_content(json.loads(ret))
 
 
