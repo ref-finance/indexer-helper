@@ -783,6 +783,35 @@ def query_dcl_pool_log(network_id, start_block_id, end_block_id):
         cursor.close()
 
 
+def add_v2_pool_data(data_list, network_id):
+    db_conn = get_db_connect(network_id)
+
+    sql = "insert into dcl_pool_analysis_testnet(pool_id, point, fee_x, fee_y, l, tvl_x_l, " \
+          "tvl_x_o, tvl_y_l, tvl_y_o, vol_x_in_l, vol_x_in_o, vol_x_out_l, vol_x_out_o, " \
+          "vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, timestamp, create_time) " \
+          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())"
+
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["pool_id"], data["point"], data["fee_x"], data["fee_y"], data["l"],
+                                data["tvl_x_l"], data["tvl_x_o"], data["tvl_y_l"],
+                                data["tvl_y_o"], data["vol_x_in_l"], data["vol_x_in_o"],
+                                data["vol_x_out_l"], data["vol_x_out_o"], data["vol_y_in_l"], data["vol_y_in_o"],
+                                data["vol_y_out_l"], data["vol_y_out_o"], data["timestamp"]))
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert v2 pool data to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
