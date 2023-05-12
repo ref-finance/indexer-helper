@@ -27,7 +27,8 @@ def add_data_to_db(file_name, network_id):
                                 "vol_x_out_l": point_data["vol_x_out_l"], "vol_x_out_o": point_data["vol_x_out_o"],
                                 "vol_y_in_l": point_data["vol_y_in_l"], "vol_y_in_o": point_data["vol_y_in_o"],
                                 "vol_y_out_l": point_data["vol_y_out_l"], "vol_y_out_o": point_data["vol_y_out_o"],
-                                "timestamp": now_time,
+                                "p_fee_x": point_data["p_fee_x"], "p_fee_y": point_data["p_fee_y"],
+                                "p": point_data["p"], "timestamp": now_time,
                                 }
                 v2_pool_data_list.append(v2_pool_data)
     add_v2_pool_data(v2_pool_data_list, network_id)

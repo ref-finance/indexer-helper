@@ -788,8 +788,8 @@ def add_v2_pool_data(data_list, network_id):
 
     sql = "insert into dcl_pool_analysis_testnet(pool_id, point, fee_x, fee_y, l, tvl_x_l, " \
           "tvl_x_o, tvl_y_l, tvl_y_o, vol_x_in_l, vol_x_in_o, vol_x_out_l, vol_x_out_o, " \
-          "vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, timestamp, create_time) " \
-          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())"
+          "vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, p_fee_x, p_fee_y, p, timestamp, create_time) " \
+          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())"
 
     insert_data = []
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -799,7 +799,8 @@ def add_v2_pool_data(data_list, network_id):
                                 data["tvl_x_l"], data["tvl_x_o"], data["tvl_y_l"],
                                 data["tvl_y_o"], data["vol_x_in_l"], data["vol_x_in_o"],
                                 data["vol_x_out_l"], data["vol_x_out_o"], data["vol_y_in_l"], data["vol_y_in_o"],
-                                data["vol_y_out_l"], data["vol_y_out_o"], data["timestamp"]))
+                                data["vol_y_out_l"], data["vol_y_out_o"], data["p_fee_x"],
+                                data["p_fee_y"], data["p"], data["timestamp"]))
 
         cursor.executemany(sql, insert_data)
         db_conn.commit()
