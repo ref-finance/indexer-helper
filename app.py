@@ -21,8 +21,7 @@ from db_provider import get_history_token_price, query_limit_order_log, query_li
 import re
 from flask_limiter import Limiter
 from loguru import logger
-from werkzeug.utils import secure_filename
-from analysis_v2_pool_data_s3 import add_data_to_db, analysis_v2_pool_data_to_s3
+from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3
 
 
 service_version = "20230421.01"
@@ -469,20 +468,6 @@ def handle_dcl_pool_log():
         return "[]"
     dcl_pool_log_data = combine_dcl_pool_log(ret)
     return compress_response_content(dcl_pool_log_data)
-
-
-@app.route('/upload-v2-pool-data', methods=['GET', 'POST'])
-@flask_cors.cross_origin()
-def upload_v2_pool_data():
-    file_name = ""
-    if request.method == 'POST':
-        f = request.files['file']
-        # f.save('C:\\Users\\86176\Desktop\\v2_pool_analysis\\123\\' + secure_filename(f.filename))
-        f.save(
-            '/www/wwwroot/testnet-indexer.ref-finance.com/indexer-helper/v2_pool_data/' + secure_filename(f.filename))
-        file_name = f.filename
-        add_data_to_db(file_name, Cfg.NETWORK_ID)
-    return file_name
 
 
 @app.route('/analysis-v2-pool-data', methods=['GET'])
