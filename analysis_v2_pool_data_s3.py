@@ -1,13 +1,13 @@
 import json
 import sys
 import time
-from db_info import BUCKET_NAME_TEST, AWS_S3_AKI_TEST, AWS_S3_SAK_TEST, AWS_REGION_NAME_TEST
+from db_info import BUCKET_NAME, AWS_S3_AKI, AWS_S3_SAK, AWS_REGION_NAME
 import boto3
 import os
 sys.path.append('/')
 from db_provider import add_v2_pool_data
 
-s3 = boto3.client('s3', region_name=AWS_REGION_NAME_TEST, aws_access_key_id=AWS_S3_AKI_TEST, aws_secret_access_key=AWS_S3_SAK_TEST)
+s3 = boto3.client('s3', region_name=AWS_REGION_NAME, aws_access_key_id=AWS_S3_AKI, aws_secret_access_key=AWS_S3_SAK)
 
 
 def add_data_to_db(file_name, network_id):
@@ -46,7 +46,7 @@ def download_file_s3(file_name):
 
 
 def download_file_local(object_name, file_name):
-    s3.download_file(BUCKET_NAME_TEST, object_name, file_name)
+    s3.download_file(BUCKET_NAME, object_name, file_name)
 
 
 def analysis_v2_pool_data_to_s3(file_name, network_id):
@@ -56,5 +56,5 @@ def analysis_v2_pool_data_to_s3(file_name, network_id):
 
 if __name__ == "__main__":
     print("#########analysis_v2_pool_data start###########")
-    analysis_v2_pool_data_to_s3("output/height_91440568/dcl_endpoint_stats.json", "TESTNET")
+    analysis_v2_pool_data_to_s3("output/height_91440568/dcl_endpoint_stats.json", "MAINNET")
     print("#########analysis_v2_pool_data end###########")
