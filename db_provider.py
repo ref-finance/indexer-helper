@@ -813,6 +813,128 @@ def add_v2_pool_data(data_list, network_id):
         cursor.close()
 
 
+def add_dcl_user_liquidity_data(data_list, network_id):
+    db_conn = get_db_connect(network_id)
+
+    sql = "insert into dcl_user_liquidity(pool_id, account_id, point, l, tvl_x_l, tvl_y_l, p, timestamp, create_time) " \
+          "values(%s,%s,%s,%s,%s,%s,%s,%s, now())"
+
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["pool_id"], data["account_id"], data["point"], data["l"], data["tvl_x_l"],
+                                data["tvl_y_l"], data["p"], data["timestamp"]))
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert v2 pool data to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_recent_transaction_swap(network_id, pool_id):
+    db_conn = get_near_lake_connect(network_id)
+    sql = "select token_in, token_out, swap_in, swap_out,`timestamp`, block_hash as tx_id from near_lake_swap_log " \
+          "where pool_id = '%s' order by id desc limit 50" % pool_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query near_lake_swap_log to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_recent_transaction_dcl_swap(network_id, pool_id):
+    db_conn = get_near_lake_dcl_connect(network_id)
+    sql = "select token_in, token_out, amount_in, amount_out,`timestamp`, tx_id from t_swap " \
+          "where pool_id = '%s' order by id desc limit 50" % pool_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query t_swap to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_recent_transaction_liquidity(network_id, pool_id):
+    db_conn = get_near_lake_connect(network_id)
+    sql = "select method_name, token_in, token_out, amount_in, amount_out, `timestamp`, block_hash as tx_id " \
+          "from near_lake_liquidity_log " \
+          "where pool_id = '%s' order by id desc limit 50" % pool_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query near_lake_liquidity_log to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_recent_transaction_dcl_liquidity(network_id, pool_id):
+    db_conn = get_near_lake_dcl_connect(network_id)
+    sql = "select * from (select tla.event_method as method_name, tla.paid_token_x as amount_x, " \
+          "tla.paid_token_y as amount_y, tla.`timestamp`, tla.tx_id from t_liquidity_added as tla " \
+          "where tla.pool_id = '%s' union all select tlr.event_method as method_name," \
+          "tlr.refund_token_x as amount_x,tlr.refund_token_y as amount_y, tlr.`timestamp`, " \
+          "tlr. tx_id from t_liquidity_removed as tlr where tlr.pool_id = '%s') as all_data " \
+          "order by `timestamp` desc limit 50" % (pool_id, pool_id)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query t_liquidity_added to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_recent_transaction_limit_order(network_id, pool_id):
+    db_conn = get_near_lake_dcl_connect(network_id)
+    sql = "select 'order_cancelled' as method_name, sell_token, actual_cancel_amount as amount, point," \
+          "`timestamp`,tx_id from t_order_cancelled where pool_id = '%s' and actual_cancel_amount != '0' " \
+          "order by id desc limit 50" % pool_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query near_lake_limit_order_mainnet to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_dcl_points(network_id, pool_id, start_point, end_point):
+    db_conn = get_db_connect(network_id)
+    sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
+          "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,`timestamp` " \
+          "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
+          "from dcl_pool_analysis) and point >= %s and point <= %s order by point" % (pool_id, start_point, end_point)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        point_data = cursor.fetchall()
+        return point_data
+    except Exception as e:
+        print("query dcl_pool_analysis to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
