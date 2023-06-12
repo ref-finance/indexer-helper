@@ -935,6 +935,22 @@ def query_dcl_points(network_id, pool_id, start_point, end_point):
         cursor.close()
 
 
+def query_dcl_points_by_account(network_id, pool_id, account_id, start_point, end_point):
+    db_conn = get_db_connect(network_id)
+    sql = "select pool_id,account_id,point,l,tvl_x_l,tvl_y_l,p,`timestamp`,create_time from dcl_user_liquidity " \
+          "where pool_id = '%s' and account_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
+          "from dcl_user_liquidity) and point >= %s and point <= %s order by point" % (pool_id, account_id, start_point, end_point)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        point_data = cursor.fetchall()
+        return point_data
+    except Exception as e:
+        print("query dcl_pool_analysis to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()

@@ -15,11 +15,11 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
-    query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points
+    query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account
 import re
 from flask_limiter import Limiter
 from loguru import logger
@@ -31,12 +31,12 @@ Welcome = 'Welcome to ref datacenter API server, version ' + service_version + '
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
-# limiter = Limiter(
-#     app,
-#     key_func=get_ip_address,
-#     default_limits=["20 per second"],
-#     storage_uri="redis://:@127.0.0.1:6379/2"
-# )
+limiter = Limiter(
+    app,
+    key_func=get_ip_address,
+    default_limits=["20 per second"],
+    storage_uri="redis://:@127.0.0.1:6379/2"
+)
 
 
 @app.before_request
@@ -59,7 +59,7 @@ def hello_world():
 
 @app.route('/timestamp', methods=['GET'])
 @flask_cors.cross_origin()
-# @limiter.limit("1/5 second")
+@limiter.limit("1/5 second")
 def handle_timestamp():
     import time
     return jsonify({"ts": int(time.time())})
@@ -367,7 +367,7 @@ def handle_history_token_price_by_ids():
 
 @app.route('/get-service-version', methods=['GET'])
 @flask_cors.cross_origin()
-# @limiter.limit("1/second")
+@limiter.limit("1/second")
 def get_service_version():
     return jsonify(service_version)
 
@@ -565,6 +565,27 @@ def handle_fee_by_account():
         "total_liquidity": str('%.6f' % random.uniform(20, 200))
     }
     return compress_response_content(ret_data)
+
+
+@app.route('/get-dcl-points-by-account', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_dcl_points_by_account():
+    pool_id = request.args.get("pool_id")
+    slot_number = request.args.get("slot_number")
+    start_point = request.args.get("start_point")
+    end_point = request.args.get("end_point")
+    account_id = request.args.get("account_id")
+    if slot_number is None:
+        slot_number = 50
+    if start_point is None:
+        start_point = -800000
+    if end_point is None:
+        end_point = 800000
+    if pool_id is None or account_id is None:
+        return "null"
+    point_data = query_dcl_points_by_account(Cfg.NETWORK_ID, pool_id, account_id, int(start_point), int(end_point))
+    ret_point_data = handle_dcl_point_bin_by_account(pool_id, point_data, int(slot_number), account_id, int(start_point), int(end_point))
+    return compress_response_content(ret_point_data)
 
 
 logger.add("app.log")

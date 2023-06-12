@@ -336,6 +336,52 @@ def handle_top_bin_fee(pool_id, point_data, slot_number, start_point, end_point)
     return ret_point_data
 
 
+def handle_dcl_point_bin_by_account(pool_id, point_data, slot_number, account_id, start_point, end_point):
+    ret_point_list = []
+    total_point = end_point - start_point
+    fee_tier = pool_id.split("|")[-1]
+    point_delta_number = 40
+    if fee_tier == "100":
+        point_delta_number = 1
+    elif fee_tier == "400":
+        point_delta_number = 8
+    elif fee_tier == "2000":
+        point_delta_number = 40
+    elif fee_tier == "10000":
+        point_delta_number = 200
+    bin_point_number = point_delta_number * slot_number
+    total_bin = int(total_point / bin_point_number)
+    for i in range(1, total_bin + 2):
+        slot_point_number = bin_point_number * i
+        start_point_number = int(start_point / bin_point_number) * bin_point_number
+        ret_point_data = {
+            "pool_id": "",
+            "account_id": account_id,
+            "point": start_point_number + slot_point_number - bin_point_number,
+            "liquidity": 0,
+            "token_x": 0,
+            "token_y": 0,
+            "fee": 0,
+            "total_liquidity": 0,
+            "sort_number": i,
+        }
+        end_slot_point_number = start_point_number + slot_point_number
+        start_slot_point_number = end_slot_point_number - bin_point_number
+        for point in point_data:
+            point_number = point["point"]
+            if start_slot_point_number <= point_number < end_slot_point_number:
+                if ret_point_data["pool_id"] == "":
+                    ret_point_data["pool_id"] = point["pool_id"]
+                ret_point_data["liquidity"] = ret_point_data["liquidity"] + int(point["l"])
+                ret_point_data["token_x"] = ret_point_data["token_x"] + float(point["tvl_x_l"])
+                ret_point_data["token_y"] = ret_point_data["token_y"] + float(point["tvl_y_l"])
+                ret_point_data["fee"] = (ret_point_data["fee"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])) / 8.612
+                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])
+        if ret_point_data["liquidity"] > 0:
+            ret_point_list.append(ret_point_data)
+    return ret_point_list
+
+
 if __name__ == '__main__':
     from config import Cfg
     from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata
