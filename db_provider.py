@@ -837,6 +837,30 @@ def add_dcl_user_liquidity_data(data_list, network_id):
         cursor.close()
 
 
+def add_dcl_user_liquidity_fee_data(data_list, network_id):
+    db_conn = get_db_connect(network_id)
+
+    sql = "insert into dcl_user_liquidity_fee(pool_id, account_id, unclaimed_fee_x, unclaimed_fee_y, timestamp, create_time) " \
+          "values(%s,%s,%s,%s,%s, now())"
+
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["pool_id"], data["account_id"], data["unclaimed_fee_x"], data["unclaimed_fee_y"],
+                                data["timestamp"]))
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert v2 pool data to db error:", e)
+    finally:
+        cursor.close()
+
+
 def query_recent_transaction_swap(network_id, pool_id):
     db_conn = get_near_lake_connect(network_id)
     sql = "select token_in, token_out, swap_in, swap_out,`timestamp`, block_hash as tx_id from near_lake_swap_log " \
