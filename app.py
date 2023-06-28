@@ -19,7 +19,8 @@ from utils import combine_pools_info, compress_response_content, get_ip_address,
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
-    query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account
+    query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
+    query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, query_dcl_user_tvl, query_dcl_user_change_log
 import re
 from flask_limiter import Limiter
 from loguru import logger
@@ -557,13 +558,82 @@ def handle_dcl_points():
 @app.route('/get-fee-by-account', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_fee_by_account():
+    ret_data = {}
     pool_id = request.args.get("pool_id")
     account_id = request.args.get("account_id")
     if pool_id is None or account_id is None:
         return "null"
-    ret_data = {
-        "total_fee": str('%.6f' % random.uniform(1, 5)),
-        "total_liquidity": str('%.6f' % random.uniform(20, 200))
+    unclaimed_fee_data = query_dcl_user_unclaimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
+    claimed_fee_data = query_dcl_user_claimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
+    fee_x = 0
+    fee_y = 0
+    for unclaimed_fee in unclaimed_fee_data:
+        if not unclaimed_fee["unclaimed_fee_x"] is None:
+            fee_x = fee_x + int(unclaimed_fee["unclaimed_fee_x"])
+        if not unclaimed_fee["unclaimed_fee_y"] is None:
+            fee_y = fee_y + int(unclaimed_fee["unclaimed_fee_y"])
+    for claimed_fee in claimed_fee_data:
+        if not claimed_fee["claimed_fee_x"] is None:
+            fee_x = fee_x + int(claimed_fee["claimed_fee_x"])
+        if not claimed_fee["claimed_fee_y"] is None:
+            fee_y = fee_y + int(claimed_fee["claimed_fee_y"])
+    unclaimed_fee_data_24h = query_dcl_user_unclaimed_fee_24h(Cfg.NETWORK_ID, pool_id, account_id)
+    claimed_fee_data_24h = query_dcl_user_claimed_fee_24h(Cfg.NETWORK_ID, pool_id, account_id)
+    fee_x_24h = 0
+    fee_y_24h = 0
+    for unclaimed_fee_24h in unclaimed_fee_data_24h:
+        if not unclaimed_fee_24h["unclaimed_fee_x"] is None:
+            fee_x_24h = fee_x_24h + int(unclaimed_fee_24h["unclaimed_fee_x"])
+        if not unclaimed_fee_24h["unclaimed_fee_y"] is None:
+            fee_y_24h = fee_y_24h + int(unclaimed_fee_24h["unclaimed_fee_y"])
+    for claimed_fee_24h in claimed_fee_data_24h:
+        if not claimed_fee_24h["claimed_fee_x"] is None:
+            fee_x_24h = fee_x_24h + int(claimed_fee_24h["claimed_fee_x"])
+        if not claimed_fee_24h["claimed_fee_y"] is None:
+            fee_y_24h = fee_y_24h + int(claimed_fee_24h["claimed_fee_y"])
+    total_earned_fee = {
+        "total_fee_x": fee_x,
+        "total_fee_y": fee_y
+    }
+    total_fee_24h = {
+        "fee_x": fee_x - fee_x_24h,
+        "fee_y": fee_y - fee_y_24h,
+    }
+    user_tvl_data = query_dcl_user_tvl(Cfg.NETWORK_ID, pool_id, account_id)
+    token_x = 0
+    token_y = 0
+    for user_tvl in user_tvl_data:
+        if not user_tvl["tvl_x_l"] is None:
+            token_x = token_x + float(user_tvl["tvl_x_l"])
+        if not user_tvl["tvl_y_l"] is None:
+            token_y = token_y + float(user_tvl["tvl_y_l"])
+    user_token = {
+        "token_x": token_x,
+        "token_y": token_y,
+    }
+    change_log_data = query_dcl_user_change_log(Cfg.NETWORK_ID, pool_id, account_id)
+    ret_change_log_data = []
+    for change_log in change_log_data:
+        change_token_x = int(change_log["token_x"])
+        change_token_y = int(change_log["token_y"])
+        if change_log["event_method"] == "liquidity_removed":
+            change_token_x = 0 - int(change_log["token_x"])
+            change_token_y = 0 - int(change_log["token_y"])
+        if change_log["event_method"] == "liquidity_merge":
+            change_token_x = 0 - (int(change_log["remove_token_x"]) - int(change_log["merge_token_x"]))
+            change_token_y = 0 - (int(change_log["remove_token_y"]) - int(change_log["merge_token_y"]))
+        change_log = {
+            "event_method": change_log["event_method"],
+            "token_x": change_token_x,
+            "token_y": change_token_y,
+            "timestamp": change_log["timestamp"],
+        }
+        ret_change_log_data.append(change_log)
+    ret_data["total_earned_fee"] = total_earned_fee
+    ret_data["apr"] = {
+        "fee_data": total_fee_24h,
+        "user_token": user_token,
+        "change_log_data": ret_change_log_data
     }
     return compress_response_content(ret_data)
 

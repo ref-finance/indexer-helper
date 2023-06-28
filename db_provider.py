@@ -985,6 +985,116 @@ def query_dcl_points_by_account(network_id, pool_id, account_id, start_point, en
         cursor.close()
 
 
+def query_dcl_user_unclaimed_fee(network_id, pool_id, account_id):
+    db_conn = get_db_connect(network_id)
+    sql = "select unclaimed_fee_x, unclaimed_fee_y from dcl_user_liquidity_fee where pool_id = '%s' and " \
+          "account_id = '%s' and `timestamp` >= (select max(`timestamp`) from dcl_user_liquidity_fee)" % (pool_id, account_id)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        point_data = cursor.fetchall()
+        return point_data
+    except Exception as e:
+        print("query dcl_user_liquidity_fee to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_dcl_user_unclaimed_fee_24h(network_id, pool_id, account_id):
+    now = int(time.time())
+    timestamp = now - (1 * 24 * 60 * 60)
+    db_conn = get_db_connect(network_id)
+    sql = "select * from dcl_user_liquidity_fee where pool_id = '%s' and account_id = '%s' and `timestamp` <= %s " \
+          "order by `timestamp` desc limit 1" % (pool_id, account_id, timestamp)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        point_data = cursor.fetchall()
+        return point_data
+    except Exception as e:
+        print("query dcl_user_liquidity_fee to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_dcl_user_claimed_fee(network_id, pool_id, account_id):
+    db_conn = get_near_lake_dcl_connect(network_id)
+    sql = "select sum(total_fee_x) as claimed_fee_x, sum(total_fee_y) as claimed_fee_y from " \
+          "(select sum(claim_fee_token_x) as total_fee_x, sum(claim_fee_token_y) as total_fee_y from " \
+          "t_liquidity_added where pool_id = '%s' and owner_id = '%s' and event_method in( 'liquidity_append', " \
+          "'liquidity_merge') union all select sum(claim_fee_token_x) as total_fee_x, sum(claim_fee_token_y) as " \
+          "total_fee_y from t_liquidity_removed where pool_id = '%s' and owner_id = '%s' and event_method = " \
+          "'liquidity_removed') as fee" % (pool_id, account_id, pool_id, account_id)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query t_liquidity_removed to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_dcl_user_claimed_fee_24h(network_id, pool_id, account_id):
+    now = int(time.time())
+    timestamp = now - (1 * 24 * 60 * 60)
+    db_conn = get_near_lake_dcl_connect(network_id)
+    sql = "select sum(total_fee_x) as claimed_fee_x, sum(total_fee_y) as claimed_fee_y from " \
+          "(select sum(claim_fee_token_x) as total_fee_x, sum(claim_fee_token_y) as total_fee_y from " \
+          "t_liquidity_added where pool_id = '%s' and owner_id = '%s' and event_method in( 'liquidity_append', " \
+          "'liquidity_merge') and `timestamp` <= '%s' union all select sum(claim_fee_token_x) as total_fee_x, " \
+          "sum(claim_fee_token_y) as total_fee_y from t_liquidity_removed where pool_id = '%s' and owner_id = '%s' " \
+          "and event_method = 'liquidity_removed' and `timestamp` <= '%s') " \
+          "as fee" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query t_liquidity_removed to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_dcl_user_tvl(network_id, pool_id, account_id):
+    db_conn = get_db_connect(network_id)
+    sql = "select sum(tvl_x_l) as tvl_x_l, sum(tvl_y_l) as tvl_y_l from dcl_user_liquidity where pool_id = '%s' and " \
+          "account_id = '%s' and `timestamp` >= (select max(`timestamp`) from dcl_user_liquidity)" % (pool_id, account_id)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        point_data = cursor.fetchall()
+        return point_data
+    except Exception as e:
+        print("query dcl_user_liquidity to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_dcl_user_change_log(network_id, pool_id, account_id):
+    now = int(time.time())
+    timestamp = now - (1 * 24 * 60 * 60)
+    db_conn = get_near_lake_dcl_connect(network_id)
+    sql = "select event_method,paid_token_x as token_x,paid_token_y as token_y,remove_token_x,remove_token_y," \
+          "merge_token_x,merge_token_y,`timestamp` from t_liquidity_added where pool_id = '%s' and owner_id = '%s' " \
+          "and event_method in('liquidity_append', 'liquidity_merge') and `timestamp` >= '%s' union all select " \
+          "event_method,refund_token_x as token_x, refund_token_y as token_y, null as remove_token_x,null as " \
+          "remove_token_y,null as merge_token_x,null as merge_token_y,`timestamp`  from t_liquidity_removed " \
+          "where pool_id = '%s' and owner_id = '%s' and event_method = 'liquidity_removed' and " \
+          "`timestamp` >= '%s'" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        recent_transaction_data = cursor.fetchall()
+        return recent_transaction_data
+    except Exception as e:
+        print("query t_liquidity_added to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
