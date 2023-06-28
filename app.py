@@ -543,11 +543,12 @@ def handle_dcl_points():
         end_point = 800000
     if pool_id is None:
         return "null"
-    all_point_data = query_dcl_points(Cfg.NETWORK_ID, pool_id, -800000, 800000)
+    all_point_data, all_point_data_24h = query_dcl_points(Cfg.NETWORK_ID, pool_id, -800000, 800000)
     point_data = handle_point_data(all_point_data, int(start_point), int(end_point))
-    ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point))
+    point_data_24h = handle_point_data(all_point_data_24h, int(start_point), int(end_point))
+    ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point), point_data_24h)
     ret_data = {}
-    top_bin_fee_data = handle_top_bin_fee(pool_id, all_point_data, int(slot_number), -800000, 800000)
+    top_bin_fee_data = handle_top_bin_fee(ret_point_data)
     ret_data["point_data"] = ret_point_data
     ret_data["top_bin_fee_data"] = top_bin_fee_data
     return compress_response_content(ret_data)

@@ -879,7 +879,7 @@ def query_recent_transaction_swap(network_id, pool_id):
 def query_recent_transaction_dcl_swap(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
     sql = "select token_in, token_out, amount_in, amount_out,`timestamp`, tx_id from t_swap " \
-          "where pool_id = '%s' order by id desc limit 50" % pool_id
+          "where pool_id like '%"+pool_id+"%' order by id desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -913,7 +913,7 @@ def query_recent_transaction_dcl_liquidity(network_id, pool_id):
           "tla.paid_token_y as amount_y, tla.`timestamp`, tla.tx_id from t_liquidity_added as tla " \
           "where tla.pool_id = '%s' union all select tlr.event_method as method_name," \
           "tlr.refund_token_x as amount_x,tlr.refund_token_y as amount_y, tlr.`timestamp`, " \
-          "tlr. tx_id from t_liquidity_removed as tlr where tlr.pool_id = '%s') as all_data " \
+          "tlr. tx_id from t_liquidity_removed as tlr where tlr.pool_id = '%s' and tlr.removed_amount > 0) as all_data " \
           "order by `timestamp` desc limit 50" % (pool_id, pool_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
@@ -943,16 +943,26 @@ def query_recent_transaction_limit_order(network_id, pool_id):
 
 
 def query_dcl_points(network_id, pool_id, start_point, end_point):
+    now = int(time.time())
+    timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
     sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
           "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,`timestamp` " \
           "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
           "from dcl_pool_analysis) and point >= %s and point <= %s order by point" % (pool_id, start_point, end_point)
+
+    sql_24h = "select pool_id,point,sum(fee_x) as fee_x,sum(fee_y) as fee_y,sum(tvl_x_l) as tvl_x_l," \
+              "sum(tvl_y_l) as tvl_y_l,p,`timestamp` from dcl_pool_analysis where pool_id = '%s' " \
+              "and `timestamp` >= %s GROUP BY point order by point" % (pool_id, timestamp)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
         point_data = cursor.fetchall()
-        return point_data
+        cursor.execute(sql_24h)
+        point_data_24h = cursor.fetchall()
+        # end = int(time.time())
+        # print("end:", end - now)
+        return point_data, point_data_24h
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
     finally:

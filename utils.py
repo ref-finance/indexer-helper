@@ -1,4 +1,6 @@
 import gzip
+import time
+
 from flask import make_response
 import json
 from flask import request
@@ -241,7 +243,8 @@ def handle_point_data(all_point_data, start_point, end_point):
     return point_data_list
 
 
-def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point):
+def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h):
+    # now = int(time.time())
     ret_point_list = []
     total_point = end_point - start_point
     fee_tier = pool_id.split("|")[-1]
@@ -285,55 +288,80 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
                 ret_point_data["order_x"] = ret_point_data["order_x"] + float(point["tvl_x_o"])
                 ret_point_data["order_y"] = ret_point_data["order_y"] + float(point["tvl_y_o"])
                 ret_point_data["order_liquidity"] = ret_point_data["order_liquidity"] + float(point["tvl_y_o"])
-                ret_point_data["fee"] = ret_point_data["fee"] + (float(point["fee_x"]) + float(point["fee_y"])) * float(point["p"])
-                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])
+                # ret_point_data["fee"] = ret_point_data["fee"] + (float(point["fee_x"]) + float(point["fee_y"])) * float(point["p"])
+                # ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])
+        for point_24h in point_data_24h:
+            point_number = point_24h["point"]
+            if start_slot_point_number <= point_number < end_slot_point_number:
+                ret_point_data["fee"] = ret_point_data["fee"] + (float(point_24h["fee_x"]) + float(point_24h["fee_y"])) * float(point_24h["p"])
+                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point_24h["tvl_x_l"]) + float(point_24h["tvl_y_l"])) / 24 * float(point_24h["p"])
         if ret_point_data["liquidity"] > 0:
             ret_point_list.append(ret_point_data)
+    # end = int(time.time())
+    # print("end111:", end - now)
     return ret_point_list
 
 
-def handle_top_bin_fee(pool_id, point_data, slot_number, start_point, end_point):
-    total_point = end_point - start_point
-    fee_tier = pool_id.split("|")[-1]
-    point_delta_number = 40
-    if fee_tier == "100":
-        point_delta_number = 1
-    elif fee_tier == "400":
-        point_delta_number = 8
-    elif fee_tier == "2000":
-        point_delta_number = 40
-    elif fee_tier == "10000":
-        point_delta_number = 200
-    bin_point_number = point_delta_number * slot_number
-    total_bin = int(total_point / bin_point_number)
+def handle_top_bin_fee(point_data):
     ret_point_data = {
         "total_fee": 0,
         "total_liquidity": 0,
     }
     max_fee_apr = 0
-    max_total_liquidity = 0
-    for i in range(1, total_bin + 2):
-        slot_point_number = bin_point_number * i
-        start_point_number = int(start_point / bin_point_number) * bin_point_number
-        end_slot_point_number = start_point_number + slot_point_number
-        start_slot_point_number = end_slot_point_number - bin_point_number
-        total_fee = 0
-        total_liquidity = 0
-        for point in point_data:
-            point_number = point["point"]
-            if start_slot_point_number <= point_number < end_slot_point_number:
-                total_fee = total_fee + (float(point["fee_x"]) + float(point["fee_y"])) * float(point["p"])
-                total_liquidity = total_liquidity + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])
-        if total_liquidity > 0:
-            if total_liquidity > max_total_liquidity:
-                max_total_liquidity = total_liquidity
-                ret_point_data["total_liquidity"] = total_liquidity
+    for point in point_data:
+        total_fee = point["fee"]
+        total_liquidity = point["total_liquidity"]
+        if total_liquidity > 0 and total_fee > 0:
             bin_fee_apr = total_fee / total_liquidity
             if bin_fee_apr > max_fee_apr:
                 max_fee_apr = bin_fee_apr
                 ret_point_data["total_fee"] = total_fee
                 ret_point_data["total_liquidity"] = total_liquidity
     return ret_point_data
+
+
+# def handle_top_bin_fee(pool_id, point_data, slot_number, start_point, end_point):
+#     total_point = end_point - start_point
+#     fee_tier = pool_id.split("|")[-1]
+#     point_delta_number = 40
+#     if fee_tier == "100":
+#         point_delta_number = 1
+#     elif fee_tier == "400":
+#         point_delta_number = 8
+#     elif fee_tier == "2000":
+#         point_delta_number = 40
+#     elif fee_tier == "10000":
+#         point_delta_number = 200
+#     bin_point_number = point_delta_number * slot_number
+#     total_bin = int(total_point / bin_point_number)
+#     ret_point_data = {
+#         "total_fee": 0,
+#         "total_liquidity": 0,
+#     }
+#     max_fee_apr = 0
+#     max_total_liquidity = 0
+#     for i in range(1, total_bin + 2):
+#         slot_point_number = bin_point_number * i
+#         start_point_number = int(start_point / bin_point_number) * bin_point_number
+#         end_slot_point_number = start_point_number + slot_point_number
+#         start_slot_point_number = end_slot_point_number - bin_point_number
+#         total_fee = 0
+#         total_liquidity = 0
+#         for point in point_data:
+#             point_number = point["point"]
+#             if start_slot_point_number <= point_number < end_slot_point_number:
+#                 total_fee = total_fee + (float(point["fee_x"]) + float(point["fee_y"])) * float(point["p"])
+#                 total_liquidity = total_liquidity + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])
+#         if total_liquidity > 0:
+#             if total_liquidity > max_total_liquidity:
+#                 max_total_liquidity = total_liquidity
+#                 ret_point_data["total_liquidity"] = total_liquidity
+#             bin_fee_apr = total_fee / total_liquidity
+#             if bin_fee_apr > max_fee_apr:
+#                 max_fee_apr = bin_fee_apr
+#                 ret_point_data["total_fee"] = total_fee
+#                 ret_point_data["total_liquidity"] = total_liquidity
+#     return ret_point_data
 
 
 def handle_dcl_point_bin_by_account(pool_id, point_data, slot_number, account_id, start_point, end_point):
@@ -375,7 +403,7 @@ def handle_dcl_point_bin_by_account(pool_id, point_data, slot_number, account_id
                 ret_point_data["liquidity"] = ret_point_data["liquidity"] + int(point["l"])
                 ret_point_data["token_x"] = ret_point_data["token_x"] + float(point["tvl_x_l"])
                 ret_point_data["token_y"] = ret_point_data["token_y"] + float(point["tvl_y_l"])
-                ret_point_data["fee"] = (ret_point_data["fee"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])) / 8.612
+                ret_point_data["fee"] = (ret_point_data["fee"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"]))
                 ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])
         if ret_point_data["liquidity"] > 0:
             ret_point_list.append(ret_point_data)
