@@ -928,9 +928,11 @@ def query_recent_transaction_dcl_liquidity(network_id, pool_id):
 
 def query_recent_transaction_limit_order(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
-    sql = "select 'order_cancelled' as method_name, sell_token, actual_cancel_amount as amount, point," \
-          "`timestamp`,tx_id from t_order_cancelled where pool_id = '%s' and actual_cancel_amount != '0' " \
-          "order by id desc limit 50" % pool_id
+    sql = "select * from (select 'order_cancelled' as method_name, sell_token, actual_cancel_amount as amount, " \
+          "point,`timestamp`,tx_id from t_order_cancelled where pool_id = '%s' and actual_cancel_amount != '0' " \
+          "union all select 'order_added' as method_name, sell_token, original_amount as amount, point," \
+          "`timestamp`,tx_id from t_order_added where pool_id = '%s' and (args like '%%%%LimitOrderWithSwap%%%%' or " \
+          "args like '%%%%LimitOrder%%%%')) as all_data order by all_data.`timestamp` desc limit 50" % (pool_id, pool_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
