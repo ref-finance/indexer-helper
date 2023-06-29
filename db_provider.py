@@ -893,7 +893,7 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
 
 def query_recent_transaction_liquidity(network_id, pool_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select method_name, token_in, token_out, amount_in, amount_out, `timestamp`, block_hash as tx_id " \
+    sql = "select method_name, pool_id, shares, `timestamp`, block_hash as tx_id, amounts " \
           "from near_lake_liquidity_log " \
           "where pool_id = '%s' order by id desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -909,12 +909,12 @@ def query_recent_transaction_liquidity(network_id, pool_id):
 
 def query_recent_transaction_dcl_liquidity(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
-    sql = "select * from (select tla.event_method as method_name, tla.paid_token_x as amount_x, " \
-          "tla.paid_token_y as amount_y, tla.`timestamp`, tla.tx_id from t_liquidity_added as tla " \
-          "where tla.pool_id = '%s' union all select tlr.event_method as method_name," \
-          "tlr.refund_token_x as amount_x,tlr.refund_token_y as amount_y, tlr.`timestamp`, " \
-          "tlr. tx_id from t_liquidity_removed as tlr where tlr.pool_id = '%s' and tlr.removed_amount > 0) as all_data " \
-          "order by `timestamp` desc limit 50" % (pool_id, pool_id)
+    sql = "select * from (select tla.event_method as method_name, sum(tla.paid_token_x) as amount_x, " \
+          "sum(tla.paid_token_y) as amount_y, tla.`timestamp`, tla.tx_id from t_liquidity_added as tla where " \
+          "tla.pool_id = '%s' group by tx_id union all select tlr.event_method as method_name, " \
+          "sum(tlr.refund_token_x) as amount_x,sum(tlr.refund_token_y) as amount_y, tlr.`timestamp`, " \
+          "tlr. tx_id from t_liquidity_removed as tlr where tlr.pool_id = '%s' and tlr.removed_amount > 0 " \
+          "group by tx_id) as all_data order by `timestamp` desc limit 50" % (pool_id, pool_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)

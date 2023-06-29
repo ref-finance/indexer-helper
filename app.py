@@ -509,8 +509,19 @@ def handle_recent_transaction_dcl_swap():
 @flask_cors.cross_origin()
 def handle_recent_transaction_liquidity():
     pool_id = request.args.get("pool_id")
-    ret_data = query_recent_transaction_liquidity(Cfg.NETWORK_ID, pool_id)
-    return compress_response_content(ret_data)
+    # ret = []
+    liquidity_data_list = query_recent_transaction_liquidity(Cfg.NETWORK_ID, pool_id)
+    # for liquidity_data in liquidity_data_list:
+    #     ret_data = {
+    #         "method_name": liquidity_data["liquidity_data"],
+    #         "pool_id": liquidity_data["pool_id"],
+    #         "shares": liquidity_data["shares"],
+    #         "timestamp": liquidity_data["timestamp"],
+    #         "tx_id": liquidity_data["tx_id"],
+    #         "amounts": "",
+    #     }
+    #     ret.append(ret_data)
+    return compress_response_content(liquidity_data_list)
 
 
 @app.route('/get-recent-transaction-dcl-liquidity', methods=['GET'])

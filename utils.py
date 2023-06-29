@@ -1,12 +1,15 @@
 import gzip
-import time
 
 from flask import make_response
 import json
 from flask import request
 import requests
 from db_provider import add_tx_receipt, query_tx_by_receipt
-import random
+from config import Cfg
+
+LEFT_MOST_POINT = -800000
+RIGHT_MOST_POINT = 800000
+sqrt_price_96 = 0
 
 
 def get_tx_id(receipt_id, network_id):
@@ -244,10 +247,15 @@ def handle_point_data(all_point_data, start_point, end_point):
 
 
 def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h):
-    # now = int(time.time())
+    token_decimal_data = get_token_decimal()
     ret_point_list = []
+    if len(point_data) < 1:
+        return ret_point_list
     total_point = end_point - start_point
-    fee_tier = pool_id.split("|")[-1]
+    pool_id_s = pool_id.split("|")
+    fee_tier = pool_id_s[-1]
+    token_x = pool_id_s[0]
+    token_y = pool_id_s[1]
     point_delta_number = 40
     if fee_tier == "100":
         point_delta_number = 1
@@ -257,13 +265,17 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
         point_delta_number = 40
     elif fee_tier == "10000":
         point_delta_number = 200
+    current_point = 0
+    for point in point_data:
+        if float(point["tvl_x_l"]) > 0 and float(point["tvl_y_l"]) > 0:
+            current_point = point["point"]
     bin_point_number = point_delta_number * slot_number
     total_bin = int(total_point / bin_point_number)
     for i in range(1, total_bin + 2):
         slot_point_number = bin_point_number * i
         start_point_number = int(start_point / bin_point_number) * bin_point_number
         ret_point_data = {
-            "pool_id": "",
+            "pool_id": pool_id,
             "point": start_point_number + slot_point_number - bin_point_number,
             "liquidity": 0,
             "token_x": 0,
@@ -280,25 +292,33 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
         for point in point_data:
             point_number = point["point"]
             if start_slot_point_number <= point_number < end_slot_point_number:
-                if ret_point_data["pool_id"] == "":
-                    ret_point_data["pool_id"] = point["pool_id"]
-                ret_point_data["liquidity"] = ret_point_data["liquidity"] + int(point["l"])
+                # if ret_point_data["pool_id"] == "":
+                #     ret_point_data["pool_id"] = point["pool_id"]
+                # ret_point_data["liquidity"] = ret_point_data["liquidity"] + int(point["l"])
                 ret_point_data["token_x"] = ret_point_data["token_x"] + float(point["tvl_x_l"])
                 ret_point_data["token_y"] = ret_point_data["token_y"] + float(point["tvl_y_l"])
                 ret_point_data["order_x"] = ret_point_data["order_x"] + float(point["tvl_x_o"])
                 ret_point_data["order_y"] = ret_point_data["order_y"] + float(point["tvl_y_o"])
-                ret_point_data["order_liquidity"] = ret_point_data["order_liquidity"] + float(point["tvl_y_o"])
+                # ret_point_data["order_liquidity"] = ret_point_data["order_liquidity"] + float(point["tvl_y_o"])
                 # ret_point_data["fee"] = ret_point_data["fee"] + (float(point["fee_x"]) + float(point["fee_y"])) * float(point["p"])
                 # ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point["tvl_x_l"]) + float(point["tvl_y_l"])) * float(point["p"])
+        if end_slot_point_number >= RIGHT_MOST_POINT:
+            end_slot_point_number = RIGHT_MOST_POINT - 1
+        liquidity_amount_x = ret_point_data["token_x"] * int("1" + "0" * token_decimal_data[token_x])
+        liquidity_amount_y = ret_point_data["token_y"] * int("1" + "0" * token_decimal_data[token_y])
+        if liquidity_amount_x > 0 or liquidity_amount_y > 0:
+            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point)
+        order_amount_x = ret_point_data["order_x"] * int("1" + "0" * token_decimal_data[token_x])
+        order_amount_y = ret_point_data["order_y"] * int("1" + "0" * token_decimal_data[token_y])
+        if order_amount_x > 0 or order_amount_y > 0:
+            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point)
         for point_24h in point_data_24h:
             point_number = point_24h["point"]
             if start_slot_point_number <= point_number < end_slot_point_number:
                 ret_point_data["fee"] = ret_point_data["fee"] + (float(point_24h["fee_x"]) + float(point_24h["fee_y"])) * float(point_24h["p"])
                 ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point_24h["tvl_x_l"]) + float(point_24h["tvl_y_l"])) / 24 * float(point_24h["p"])
-        if ret_point_data["liquidity"] > 0:
+        if ret_point_data["liquidity"] > 0 or ret_point_data["order_liquidity"] > 0:
             ret_point_list.append(ret_point_data)
-    # end = int(time.time())
-    # print("end111:", end - now)
     return ret_point_list
 
 
@@ -410,13 +430,143 @@ def handle_dcl_point_bin_by_account(pool_id, point_data, slot_number, account_id
     return ret_point_list
 
 
+def pow_128():
+    return 1 << 128
+
+
+def pow_96():
+    return 1 << 96
+
+
+def sqrt_rate_96():
+    return get_sqrt_price(1)
+
+
+def get_sqrt_price(point: int):
+    if point > RIGHT_MOST_POINT or point < LEFT_MOST_POINT:
+        print("E202_ILLEGAL_POINT")
+        return None
+
+    abs_point = point
+    if point < 0:
+        abs_point = -point
+
+    value = 0x100000000000000000000000000000000
+    if point & 1 != 0:
+        value = 0xfffcb933bd6fad37aa2d162d1a594001
+
+    value = update_value(abs_point, value, 0x2, 0xfff97272373d413259a46990580e213a)
+    value = update_value(abs_point, value, 0x4, 0xfff2e50f5f656932ef12357cf3c7fdcc)
+    value = update_value(abs_point, value, 0x8, 0xffe5caca7e10e4e61c3624eaa0941cd0)
+    value = update_value(abs_point, value, 0x10, 0xffcb9843d60f6159c9db58835c926644)
+    value = update_value(abs_point, value, 0x20, 0xff973b41fa98c081472e6896dfb254c0)
+    value = update_value(abs_point, value, 0x40, 0xff2ea16466c96a3843ec78b326b52861)
+    value = update_value(abs_point, value, 0x80, 0xfe5dee046a99a2a811c461f1969c3053)
+    value = update_value(abs_point, value, 0x100, 0xfcbe86c7900a88aedcffc83b479aa3a4)
+    value = update_value(abs_point, value, 0x200, 0xf987a7253ac413176f2b074cf7815e54)
+    value = update_value(abs_point, value, 0x400, 0xf3392b0822b70005940c7a398e4b70f3)
+    value = update_value(abs_point, value, 0x800, 0xe7159475a2c29b7443b29c7fa6e889d9)
+    value = update_value(abs_point, value, 0x1000, 0xd097f3bdfd2022b8845ad8f792aa5825)
+    value = update_value(abs_point, value, 0x2000, 0xa9f746462d870fdf8a65dc1f90e061e5)
+    value = update_value(abs_point, value, 0x4000, 0x70d869a156d2a1b890bb3df62baf32f7)
+    value = update_value(abs_point, value, 0x8000, 0x31be135f97d08fd981231505542fcfa6)
+    value = update_value(abs_point, value, 0x10000, 0x9aa508b5b7a84e1c677de54f3e99bc9)
+    value = update_value(abs_point, value, 0x20000, 0x5d6af8dedb81196699c329225ee604)
+    value = update_value(abs_point, value, 0x40000, 0x2216e584f5fa1ea926041bedfe98)
+    value = update_value(abs_point, value, 0x80000, 0x48a170391f7dc42444e8fa2)
+
+    if point > 0:
+        value = ((1 << 256) - 1) // value
+
+    remainder = 0
+    if value % (1 << 32):
+        remainder = 1
+    return (value >> 32) + remainder
+
+
+def update_value(point, value, hex1, hex2):
+    if point & hex1 != 0:
+        value = value * hex2
+        value = (value >> 128)
+    return value
+
+
+def mul_fraction_floor(number, _numerator, _denominator):
+    return number * _numerator // _denominator
+
+
+def get_amount_y_unit_liquidity_96(sqrt_price_l_96: int, sqrt_price_r_96: int, sqrt_rate_96: int):
+    numerator = sqrt_price_r_96 - sqrt_price_l_96
+    denominator = sqrt_rate_96 - pow_96()
+    return mul_fraction_ceil(pow_96(), numerator, denominator)
+
+
+def mul_fraction_ceil(number, _numerator, _denominator):
+    res = number * _numerator // _denominator
+    if number * _numerator % _denominator == 0:
+        return res
+    else:
+        return res + 1
+
+
+def get_amount_x_unit_liquidity_96(left_pt: int, right_pt: int, sqrt_price_r_96: int, sqrt_rate_96: int):
+    sqrt_price_pr_pc_96 = get_sqrt_price(right_pt - left_pt + 1)
+    sqrt_price_pr_pd_96 = get_sqrt_price(right_pt + 1)
+    numerator = sqrt_price_pr_pc_96 - sqrt_rate_96
+    denominator = sqrt_price_pr_pd_96 - sqrt_price_r_96
+    return mul_fraction_ceil(pow_96(), numerator, denominator)
+
+
+def compute_deposit_xy_per_unit(left_point: int, right_point: int, current_point: int):
+    sqrt_price_r_96 = get_sqrt_price(right_point)
+    y = 0
+    if left_point < current_point:
+        sqrt_price_l_96 = get_sqrt_price(left_point)
+        if right_point < current_point:
+            y = get_amount_y_unit_liquidity_96(sqrt_price_l_96, sqrt_price_r_96, sqrt_rate_96())
+        else:
+            y = get_amount_y_unit_liquidity_96(sqrt_price_l_96, sqrt_price_96, sqrt_rate_96())
+    x = 0
+    if right_point > current_point:
+        xr_left = current_point + 1
+        if left_point > current_point:
+            xr_left = left_point
+        x = get_amount_x_unit_liquidity_96(xr_left, right_point, sqrt_price_r_96, sqrt_rate_96())
+    if left_point <= current_point < right_point:
+        y += sqrt_price_96
+    return x, y
+
+
+def compute_liquidity(left_point: int, right_point: int, amount_x: int, amount_y: int, current_point: int):
+    liquidity = ((1 << 128) - 1) // 2
+    (x, y) = compute_deposit_xy_per_unit(left_point, right_point, current_point)
+    if x > 0:
+        xl = mul_fraction_floor(amount_x, pow_96(), x)
+        if liquidity > xl:
+            liquidity = xl
+    if y > 0:
+        yl = mul_fraction_floor(amount_y - 1, pow_96(), y)
+        if liquidity > yl:
+            liquidity = yl
+    return liquidity
+
+
+def get_token_decimal():
+    token_decimal_data = {}
+    for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
+        token_decimal_data[token["NEAR_ID"]] = token["DECIMAL"]
+    return token_decimal_data
+
+
 if __name__ == '__main__':
-    from config import Cfg
-    from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata
-    pools = list_pools_by_id_list(Cfg.NETWORK_ID, [10, 11, 14, 79])
-    prices = list_token_price(Cfg.NETWORK_ID)
-    metadata = list_token_metadata(Cfg.NETWORK_ID)
-    combine_pools_info(pools, prices, metadata)
-    for pool in pools:
-        print(pool)
-    pass
+    # from config import Cfg
+    # from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata
+    # pools = list_pools_by_id_list(Cfg.NETWORK_ID, [10, 11, 14, 79])
+    # prices = list_token_price(Cfg.NETWORK_ID)
+    # metadata = list_token_metadata(Cfg.NETWORK_ID)
+    # combine_pools_info(pools, prices, metadata)
+    # for pool in pools:
+    #     print(pool)
+    # pass
+    liquidity_ = compute_liquidity(421320, 421360, 21388073, 0, 410840)
+    print(liquidity_)
