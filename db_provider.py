@@ -951,7 +951,8 @@ def query_dcl_points(network_id, pool_id, start_point, end_point):
     sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
           "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,`timestamp` " \
           "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
-          "from dcl_pool_analysis) and point >= %s and point <= %s order by point" % (pool_id, start_point, end_point)
+          "from dcl_pool_analysis where pool_id = '%s') and point >= %s and point <= %s " \
+          "order by point" % (pool_id, pool_id, start_point, end_point)
 
     sql_24h = "select pool_id,point,sum(fee_x) as fee_x,sum(fee_y) as fee_y,sum(tvl_x_l) as tvl_x_l," \
               "sum(tvl_y_l) as tvl_y_l,p,`timestamp` from dcl_pool_analysis where pool_id = '%s' " \
@@ -982,7 +983,7 @@ def query_dcl_points_by_account(network_id, pool_id, account_id, start_point, en
         point_data = cursor.fetchall()
         return point_data
     except Exception as e:
-        print("query dcl_pool_analysis to db error:", e)
+        print("query dcl_user_liquidity to db error:", e)
     finally:
         cursor.close()
 
