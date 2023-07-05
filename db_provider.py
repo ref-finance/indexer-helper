@@ -788,8 +788,8 @@ def add_v2_pool_data(data_list, network_id):
 
     sql = "insert into dcl_pool_analysis(pool_id, point, fee_x, fee_y, l, tvl_x_l, " \
           "tvl_x_o, tvl_y_l, tvl_y_o, vol_x_in_l, vol_x_in_o, vol_x_out_l, vol_x_out_o, " \
-          "vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, p_fee_x, p_fee_y, p, timestamp, create_time) " \
-          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())"
+          "vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, p_fee_x, p_fee_y, p, cp, timestamp, create_time) " \
+          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())"
 
     insert_data = []
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -800,7 +800,7 @@ def add_v2_pool_data(data_list, network_id):
                                 data["tvl_y_o"], data["vol_x_in_l"], data["vol_x_in_o"],
                                 data["vol_x_out_l"], data["vol_x_out_o"], data["vol_y_in_l"], data["vol_y_in_o"],
                                 data["vol_y_out_l"], data["vol_y_out_o"], data["p_fee_x"],
-                                data["p_fee_y"], data["p"], data["timestamp"]))
+                                data["p_fee_y"], data["p"], data["cp"], data["timestamp"]))
 
         cursor.executemany(sql, insert_data)
         db_conn.commit()
@@ -944,28 +944,30 @@ def query_recent_transaction_limit_order(network_id, pool_id):
         cursor.close()
 
 
-def query_dcl_points(network_id, pool_id, start_point, end_point):
+def query_dcl_points(network_id, pool_id):
     now = int(time.time())
     timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
     sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
           "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,`timestamp` " \
           "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
-          "from dcl_pool_analysis where pool_id = '%s') and point >= %s and point <= %s " \
-          "order by point" % (pool_id, pool_id, start_point, end_point)
+          "from dcl_pool_analysis where pool_id = '%s') order by point" % (pool_id, pool_id)
 
     sql_24h = "select pool_id,point,sum(fee_x) as fee_x,sum(fee_y) as fee_y,sum(tvl_x_l) as tvl_x_l," \
               "sum(tvl_y_l) as tvl_y_l,p,`timestamp` from dcl_pool_analysis where pool_id = '%s' " \
               "and `timestamp` >= %s GROUP BY point order by point" % (pool_id, timestamp)
+
+    sql_24h_count = "select count(*) from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= %s " \
+                    "group by `timestamp`" % (pool_id, timestamp)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
         point_data = cursor.fetchall()
         cursor.execute(sql_24h)
         point_data_24h = cursor.fetchall()
-        # end = int(time.time())
-        # print("end:", end - now)
-        return point_data, point_data_24h
+        cursor.execute(sql_24h_count)
+        point_data_24h_count = cursor.fetchall()
+        return point_data, point_data_24h, len(point_data_24h_count)
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
     finally:
@@ -1063,8 +1065,9 @@ def query_dcl_user_claimed_fee_24h(network_id, pool_id, account_id):
 
 def query_dcl_user_tvl(network_id, pool_id, account_id):
     db_conn = get_db_connect(network_id)
-    sql = "select sum(tvl_x_l) as tvl_x_l, sum(tvl_y_l) as tvl_y_l from dcl_user_liquidity where pool_id = '%s' and " \
-          "account_id = '%s' and `timestamp` >= (select max(`timestamp`) from dcl_user_liquidity)" % (pool_id, account_id)
+    sql = "select sum(tvl_x_l) as tvl_x_l, sum(tvl_y_l) as tvl_y_l,`timestamp` from dcl_user_liquidity where " \
+          "pool_id = '%s' and account_id = '%s' and `timestamp` >= (select max(`timestamp`) from " \
+          "dcl_user_liquidity where pool_id = '%s' and account_id = '%s')" % (pool_id, account_id, pool_id, account_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)

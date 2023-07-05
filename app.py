@@ -560,10 +560,11 @@ def handle_dcl_points():
         end_point = 800000
     if pool_id is None:
         return "null"
-    all_point_data, all_point_data_24h = query_dcl_points(Cfg.NETWORK_ID, pool_id, -800000, 800000)
+    all_point_data, all_point_data_24h, point_data_24h_count = query_dcl_points(Cfg.NETWORK_ID, pool_id)
     point_data = handle_point_data(all_point_data, int(start_point), int(end_point))
     point_data_24h = handle_point_data(all_point_data_24h, int(start_point), int(end_point))
-    ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point), point_data_24h)
+    ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point),
+                                          point_data_24h, point_data_24h_count)
     ret_data = {}
     top_bin_fee_data = handle_top_bin_fee(ret_point_data)
     ret_data["point_data"] = ret_point_data
@@ -618,7 +619,9 @@ def handle_fee_by_account():
     user_tvl_data = query_dcl_user_tvl(Cfg.NETWORK_ID, pool_id, account_id)
     token_x = 0
     token_y = 0
+    user_token_timestamp = 0
     for user_tvl in user_tvl_data:
+        user_token_timestamp = user_tvl["timestamp"]
         if not user_tvl["tvl_x_l"] is None:
             token_x = token_x + float(user_tvl["tvl_x_l"])
         if not user_tvl["tvl_y_l"] is None:
@@ -626,10 +629,14 @@ def handle_fee_by_account():
     user_token = {
         "token_x": token_x,
         "token_y": token_y,
+        "timestamp": user_token_timestamp,
     }
     change_log_data = query_dcl_user_change_log(Cfg.NETWORK_ID, pool_id, account_id)
     ret_change_log_data = []
     for change_log in change_log_data:
+        change_log_timestamp = int(int(change_log["timestamp"]) / 1000000000)
+        if change_log_timestamp > user_token_timestamp:
+            continue
         change_token_x = int(change_log["token_x"])
         change_token_y = int(change_log["token_y"])
         if change_log["event_method"] == "liquidity_removed":

@@ -245,7 +245,7 @@ def handle_point_data(all_point_data, start_point, end_point):
     return point_data_list
 
 
-def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h):
+def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h, point_data_24h_count):
     token_decimal_data = get_token_decimal()
     ret_point_list = []
     if len(point_data) < 1:
@@ -287,7 +287,8 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
             "order_x": 0,
             "order_y": 0,
             "order_liquidity": 0,
-            "fee": 0,
+            "fee_x": 0,
+            "fee_y": 0,
             "total_liquidity": 0,
             "sort_number": i,
         }
@@ -321,8 +322,9 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
         for point_24h in point_data_24h:
             point_number = point_24h["point"]
             if start_slot_point_number <= point_number < end_slot_point_number:
-                ret_point_data["fee"] = ret_point_data["fee"] + (float(point_24h["fee_x"]) + float(point_24h["fee_y"])) * float(point_24h["p"])
-                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point_24h["tvl_x_l"]) + float(point_24h["tvl_y_l"])) / 24 * float(point_24h["p"])
+                ret_point_data["fee_x"] = ret_point_data["fee_x"] + float(point_24h["fee_x"])
+                ret_point_data["fee_y"] = ret_point_data["fee_y"] + float(point_24h["fee_y"])
+                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point_24h["tvl_x_l"]) + float(point_24h["tvl_y_l"])) / point_data_24h_count
         if ret_point_data["liquidity"] > 0 or ret_point_data["order_liquidity"] > 0:
             ret_point_list.append(ret_point_data)
     return ret_point_list
@@ -335,7 +337,7 @@ def handle_top_bin_fee(point_data):
     }
     max_fee_apr = 0
     for point in point_data:
-        total_fee = point["fee"]
+        total_fee = point["fee_x"] + point["fee_y"]
         total_liquidity = point["total_liquidity"]
         if total_liquidity > 0 and total_fee > 0:
             bin_fee_apr = total_fee / total_liquidity
@@ -690,9 +692,8 @@ if __name__ == '__main__':
     # for pool in pools:
     #     print(pool)
     # pass
-    liquidity_ = compute_liquidity(4800, 4840, 0, 2063525954789424000000000000, 5000)
+    liquidity_ = compute_liquidity(5440, 5480, 56792121423083480000000000000, 0, 5035)
     print("liquidity_:", liquidity_)
-    a_x, a_y = compute_deposit_x_y_buckup(40541610013959251324803864, 4800, 4840, 5000)
+    a_x, a_y = compute_deposit_x_y_buckup(182847144196469251612398703, 5000, 5040, 5035)
     print("x:", a_x)
     print("y", a_y)
-
