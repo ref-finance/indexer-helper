@@ -279,8 +279,7 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
             "order_x": 0,
             "order_y": 0,
             "order_liquidity": 0,
-            "fee_x": 0,
-            "fee_y": 0,
+            "fee": 0,
             "total_liquidity": 0,
             "sort_number": i,
         }
@@ -316,8 +315,9 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
         for point_24h in point_data_24h:
             point_number = point_24h["point"]
             if start_slot_point_number <= point_number < end_slot_point_number:
-                ret_point_data["fee_x"] = ret_point_data["fee_x"] + float(point_24h["fee_x"])
-                ret_point_data["fee_y"] = ret_point_data["fee_y"] + float(point_24h["fee_y"])
+                fee_x = float(point_24h["fee_x"]) * token_price[0]
+                fee_y = float(point_24h["fee_y"]) * token_price[1]
+                ret_point_data["fee"] = ret_point_data["fee"] + fee_x + fee_y
                 tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / point_data_24h_count
                 tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / point_data_24h_count
                 ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + tvl_x_l_24h + tvl_y_l_24h
@@ -326,14 +326,14 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
     return ret_point_list
 
 
-def handle_top_bin_fee(point_data, token_price):
+def handle_top_bin_fee(point_data):
     ret_point_data = {
         "total_fee": 0,
         "total_liquidity": 0,
     }
     max_fee_apr = 0
     for point in point_data:
-        total_fee = point["fee_x"] * token_price[0] + point["fee_y"] * token_price[1]
+        total_fee = point["fee"]
         total_liquidity = point["total_liquidity"]
         if total_liquidity > 0 and total_fee > 0:
             bin_fee_apr = total_fee / total_liquidity
@@ -688,8 +688,8 @@ if __name__ == '__main__':
     # for pool in pools:
     #     print(pool)
     # pass
-    liquidity_ = compute_liquidity(5440, 5480, 56792121423083480000000000000, 0, 5035)
+    liquidity_ = compute_liquidity(5160, 5240, 7404115124903830000000000000, 10555983177592727000000000000, 5214)
     print("liquidity_:", liquidity_)
-    a_x, a_y = compute_deposit_x_y_buckup(182847144196469251612398703, 5000, 5040, 5035)
-    print("x:", a_x)
-    print("y", a_y)
+    # a_x, a_y = compute_deposit_x_y_buckup(182847144196469251612398703, 5000, 5040, 5035)
+    # print("x:", a_x)
+    # print("y", a_y)
