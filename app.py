@@ -493,7 +493,14 @@ def analysis_v2_pool_account_data():
 @flask_cors.cross_origin()
 def handle_recent_transaction_swap():
     pool_id = request.args.get("pool_id")
-    ret_data = query_recent_transaction_swap(Cfg.NETWORK_ID, pool_id)
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_swap(Cfg.NETWORK_ID, pool_id)
+        for ret in ret_data:
+            if ret["tx_id"] is None:
+                ret["tx_id"] = get_tx_id(ret["block_hash"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when swap: ", e)
     return compress_response_content(ret_data)
 
 
@@ -501,7 +508,14 @@ def handle_recent_transaction_swap():
 @flask_cors.cross_origin()
 def handle_recent_transaction_dcl_swap():
     pool_id = request.args.get("pool_id")
-    ret_data = query_recent_transaction_dcl_swap(Cfg.NETWORK_ID, pool_id)
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_dcl_swap(Cfg.NETWORK_ID, pool_id)
+        for ret in ret_data:
+            if ret["tx_id"] is None:
+                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when dcl-swap: ", e)
     return compress_response_content(ret_data)
 
 
@@ -513,16 +527,21 @@ def handle_recent_transaction_liquidity():
     liquidity_data_list = query_recent_transaction_liquidity(Cfg.NETWORK_ID, pool_id)
     if liquidity_data_list is None:
         return ret
-    for liquidity_data in liquidity_data_list:
-        ret_data = {
-            "method_name": liquidity_data["method_name"],
-            "pool_id": liquidity_data["pool_id"],
-            "shares": liquidity_data["shares"],
-            "timestamp": liquidity_data["timestamp"],
-            "tx_id": liquidity_data["tx_id"],
-            "amounts": str(liquidity_data["amounts"]),
-        }
-        ret.append(ret_data)
+    try:
+        for liquidity_data in liquidity_data_list:
+            ret_data = {
+                "method_name": liquidity_data["method_name"],
+                "pool_id": liquidity_data["pool_id"],
+                "shares": liquidity_data["shares"],
+                "timestamp": liquidity_data["timestamp"],
+                "tx_id": liquidity_data["tx_id"],
+                "amounts": str(liquidity_data["amounts"]),
+            }
+            if ret_data["tx_id"] is None:
+                ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
+            ret.append(ret_data)
+    except Exception as e:
+        print("Exception when liquidity: ", e)
     return compress_response_content(ret)
 
 
@@ -530,10 +549,16 @@ def handle_recent_transaction_liquidity():
 @flask_cors.cross_origin()
 def handle_recent_transaction_dcl_liquidity():
     pool_id = request.args.get("pool_id")
-    ret_data = query_recent_transaction_dcl_liquidity(Cfg.NETWORK_ID, pool_id)
-    for ret_d in ret_data:
-        ret_d["amount_x"] = str(int(ret_d["amount_x"]))
-        ret_d["amount_y"] = str(int(ret_d["amount_y"]))
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_dcl_liquidity(Cfg.NETWORK_ID, pool_id)
+        for ret_d in ret_data:
+            ret_d["amount_x"] = str(int(ret_d["amount_x"]))
+            ret_d["amount_y"] = str(int(ret_d["amount_y"]))
+            if ret_d["tx_id"] is None:
+                ret_d["tx_id"] = get_tx_id(ret_d["receipt_id"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when dcl-liquidity: ", e)
     return compress_response_content(ret_data)
 
 
@@ -541,7 +566,14 @@ def handle_recent_transaction_dcl_liquidity():
 @flask_cors.cross_origin()
 def handle_recent_transaction_limit_order():
     pool_id = request.args.get("pool_id")
-    ret_data = query_recent_transaction_limit_order(Cfg.NETWORK_ID, pool_id)
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_limit_order(Cfg.NETWORK_ID, pool_id)
+        for ret in ret_data:
+            if ret["tx_id"] is None:
+                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when limit-order: ", e)
     return compress_response_content(ret_data)
 
 
