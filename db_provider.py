@@ -949,7 +949,7 @@ def query_dcl_points(network_id, pool_id):
     timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
     sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
-          "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,`timestamp` " \
+          "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,cp,`timestamp` " \
           "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
           "from dcl_pool_analysis where pool_id = '%s') order by point" % (pool_id, pool_id)
 

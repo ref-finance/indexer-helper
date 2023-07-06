@@ -245,7 +245,8 @@ def handle_point_data(all_point_data, start_point, end_point):
     return point_data_list
 
 
-def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h, point_data_24h_count):
+def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h,
+                         point_data_24h_count, token_price):
     token_decimal_data = get_token_decimal()
     ret_point_list = []
     if len(point_data) < 1:
@@ -317,20 +318,22 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
             if start_slot_point_number <= point_number < end_slot_point_number:
                 ret_point_data["fee_x"] = ret_point_data["fee_x"] + float(point_24h["fee_x"])
                 ret_point_data["fee_y"] = ret_point_data["fee_y"] + float(point_24h["fee_y"])
-                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + (float(point_24h["tvl_x_l"]) + float(point_24h["tvl_y_l"])) / point_data_24h_count
+                tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / point_data_24h_count
+                tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / point_data_24h_count
+                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + tvl_x_l_24h + tvl_y_l_24h
         if ret_point_data["liquidity"] > 0 or ret_point_data["order_liquidity"] > 0:
             ret_point_list.append(ret_point_data)
     return ret_point_list
 
 
-def handle_top_bin_fee(point_data):
+def handle_top_bin_fee(point_data, token_price):
     ret_point_data = {
         "total_fee": 0,
         "total_liquidity": 0,
     }
     max_fee_apr = 0
     for point in point_data:
-        total_fee = point["fee_x"] + point["fee_y"]
+        total_fee = point["fee_x"] * token_price[0] + point["fee_y"] * token_price[1]
         total_liquidity = point["total_liquidity"]
         if total_liquidity > 0 and total_fee > 0:
             bin_fee_apr = total_fee / total_liquidity
