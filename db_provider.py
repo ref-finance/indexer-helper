@@ -1085,9 +1085,9 @@ def query_dcl_user_change_log(network_id, pool_id, account_id):
     db_conn = get_near_lake_dcl_connect(network_id)
     sql = "select event_method,paid_token_x as token_x,paid_token_y as token_y,remove_token_x,remove_token_y," \
           "merge_token_x,merge_token_y,`timestamp` from t_liquidity_added where pool_id = '%s' and owner_id = '%s' " \
-          "and event_method in('liquidity_append', 'liquidity_merge') and `timestamp` >= '%s' union all select " \
-          "event_method,refund_token_x as token_x, refund_token_y as token_y, null as remove_token_x,null as " \
-          "remove_token_y,null as merge_token_x,null as merge_token_y,`timestamp`  from t_liquidity_removed " \
+          "and event_method in('liquidity_append', 'liquidity_merge', 'liquidity_added') and `timestamp` >= '%s' " \
+          "union all select event_method,refund_token_x as token_x, refund_token_y as token_y, null as remove_token_x," \
+          "null as remove_token_y,null as merge_token_x,null as merge_token_y,`timestamp`  from t_liquidity_removed " \
           "where pool_id = '%s' and owner_id = '%s' and event_method = 'liquidity_removed' and " \
           "`timestamp` >= '%s'" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
