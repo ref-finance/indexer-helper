@@ -669,11 +669,13 @@ def handle_fee_by_account():
         "token_y": token_y,
         "timestamp": user_token_timestamp,
     }
-    change_log_data = query_dcl_user_change_log(Cfg.NETWORK_ID, pool_id, account_id)
+    change_log_data = query_dcl_user_change_log(Cfg.NETWORK_ID, pool_id, account_id, user_token_timestamp)
     ret_change_log_data = []
     for change_log in change_log_data:
         change_log_timestamp = int(int(change_log["timestamp"]) / 1000000000)
         if change_log_timestamp > user_token_timestamp:
+            continue
+        if change_log["token_x"] == "" or change_log["token_y"] == "":
             continue
         change_token_x = int(change_log["token_x"])
         change_token_y = int(change_log["token_y"])
@@ -681,6 +683,8 @@ def handle_fee_by_account():
             change_token_x = 0 - int(change_log["token_x"])
             change_token_y = 0 - int(change_log["token_y"])
         if change_log["event_method"] == "liquidity_merge":
+            if change_log["remove_token_x"] == "" or change_log["merge_token_x"] == "" or change_log["remove_token_y"] == "" or change_log["merge_token_y"] == "":
+                continue
             change_token_x = 0 - (int(change_log["remove_token_x"]) - int(change_log["merge_token_x"]))
             change_token_y = 0 - (int(change_log["remove_token_y"]) - int(change_log["merge_token_y"]))
         change_log = {

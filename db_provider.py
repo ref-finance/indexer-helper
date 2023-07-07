@@ -913,8 +913,8 @@ def query_recent_transaction_dcl_liquidity(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
     sql = "select all_data.method_name,all_data.amount_x,all_data.amount_y,all_data.`timestamp`,tr.tx_id," \
           "all_data.receipt_id from (select tla.event_method as method_name, sum(tla.paid_token_x) as amount_x, " \
-          "sum(tla.paid_token_y) as amount_y, tla.`timestamp`, tla.tx_id as receipt_id from " \
-          "t_liquidity_added as tla where tla.pool_id = '%s' group by tx_id union all select " \
+          "sum(tla.paid_token_y) as amount_y, tla.`timestamp`, tla.tx_id as receipt_id from t_liquidity_added as tla " \
+          "where tla.pool_id = '%s' and tla.event_method != 'liquidity_merge' group by tx_id union all select " \
           "tlr.event_method as method_name, sum(tlr.refund_token_x) as amount_x,sum(tlr.refund_token_y) " \
           "as amount_y, tlr.`timestamp`, tlr.tx_id as receipt_id from t_liquidity_removed as tlr where " \
           "tlr.pool_id = '%s' and tlr.removed_amount > 0 group by tx_id) as all_data left join ref.t_tx_receipt tr " \
@@ -1086,17 +1086,16 @@ def query_dcl_user_tvl(network_id, pool_id, account_id):
         cursor.close()
 
 
-def query_dcl_user_change_log(network_id, pool_id, account_id):
-    now = int(time.time())
-    timestamp = now - (1 * 24 * 60 * 60)
+def query_dcl_user_change_log(network_id, pool_id, account_id, user_token_timestamp):
+    timestamp = user_token_timestamp - (1 * 24 * 60 * 60)
     db_conn = get_near_lake_dcl_connect(network_id)
     sql = "select event_method,paid_token_x as token_x,paid_token_y as token_y,remove_token_x,remove_token_y," \
           "merge_token_x,merge_token_y,`timestamp` from t_liquidity_added where pool_id = '%s' and owner_id = '%s' " \
-          "and event_method in('liquidity_append', 'liquidity_merge', 'liquidity_added') and `timestamp` >= '%s' " \
+          "and event_method in('liquidity_append', 'liquidity_added') and `timestamp` >= '%s' " \
           "union all select event_method,refund_token_x as token_x, refund_token_y as token_y, null as remove_token_x," \
           "null as remove_token_y,null as merge_token_x,null as merge_token_y,`timestamp`  from t_liquidity_removed " \
-          "where pool_id = '%s' and owner_id = '%s' and event_method = 'liquidity_removed' and " \
-          "`timestamp` >= '%s'" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
+          "where pool_id = '%s' and owner_id = '%s' and event_method = 'liquidity_removed' and `timestamp` >= '%s' " \
+          "order by `timestamp` desc" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
