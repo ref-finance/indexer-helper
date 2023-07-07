@@ -1000,7 +1000,8 @@ def query_dcl_points_by_account(network_id, pool_id, account_id, start_point, en
 def query_dcl_user_unclaimed_fee(network_id, pool_id, account_id):
     db_conn = get_db_connect(network_id)
     sql = "select unclaimed_fee_x, unclaimed_fee_y from dcl_user_liquidity_fee where pool_id = '%s' and " \
-          "account_id = '%s' and `timestamp` >= (select max(`timestamp`) from dcl_user_liquidity_fee)" % (pool_id, account_id)
+          "account_id = '%s' and `timestamp` >= (select max(`timestamp`) from dcl_user_liquidity_fee where " \
+          "pool_id = '%s' and account_id = '%s')" % (pool_id, account_id, pool_id, account_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
