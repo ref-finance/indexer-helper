@@ -653,6 +653,10 @@ def handle_fee_by_account():
         "fee_x": fee_x - fee_x_24h,
         "fee_y": fee_y - fee_y_24h,
     }
+    if total_fee_24h["fee_x"] < 0:
+        total_fee_24h["fee_x"] = 0
+    if total_fee_24h["fee_y"] < 0:
+        total_fee_24h["fee_y"] = 0
     user_tvl_data = query_dcl_user_tvl(Cfg.NETWORK_ID, pool_id, account_id)
     token_x = 0
     token_y = 0
