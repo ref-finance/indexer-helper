@@ -299,17 +299,17 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
         liquidity_amount_x = ret_point_data["token_x"] * int("1" + "0" * token_decimal_data[token_x])
         liquidity_amount_y = ret_point_data["token_y"] * int("1" + "0" * token_decimal_data[token_y])
         if liquidity_amount_x > 0 and liquidity_amount_y == 0:
-            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point)
+            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point - bin_point_number)
         if liquidity_amount_x == 0 and liquidity_amount_y > 0:
-            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point)
+            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point + bin_point_number)
         if liquidity_amount_x > 0 and liquidity_amount_y > 0:
             ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point)
         order_amount_x = ret_point_data["order_x"] * int("1" + "0" * token_decimal_data[token_x])
         order_amount_y = ret_point_data["order_y"] * int("1" + "0" * token_decimal_data[token_y])
         if order_amount_x > 0 and order_amount_y == 0:
-            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point)
+            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point - bin_point_number)
         if order_amount_x == 0 and order_amount_y > 0:
-            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point)
+            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point + bin_point_number)
         if order_amount_x > 0 and order_amount_y > 0:
             ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point)
         for point_24h in point_data_24h:
