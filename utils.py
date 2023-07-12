@@ -202,34 +202,45 @@ def combine_dcl_pool_log(ret):
                 "block_no": data["block_id"],
                 "operator": data["owner_id"],
             }
-            if "pool_id" in args:
-                ret_msg_data["pool_id"] = args["pool_id"]
+            args_detail = args
+            if data["event_method"] == "liquidity_added" and "add_liquidity_infos" in args:
+                add_liquidity_infos = args["add_liquidity_infos"]
+                for add_liquidity_info in add_liquidity_infos:
+                    if data["left_point"] == str(add_liquidity_info["left_point"]) and data["right_point"] == str(add_liquidity_info["right_point"]):
+                        args_detail = add_liquidity_info
+            if data["event_method"] == "liquidity_removed" and "remove_liquidity_infos" in args:
+                remove_liquidity_infos = args["remove_liquidity_infos"]
+                for remove_liquidity_info in remove_liquidity_infos:
+                    if data["lpt_id"] == remove_liquidity_info["lpt_id"]:
+                        args_detail = remove_liquidity_info
+            if "pool_id" in args_detail:
+                ret_msg_data["pool_id"] = args_detail["pool_id"]
                 flag = True
-            if "lpt_id" in args:
-                ret_msg_data["lpt_id"] = args["lpt_id"]
+            if "lpt_id" in args_detail:
+                ret_msg_data["lpt_id"] = args_detail["lpt_id"]
                 flag = True
-            if "order_id" in args:
-                ret_msg_data["order_id"] = args["order_id"]
-            if "amount" in args:
-                ret_msg_data["amount"] = args["amount"]
+            if "order_id" in args_detail:
+                ret_msg_data["order_id"] = args_detail["order_id"]
+            if "amount" in args_detail:
+                ret_msg_data["amount"] = args_detail["amount"]
                 flag = True
-            if "left_point" in args:
-                ret_msg_data["left_point"] = args["left_point"]
+            if "left_point" in args_detail:
+                ret_msg_data["left_point"] = args_detail["left_point"]
                 flag = True
-            if "right_point" in args:
-                ret_msg_data["right_point"] = args["right_point"]
+            if "right_point" in args_detail:
+                ret_msg_data["right_point"] = args_detail["right_point"]
                 flag = True
-            if "amount_x" in args:
-                ret_msg_data["amount_x"] = args["amount_x"]
+            if "amount_x" in args_detail:
+                ret_msg_data["amount_x"] = args_detail["amount_x"]
                 flag = True
-            if "amount_y" in args:
-                ret_msg_data["amount_y"] = args["amount_y"]
+            if "amount_y" in args_detail:
+                ret_msg_data["amount_y"] = args_detail["amount_y"]
                 flag = True
-            if "min_amount_x" in args:
-                ret_msg_data["min_amount_x"] = args["min_amount_x"]
+            if "min_amount_x" in args_detail:
+                ret_msg_data["min_amount_x"] = args_detail["min_amount_x"]
                 flag = True
-            if "min_amount_y" in args:
-                ret_msg_data["min_amount_y"] = args["min_amount_y"]
+            if "min_amount_y" in args_detail:
+                ret_msg_data["min_amount_y"] = args_detail["min_amount_y"]
                 flag = True
             if flag is False:
                 ret_msg_data["amount"] = "None"
