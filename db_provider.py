@@ -511,7 +511,8 @@ def query_limit_order_log(network_id, owner_id):
 
 def query_limit_order_swap(network_id, owner_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp from near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
+    sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp from " \
+          "near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -912,10 +913,11 @@ def query_recent_transaction_liquidity(network_id, pool_id):
 def query_recent_transaction_dcl_liquidity(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
     sql = "select all_data.method_name,all_data.amount_x,all_data.amount_y,all_data.`timestamp`,tr.tx_id," \
-          "all_data.receipt_id from (select tla.event_method as method_name, sum(tla.paid_token_x) as amount_x, " \
-          "sum(tla.paid_token_y) as amount_y, tla.`timestamp`, tla.tx_id as receipt_id from t_liquidity_added as tla " \
-          "where tla.pool_id = '%s' and tla.event_method != 'liquidity_merge' group by tx_id union all select " \
-          "tlr.event_method as method_name, sum(tlr.refund_token_x) as amount_x,sum(tlr.refund_token_y) " \
+          "all_data.receipt_id from (select tla.event_method as method_name, sum(cast(tla.paid_token_x as " \
+          "decimal(64, 0))) as amount_x, sum(cast(tla.paid_token_y as decimal(64, 0))) as amount_y, tla.`timestamp`, " \
+          "tla.tx_id as receipt_id from t_liquidity_added as tla where tla.pool_id = '%s' and " \
+          "tla.event_method != 'liquidity_merge' group by tx_id union all select tlr.event_method as method_name, " \
+          "sum(cast(tlr.refund_token_x as decimal(64, 0))) as amount_x,sum(cast(tlr.refund_token_y as decimal(64, 0))) " \
           "as amount_y, tlr.`timestamp`, tlr.tx_id as receipt_id from t_liquidity_removed as tlr where " \
           "tlr.pool_id = '%s' and tlr.removed_amount > 0 group by tx_id) as all_data left join ref.t_tx_receipt tr " \
           "on all_data.receipt_id = tr.receipt_id order by `timestamp` desc limit 50" % (pool_id, pool_id)
@@ -1032,10 +1034,12 @@ def query_dcl_user_unclaimed_fee_24h(network_id, pool_id, account_id):
 
 def query_dcl_user_claimed_fee(network_id, pool_id, account_id):
     db_conn = get_near_lake_dcl_connect(network_id)
-    sql = "select sum(total_fee_x) as claimed_fee_x, sum(total_fee_y) as claimed_fee_y from " \
-          "(select sum(claim_fee_token_x) as total_fee_x, sum(claim_fee_token_y) as total_fee_y from " \
+    sql = "select sum(cast(total_fee_x as decimal(64, 0))) as claimed_fee_x, sum(cast(total_fee_y as " \
+          "decimal(64, 0))) as claimed_fee_y from (select sum(cast(claim_fee_token_x as decimal(64, 0))) as " \
+          "total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
           "t_liquidity_added where pool_id = '%s' and owner_id = '%s' and event_method in( 'liquidity_append', " \
-          "'liquidity_merge') union all select sum(claim_fee_token_x) as total_fee_x, sum(claim_fee_token_y) as " \
+          "'liquidity_merge') union all select sum(cast(claim_fee_token_x as decimal(64, 0))) as total_fee_x, " \
+          "sum(cast(claim_fee_token_y as decimal(64, 0))) as " \
           "total_fee_y from t_liquidity_removed where pool_id = '%s' and owner_id = '%s' and event_method = " \
           "'liquidity_removed') as fee" % (pool_id, account_id, pool_id, account_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -1053,11 +1057,13 @@ def query_dcl_user_claimed_fee_24h(network_id, pool_id, account_id):
     now = int(time.time())
     timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_near_lake_dcl_connect(network_id)
-    sql = "select sum(total_fee_x) as claimed_fee_x, sum(total_fee_y) as claimed_fee_y from " \
-          "(select sum(claim_fee_token_x) as total_fee_x, sum(claim_fee_token_y) as total_fee_y from " \
+    sql = "select sum(cast(total_fee_x as decimal(64, 0))) as claimed_fee_x, sum(cast(total_fee_y as " \
+          "decimal(64, 0))) as claimed_fee_y from (select sum(cast(claim_fee_token_x as decimal(64, 0))) as " \
+          "total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
           "t_liquidity_added where pool_id = '%s' and owner_id = '%s' and event_method in( 'liquidity_append', " \
-          "'liquidity_merge') and `timestamp` <= '%s' union all select sum(claim_fee_token_x) as total_fee_x, " \
-          "sum(claim_fee_token_y) as total_fee_y from t_liquidity_removed where pool_id = '%s' and owner_id = '%s' " \
+          "'liquidity_merge') and `timestamp` <= '%s' union all select sum(cast(claim_fee_token_x as " \
+          "decimal(64, 0))) as total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
+          "t_liquidity_removed where pool_id = '%s' and owner_id = '%s' " \
           "and event_method = 'liquidity_removed' and `timestamp` <= '%s') " \
           "as fee" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
