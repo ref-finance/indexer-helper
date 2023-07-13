@@ -882,7 +882,7 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
     sql = "select ts.token_in, ts.token_out, ts.amount_in, ts.amount_out,ts.`timestamp`, rtr.tx_id,ts.tx_id as " \
           "receipt_id from ref_dcl_mainnet.t_swap ts left join ref.t_tx_receipt rtr on ts.tx_id = rtr.receipt_id " \
-          "where ts.pool_id like '%"+pool_id+"%' order by ts.id desc limit 50"
+          "where ts.amount_in > '0' and ts.pool_id like '%"+pool_id+"%' order by ts.id desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
