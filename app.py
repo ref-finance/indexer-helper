@@ -464,6 +464,8 @@ def handle_assets_by_account():
 def handle_dcl_pool_log():
     start_block_id = request.args.get("start_block_id")
     end_block_id = request.args.get("end_block_id")
+    logger.info("start_block_id:{}", start_block_id)
+    logger.info("end_block_id:{}", end_block_id)
     if start_block_id is None or end_block_id is None:
         return "[]"
     ret = query_dcl_pool_log(Cfg.NETWORK_ID, start_block_id, end_block_id)
@@ -477,6 +479,7 @@ def handle_dcl_pool_log():
 @flask_cors.cross_origin()
 def analysis_v2_pool_data():
     file_name = request.args.get("file_name")
+    logger.info("pool file_name:{}", file_name)
     analysis_v2_pool_data_to_s3(file_name, Cfg.NETWORK_ID)
     return file_name
 
@@ -485,6 +488,7 @@ def analysis_v2_pool_data():
 @flask_cors.cross_origin()
 def analysis_v2_pool_account_data():
     file_name = request.args.get("file_name")
+    logger.info("account file_name:{}", file_name)
     analysis_v2_pool_account_data_to_s3(file_name, Cfg.NETWORK_ID)
     return file_name
 

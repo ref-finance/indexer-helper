@@ -329,8 +329,8 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
                 fee_x = float(point_24h["fee_x"]) * token_price[0]
                 fee_y = float(point_24h["fee_y"]) * token_price[1]
                 ret_point_data["fee"] = ret_point_data["fee"] + fee_x + fee_y
-                tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / point_data_24h_count
-                tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / point_data_24h_count
+                tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / 24
+                tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / 24
                 ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + tvl_x_l_24h + tvl_y_l_24h
         if ret_point_data["liquidity"] > 0 or ret_point_data["order_liquidity"] > 0:
             ret_point_list.append(ret_point_data)

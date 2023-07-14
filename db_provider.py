@@ -1101,7 +1101,8 @@ def query_dcl_user_change_log(network_id, pool_id, account_id, user_token_timest
           "and event_method in('liquidity_append', 'liquidity_added') and `timestamp` >= '%s' " \
           "union all select event_method,refund_token_x as token_x, refund_token_y as token_y, null as remove_token_x," \
           "null as remove_token_y,null as merge_token_x,null as merge_token_y,`timestamp`  from t_liquidity_removed " \
-          "where pool_id = '%s' and owner_id = '%s' and event_method = 'liquidity_removed' and `timestamp` >= '%s' " \
+          "where pool_id = '%s' and owner_id = '%s' and event_method = 'liquidity_removed' and removed_amount > '0' " \
+          "and `timestamp` >= '%s' " \
           "order by `timestamp` desc" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
