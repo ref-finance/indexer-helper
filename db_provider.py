@@ -966,17 +966,13 @@ def query_dcl_points(network_id, pool_id):
               "sum(tvl_y_l) as tvl_y_l,p,`timestamp` from dcl_pool_analysis where pool_id = '%s' " \
               "and `timestamp` >= %s GROUP BY point order by point" % (pool_id, timestamp)
 
-    sql_24h_count = "select count(*) from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= %s " \
-                    "group by `timestamp`" % (pool_id, timestamp)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
         point_data = cursor.fetchall()
         cursor.execute(sql_24h)
         point_data_24h = cursor.fetchall()
-        cursor.execute(sql_24h_count)
-        point_data_24h_count = cursor.fetchall()
-        return point_data, point_data_24h, len(point_data_24h_count)
+        return point_data, point_data_24h
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
     finally:

@@ -256,8 +256,7 @@ def handle_point_data(all_point_data, start_point, end_point):
     return point_data_list
 
 
-def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h,
-                         point_data_24h_count, token_price):
+def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h, token_price):
     token_decimal_data = get_token_decimal()
     ret_point_list = []
     if len(point_data) < 1:
