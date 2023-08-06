@@ -322,6 +322,8 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
             ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point + bin_point_number)
         if order_amount_x > 0 and order_amount_y > 0:
             ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point)
+        if ret_point_data["order_liquidity"] < 0:
+            ret_point_data["order_liquidity"] = 0
         for point_24h in point_data_24h:
             point_number = point_24h["point"]
             if start_slot_point_number <= point_number < end_slot_point_number:
