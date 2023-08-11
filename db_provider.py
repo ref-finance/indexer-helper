@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from config import Cfg
 import time
-from redis_provider import RedisProvider, list_history_token_price, list_token_price, get_account_pool_assets
+from redis_provider import RedisProvider, list_history_token_price, list_token_price, get_account_pool_assets, get_pool_point_24h_by_pool_id
 
 
 class Encoder(json.JSONEncoder):
@@ -784,7 +784,7 @@ def query_dcl_pool_log(network_id, start_block_id, end_block_id):
         cursor.close()
 
 
-def add_v2_pool_data(data_list, network_id):
+def add_v2_pool_data(data_list, network_id, pool_id_list):
     db_conn = get_db_connect(network_id)
 
     sql = "insert into dcl_pool_analysis(pool_id, point, fee_x, fee_y, l, tvl_x_l, " \
@@ -805,13 +805,36 @@ def add_v2_pool_data(data_list, network_id):
 
         cursor.executemany(sql, insert_data)
         db_conn.commit()
-
     except Exception as e:
         # Rollback on error
         db_conn.rollback()
         print("insert v2 pool data to db error:", e)
     finally:
         cursor.close()
+    handle_pool_point_data_to_redis(network_id, pool_id_list)
+
+
+def handle_pool_point_data_to_redis(network_id, pool_id_list):
+    now = int(time.time())
+    timestamp = now - (1 * 24 * 60 * 60)
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    redis_conn = RedisProvider()
+    redis_conn.begin_pipe()
+    try:
+        for pool_id in pool_id_list:
+            sql_24h = "select point,sum(fee_x) as fee_x,sum(fee_y) as fee_y,sum(tvl_x_l) as tvl_x_l," \
+                      "sum(tvl_y_l) as tvl_y_l from dcl_pool_analysis where pool_id = '%s' " \
+                      "and `timestamp` >= %s GROUP BY point order by point" % (pool_id, timestamp)
+            cursor.execute(sql_24h)
+            point_data_24h = cursor.fetchall()
+            redis_conn.add_pool_point_24h_assets(network_id, pool_id, json.dumps(point_data_24h))
+    except Exception as e:
+        print("query dcl_pool_analysis to db error:", e)
+    finally:
+        cursor.close()
+        redis_conn.end_pipe()
+        redis_conn.close()
 
 
 def add_dcl_user_liquidity_data(data_list, network_id):
@@ -954,24 +977,16 @@ def query_recent_transaction_limit_order(network_id, pool_id):
 
 
 def query_dcl_points(network_id, pool_id):
-    now = int(time.time())
-    timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
     sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
           "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,cp,`timestamp` " \
-          "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
-          "from dcl_pool_analysis where pool_id = '%s') order by point" % (pool_id, pool_id)
-
-    sql_24h = "select pool_id,point,sum(fee_x) as fee_x,sum(fee_y) as fee_y,sum(tvl_x_l) as tvl_x_l," \
-              "sum(tvl_y_l) as tvl_y_l,p,`timestamp` from dcl_pool_analysis where pool_id = '%s' " \
-              "and `timestamp` >= %s GROUP BY point order by point" % (pool_id, timestamp)
-
+          "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select `timestamp` from dcl_pool_analysis " \
+          "where pool_id = '%s' order by `timestamp` desc limit 1) order by point" % (pool_id, pool_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
         point_data = cursor.fetchall()
-        cursor.execute(sql_24h)
-        point_data_24h = cursor.fetchall()
+        point_data_24h = get_pool_point_24h_by_pool_id(network_id, pool_id)
         return point_data, point_data_24h
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)

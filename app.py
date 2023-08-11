@@ -25,7 +25,7 @@ import re
 from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
-import random
+import time
 
 service_version = "20230421.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -585,15 +585,9 @@ def handle_recent_transaction_limit_order():
 @flask_cors.cross_origin()
 def handle_dcl_points():
     pool_id = request.args.get("pool_id")
-    slot_number = request.args.get("slot_number")
-    start_point = request.args.get("start_point")
-    end_point = request.args.get("end_point")
-    if slot_number is None:
-        slot_number = 50
-    if start_point is None:
-        start_point = -800000
-    if end_point is None:
-        end_point = 800000
+    slot_number = request.args.get("slot_number", type=int, default=50)
+    start_point = request.args.get("start_point", type=int, default=-800000)
+    end_point = request.args.get("end_point", type=int, default=800000)
     if pool_id is None:
         return "null"
     pool_id_s = pool_id.split("|")
@@ -621,15 +615,15 @@ def handle_fee_by_account():
     account_id = request.args.get("account_id")
     if pool_id is None or account_id is None:
         return "null"
-    unclaimed_fee_data = query_dcl_user_unclaimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
+    # unclaimed_fee_data = query_dcl_user_unclaimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
     claimed_fee_data = query_dcl_user_claimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
     fee_x = 0
     fee_y = 0
-    for unclaimed_fee in unclaimed_fee_data:
-        if not unclaimed_fee["unclaimed_fee_x"] is None:
-            fee_x = fee_x + int(unclaimed_fee["unclaimed_fee_x"])
-        if not unclaimed_fee["unclaimed_fee_y"] is None:
-            fee_y = fee_y + int(unclaimed_fee["unclaimed_fee_y"])
+    # for unclaimed_fee in unclaimed_fee_data:
+    #     if not unclaimed_fee["unclaimed_fee_x"] is None:
+    #         fee_x = fee_x + int(unclaimed_fee["unclaimed_fee_x"])
+    #     if not unclaimed_fee["unclaimed_fee_y"] is None:
+    #         fee_y = fee_y + int(unclaimed_fee["unclaimed_fee_y"])
     for claimed_fee in claimed_fee_data:
         if not claimed_fee["claimed_fee_x"] is None:
             fee_x = fee_x + int(claimed_fee["claimed_fee_x"])
@@ -715,16 +709,10 @@ def handle_fee_by_account():
 @flask_cors.cross_origin()
 def handle_dcl_points_by_account():
     pool_id = request.args.get("pool_id")
-    slot_number = request.args.get("slot_number")
-    start_point = request.args.get("start_point")
-    end_point = request.args.get("end_point")
+    slot_number = request.args.get("slot_number", type=int, default=50)
+    start_point = request.args.get("start_point", type=int, default=-800000)
+    end_point = request.args.get("end_point", type=int, default=800000)
     account_id = request.args.get("account_id")
-    if slot_number is None:
-        slot_number = 50
-    if start_point is None:
-        start_point = -800000
-    if end_point is None:
-        end_point = 800000
     if pool_id is None or account_id is None:
         return "null"
     point_data = query_dcl_points_by_account(Cfg.NETWORK_ID, pool_id, account_id, int(start_point), int(end_point))
