@@ -815,7 +815,7 @@ def add_v2_pool_data(data_list, network_id, pool_id_list):
 
 
 def handle_pool_point_data_to_redis(network_id, pool_id_list):
-    now = int(time.time())
+    now = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
     timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -1140,3 +1140,6 @@ if __name__ == '__main__':
 
     ret_data = query_dcl_pool_log("MAINNET", "82253864", "82253911")
     print(ret_data)
+    # hour_stamp = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
+    # timestamp = hour_stamp - (1 * 24 * 60 * 60)
+    # print(timestamp)
