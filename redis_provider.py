@@ -86,6 +86,12 @@ def list_token_price(network_id):
     #     ret["usdt.tether-token.near"] = ret["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
     return ret
 
+def list_base_token_price(network_id):
+    r=redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_BASE_TOKEN_PRICE_KEY"])
+    r.close()
+    return ret
+
 def list_token_price_by_id_list(network_id: str, id_list: list) ->list:
     import json
     token_list = []
@@ -266,7 +272,6 @@ class RedisProvider(object):
         self.r.hdel(Cfg.NETWORK[network_id]["REDIS_KEY"], *expired)
         return expired
 
-
     def add_farm(self, network_id, farm_id, farm_str):
         self.farmids.add(farm_id)
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_KEY"], farm_id, farm_str)
@@ -282,6 +287,9 @@ class RedisProvider(object):
     
     def add_token_price(self, network_id, contract_id, price_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], contract_id, price_str)
+
+    def add_base_token_price(self, network_id, contract_id, price_str):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_BASE_TOKEN_PRICE_KEY"], contract_id, price_str)
 
     def add_history_token_price(self, network_id, contract_id, price_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_HISTORY_TOKEN_PRICE_KEY"], contract_id, price_str)

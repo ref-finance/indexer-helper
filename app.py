@@ -11,7 +11,7 @@ import flask_cors
 import json
 import logging
 from indexer_provider import get_proposal_id_hash
-from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
+from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price, list_base_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
@@ -162,6 +162,24 @@ def handle_list_token_price():
     #         "decimal": 8,
     #         "symbol": "RFTT",
     #     }
+    return compress_response_content(ret)
+
+
+@app.route('/list-base-token-price', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_list_base_token_price():
+    """
+    list_token_price
+    """
+    ret = {}
+    prices = list_base_token_price(Cfg.NETWORK_ID)
+    for token in Cfg.TOKENS["BASE_MAINNET"]:
+        if token["NEAR_ID"] in prices:
+            ret[token["NEAR_ID"]] = {
+                "price": prices[token["NEAR_ID"]],
+                "decimal": token["DECIMAL"],
+                "symbol": token["SYMBOL"],
+            }
     return compress_response_content(ret)
 
 

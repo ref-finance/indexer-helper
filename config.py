@@ -129,6 +129,7 @@ class Cfg:
             "REDIS_POOL_KEY": "POOLS_MAINNET",
             "REDIS_TOP_POOL_KEY": "TOP_POOLS_MAINNET",
             "REDIS_TOKEN_PRICE_KEY": "TOKEN_PRICE_MAINNET",
+            "REDIS_BASE_TOKEN_PRICE_KEY": "BASE_TOKEN_PRICE_MAINNET",
             "REDIS_HISTORY_TOKEN_PRICE_KEY": "HISTORY_TOKEN_PRICE_MAINNET",
             "REDIS_PROPOSAL_ID_HASH_KEY": "PROPOSAL_ID_HASH_MAINNET",
             "REDIS_TOKEN_METADATA_KEY": "TOKEN_METADATA_MAINNET",
@@ -278,6 +279,19 @@ class Cfg:
             {"SYMBOL": "APYS", "NEAR_ID": "apys.token.a11bd.near", "MD_ID": "v2.ref-finance.near|3599|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "USDt", "NEAR_ID": "usdt.tether-token.near", "MD_ID": "tether", "DECIMAL": 6},
             {"SYMBOL": "USN", "NEAR_ID": "usn", "MD_ID": "v2.ref-finance.near|3269|wrap.near", "DECIMAL": 18},
+        ],
+        "BASE_MAINNET": [
+            {"SYMBOL": "cbETH", "NEAR_ID": "0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22", "MD_ID": "coinbase-wrapped-staked-eth", "DECIMAL": 18},
+            {"SYMBOL": "WETH", "NEAR_ID": "0x4200000000000000000000000000000000000006", "MD_ID": "weth", "DECIMAL": 18},
+            {"SYMBOL": "ETH", "NEAR_ID": "aurora", "MD_ID": "ethereum", "DECIMAL": 18},
+            {"SYMBOL": "axlUSDC", "NEAR_ID": "0xEB466342C4d449BC9f53A865D5Cb90586f405215", "MD_ID": "axlusdc", "DECIMAL": 6},
+            {"SYMBOL": "BSWAP", "NEAR_ID": "0x78a087d713Be963Bf307b18F2Ff8122EF9A63ae9", "MD_ID": "baseswap", "DECIMAL": 18},
+            {"SYMBOL": "DAI", "NEAR_ID": "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb", "MD_ID": "dai", "DECIMAL": 18},
+            {"SYMBOL": "USDbC", "NEAR_ID": "0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA", "MD_ID": "bridged-usd-coin-base", "DECIMAL": 6},
+            {"SYMBOL": "RCKT", "NEAR_ID": "0x6653dD4B92a0e5Bf8ae570A98906d9D6fD2eEc09", "MD_ID": "rocketswap", "DECIMAL": 18},
+            {"SYMBOL": "BALD", "NEAR_ID": "0x27D2DECb4bFC9C76F0309b8E88dec3a601Fe25a8", "MD_ID": "bald", "DECIMAL": 18},
+            {"SYMBOL": "BASE", "NEAR_ID": "0xd07379a755A8f11B57610154861D694b2A0f615a", "MD_ID": "base", "DECIMAL": 18},
+            {"SYMBOL": "SYNTH", "NEAR_ID": "0xbd2DBb8eceA9743CA5B16423b4eAa26bDcfE5eD2", "MD_ID": "synthswap", "DECIMAL": 18},
         ],
     }
     MARKET_URL = "api.coingecko.com"
