@@ -708,6 +708,36 @@ def update_account_pool_assets_status():
         cursor.close()
 
 
+def query_burrow_log(network_id, account_id, page_number, page_size):
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_near_lake_connect(network_id)
+    sql = "select bel.`event`, bel.amount, bel.token_id, bel.`timestamp`, ttr.tx_id  from burrow_event_log bel " \
+          "left join t_tx_receipt ttr on bel.receipt_id = ttr.receipt_id where bel.account_id = '%s' and " \
+          "`event` in ('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded') " \
+          "order by bel.`timestamp` desc limit %s, %s" % (account_id, start_number, page_size)
+    sql_count = "select count(*) as total_number from burrow_event_log where account_id = '%s' and `event` in " \
+                "('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded')" % account_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        burrow_log = cursor.fetchall()
+        cursor.execute(sql_count)
+        burrow_log_count = cursor.fetchone()
+        return burrow_log, burrow_log_count["total_number"]
+    except Exception as e:
+        print("query burrow_event_log to db error:", e)
+    finally:
+        cursor.close()
+
+
+def handel_page_number(page_number, size):
+    if page_number <= 1:
+        start_number = 0
+    else:
+        start_number = (page_number - 1) * size
+    return start_number
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
