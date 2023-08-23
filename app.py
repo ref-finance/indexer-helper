@@ -633,11 +633,11 @@ def handle_fee_by_account():
     claimed_fee_data_24h = query_dcl_user_claimed_fee_24h(Cfg.NETWORK_ID, pool_id, account_id)
     fee_x_24h = 0
     fee_y_24h = 0
-    for unclaimed_fee_24h in unclaimed_fee_data_24h:
-        if not unclaimed_fee_24h["unclaimed_fee_x"] is None:
-            fee_x_24h = fee_x_24h + int(unclaimed_fee_24h["unclaimed_fee_x"])
-        if not unclaimed_fee_24h["unclaimed_fee_y"] is None:
-            fee_y_24h = fee_y_24h + int(unclaimed_fee_24h["unclaimed_fee_y"])
+    # for unclaimed_fee_24h in unclaimed_fee_data_24h:
+    #     if not unclaimed_fee_24h["unclaimed_fee_x"] is None:
+    #         fee_x_24h = fee_x_24h + int(unclaimed_fee_24h["unclaimed_fee_x"])
+    #     if not unclaimed_fee_24h["unclaimed_fee_y"] is None:
+    #         fee_y_24h = fee_y_24h + int(unclaimed_fee_24h["unclaimed_fee_y"])
     for claimed_fee_24h in claimed_fee_data_24h:
         if not claimed_fee_24h["claimed_fee_x"] is None:
             fee_x_24h = fee_x_24h + int(claimed_fee_24h["claimed_fee_x"])
