@@ -615,24 +615,20 @@ def handle_fee_by_account():
     account_id = request.args.get("account_id")
     if pool_id is None or account_id is None:
         return "null"
-    unclaimed_fee_data = query_dcl_user_unclaimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
+    # unclaimed_fee_data = query_dcl_user_unclaimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
     claimed_fee_data = query_dcl_user_claimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
     fee_x = 0
     fee_y = 0
-    total_earned_fee_x = 0
-    total_earned_fee_y = 0
-    for unclaimed_fee in unclaimed_fee_data:
-        if not unclaimed_fee["unclaimed_fee_x"] is None:
-            fee_x = fee_x + int(unclaimed_fee["unclaimed_fee_x"])
-        if not unclaimed_fee["unclaimed_fee_y"] is None:
-            fee_y = fee_y + int(unclaimed_fee["unclaimed_fee_y"])
+    # for unclaimed_fee in unclaimed_fee_data:
+    #     if not unclaimed_fee["unclaimed_fee_x"] is None:
+    #         fee_x = fee_x + int(unclaimed_fee["unclaimed_fee_x"])
+    #     if not unclaimed_fee["unclaimed_fee_y"] is None:
+    #         fee_y = fee_y + int(unclaimed_fee["unclaimed_fee_y"])
     for claimed_fee in claimed_fee_data:
         if not claimed_fee["claimed_fee_x"] is None:
             fee_x = fee_x + int(claimed_fee["claimed_fee_x"])
-            total_earned_fee_x = total_earned_fee_x + int(claimed_fee["claimed_fee_x"])
         if not claimed_fee["claimed_fee_y"] is None:
             fee_y = fee_y + int(claimed_fee["claimed_fee_y"])
-            total_earned_fee_y = total_earned_fee_y + int(claimed_fee["claimed_fee_y"])
     unclaimed_fee_data_24h = query_dcl_user_unclaimed_fee_24h(Cfg.NETWORK_ID, pool_id, account_id)
     claimed_fee_data_24h = query_dcl_user_claimed_fee_24h(Cfg.NETWORK_ID, pool_id, account_id)
     fee_x_24h = 0
@@ -648,17 +644,17 @@ def handle_fee_by_account():
         if not claimed_fee_24h["claimed_fee_y"] is None:
             fee_y_24h = fee_y_24h + int(claimed_fee_24h["claimed_fee_y"])
     total_earned_fee = {
-        "total_fee_x": total_earned_fee_x,
-        "total_fee_y": total_earned_fee_y
+        "total_fee_x": fee_x,
+        "total_fee_y": fee_y
     }
     total_fee_24h = {
         "fee_x": fee_x - fee_x_24h,
         "fee_y": fee_y - fee_y_24h,
     }
-    if total_fee_24h["fee_x"] < 0:
-        total_fee_24h["fee_x"] = 0
-    if total_fee_24h["fee_y"] < 0:
-        total_fee_24h["fee_y"] = 0
+    # if total_fee_24h["fee_x"] < 0:
+    #     total_fee_24h["fee_x"] = 0
+    # if total_fee_24h["fee_y"] < 0:
+    #     total_fee_24h["fee_y"] = 0
     user_tvl_data = query_dcl_user_tvl(Cfg.NETWORK_ID, pool_id, account_id)
     token_x = 0
     token_y = 0
