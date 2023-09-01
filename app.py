@@ -17,7 +17,7 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id,
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id
 from config import Cfg
-from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_burrow_log
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_burrow_log, get_history_token_price_by_token
 import re
 from flask_limiter import Limiter
 from loguru import logger
@@ -505,6 +505,17 @@ def handle_burrow_records():
         "total_size": count_number,
     }
     return compress_response_content(res)
+
+
+@app.route('/get-history-token-price-by-token', methods=['GET'])
+@flask_cors.cross_origin()
+def token_history_token_price_by_token():
+    token_id = request.args.get("token_id")
+    data_time = request.args.get("data_time")
+    ret = get_history_token_price_by_token(token_id, data_time)
+    if ret is None:
+        return "null"
+    return compress_response_content(ret)
 
 
 logger.add("app.log")

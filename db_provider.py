@@ -738,6 +738,29 @@ def handel_page_number(page_number, size):
     return start_number
 
 
+def get_history_token_price_by_token(token_id, data_time):
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
+    sql = "select symbol, contract_address,price,`decimal`, `timestamp` from mk_history_token_price where " \
+          "contract_address = '%s' and `timestamp` >= '%s' limit 1" % (token_id, data_time)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        ret = cursor.fetchone()
+        token_data = {
+            "symbol": ret["symbol"],
+            "contract_address": ret["contract_address"],
+            "price": int(ret["price"]),
+            "decimal": ret["decimal"],
+            "timestamp": ret["timestamp"]
+        }
+        return token_data
+    except Exception as e:
+        # Rollback on error
+        print(e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
