@@ -510,11 +510,10 @@ def handle_burrow_records():
 @app.route('/get-history-token-price-by-token', methods=['GET'])
 @flask_cors.cross_origin()
 def token_history_token_price_by_token():
-    token_id = request.args.get("token_id")
+    ids = request.args.get("ids", "")
+    id_str_list = ids.split("|")
     data_time = request.args.get("data_time")
-    ret = get_history_token_price_by_token(token_id, data_time)
-    if ret is None:
-        return "null"
+    ret = get_history_token_price_by_token(id_str_list, data_time)
     return compress_response_content(ret)
 
 
