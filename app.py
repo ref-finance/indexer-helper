@@ -165,22 +165,11 @@ def handle_list_token_price():
     return compress_response_content(ret)
 
 
-@app.route('/list-base-token-price', methods=['GET'])
+@app.route('/get-token-price', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_list_base_token_price():
-    """
-    list_token_price
-    """
-    ret = {}
     prices = list_base_token_price(Cfg.NETWORK_ID)
-    for token in Cfg.TOKENS["BASE_MAINNET"]:
-        if token["NEAR_ID"] in prices:
-            ret[token["NEAR_ID"]] = {
-                "price": prices[token["NEAR_ID"]],
-                "decimal": token["DECIMAL"],
-                "symbol": token["SYMBOL"],
-            }
-    return compress_response_content(ret)
+    return compress_response_content(prices)
 
 
 @app.route('/list-token-price-by-ids', methods=['GET'])

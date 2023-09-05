@@ -210,7 +210,7 @@ def handel_base_token_price(network_id, base_tokens, base_obj):
             md_id = base_token["MD_ID"]
             if md_id in base_obj:
                 tokens_price.append({
-                    "NEAR_ID": base_token["NEAR_ID"],
+                    "SYMBOL": base_token["SYMBOL"],
                     "price": '{:.9f}'.format(base_obj[md_id]["usd"])
                 })
     try:
@@ -218,7 +218,7 @@ def handel_base_token_price(network_id, base_tokens, base_obj):
             conn = RedisProvider()
             conn.begin_pipe()
             for token in tokens_price:
-                conn.add_base_token_price(network_id, token["NEAR_ID"], token["price"])
+                conn.add_base_token_price(network_id, token["SYMBOL"], token["price"])
             conn.end_pipe()
             conn.close()
     except Exception as e:
