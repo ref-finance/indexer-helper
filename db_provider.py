@@ -711,7 +711,7 @@ def update_account_pool_assets_status():
 def query_burrow_log(network_id, account_id, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_near_lake_connect(network_id)
-    sql = "select bel.`event`, bel.amount, bel.token_id, bel.`timestamp`, ttr.tx_id  from burrow_event_log bel " \
+    sql = "select bel.`event`, bel.amount, bel.token_id, bel.`timestamp`, ttr.tx_id, bel.receipt_id from burrow_event_log bel " \
           "left join t_tx_receipt ttr on bel.receipt_id = ttr.receipt_id where bel.account_id = '%s' and " \
           "`event` in ('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded') " \
           "order by bel.`timestamp` desc limit %s, %s" % (account_id, start_number, page_size)
