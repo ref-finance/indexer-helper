@@ -165,7 +165,7 @@ def handle_list_token_price():
     return compress_response_content(ret)
 
 
-@app.route('/get-token-price', methods=['GET'])
+@app.route('/get-token-price-by-dapdap', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_list_base_token_price():
     prices = list_base_token_price(Cfg.NETWORK_ID)
