@@ -484,6 +484,8 @@ def handle_burrow_records():
     else:
         total_page = int(count_number / page_size) + 1
     for burrow_log in burrow_log_list:
+        if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
+            burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
         burrow_log["change"] = ""
         if burrow_log["event"] == "borrow":
             burrow_log["event"] = "Borrow"
