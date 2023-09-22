@@ -184,6 +184,7 @@ class Cfg:
             {"SYMBOL": "STNEAR", "NEAR_ID": "meta-v2.pool.testnet", "MD_ID": "exchange.ref-dev.testnet|621|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.testnet", "MD_ID": "exchange.ref-dev.testnet|622|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "xREF", "NEAR_ID": "xref.ref-dev.testnet", "MD_ID": "xref.ref-dev.testnet|NA|ref.fakes.testnet", "DECIMAL": 18},
+            {"SYMBOL": "USDC", "NEAR_ID": "usdcc.fakes.testnet", "MD_ID": "usd-coin", "DECIMAL": 6},
         ],
         "TESTNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.testnet", "MD_ID": "near", "DECIMAL": 24},
@@ -213,6 +214,7 @@ class Cfg:
             {"SYMBOL": "LINEAR", "NEAR_ID": "linear-protocol.testnet", "MD_ID": "ref-finance-101.testnet|571|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "NEARX", "NEAR_ID": "dev-1656877137694-34571929023079", "MD_ID": "dev-1656877137694-34571929023079|NA|wrap.testnet", "DECIMAL": 24},
             {"SYMBOL": "xREF", "NEAR_ID": "xref.ref-finance.testnet", "MD_ID": "xref.ref-finance.testnet|NA|ref.fakes.testnet", "DECIMAL": 18},
+            {"SYMBOL": "USDC", "NEAR_ID": "usdcc.fakes.testnet", "MD_ID": "usd-coin", "DECIMAL": 6},
         ],
         "MAINNET": [
             {"SYMBOL": "near", "NEAR_ID": "wrap.near", "MD_ID": "near", "DECIMAL": 24},
@@ -279,6 +281,7 @@ class Cfg:
             {"SYMBOL": "APYS", "NEAR_ID": "apys.token.a11bd.near", "MD_ID": "v2.ref-finance.near|3599|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "USDt", "NEAR_ID": "usdt.tether-token.near", "MD_ID": "tether", "DECIMAL": 6},
             {"SYMBOL": "USN", "NEAR_ID": "usn", "MD_ID": "v2.ref-finance.near|3269|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "USDC", "NEAR_ID": "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", "MD_ID": "usd-coin", "DECIMAL": 6},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},

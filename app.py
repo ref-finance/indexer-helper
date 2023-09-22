@@ -17,13 +17,13 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id,
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id
 from config import Cfg
-from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_burrow_log, get_history_token_price_by_token
 import re
 from flask_limiter import Limiter
 from loguru import logger
 
 
-service_version = "20230531.01"
+service_version = "20230920.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -42,7 +42,7 @@ def before_request():
     data = request.args
     for v in data.values():
         v = str(v).lower()
-        pattern = r"(<script>|</script>)|(\*|;)"
+        pattern = r"(<.*?>)"
         r = re.search(pattern, v)
         if r:
             return 'Please enter the parameters of the specification!'
@@ -475,6 +475,55 @@ def token_price_ratio_report():
     if ret is None:
         return "null"
     return compress_response_content(json.loads(ret))
+
+
+@app.route('/get-burrow-records', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_burrow_records():
+    account_id = request.args.get("account_id")
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=10)
+    if account_id is None or account_id == '':
+        return ""
+    burrow_log_list, count_number = query_burrow_log(Cfg.NETWORK_ID, account_id, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    for burrow_log in burrow_log_list:
+        if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
+            burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
+        burrow_log["change"] = ""
+        if burrow_log["event"] == "borrow":
+            burrow_log["event"] = "Borrow"
+        if burrow_log["event"] == "decrease_collateral":
+            burrow_log["event"] = "Adjust Collateral"
+            burrow_log["change"] = "decrease"
+        if burrow_log["event"] == "increase_collateral":
+            burrow_log["event"] = "Adjust Collateral"
+            burrow_log["change"] = "increase"
+        if burrow_log["event"] == "deposit":
+            burrow_log["event"] = "Supply"
+        if burrow_log["event"] == "withdraw_succeeded":
+            burrow_log["event"] = "Withdraw"
+    res = {
+        "record_list": burrow_log_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/get-history-token-price-by-token', methods=['GET'])
+@flask_cors.cross_origin()
+def token_history_token_price_by_token():
+    ids = request.args.get("ids", "")
+    id_str_list = ids.split("|")
+    data_time = request.args.get("data_time")
+    ret = get_history_token_price_by_token(id_str_list, data_time)
+    return compress_response_content(ret)
 
 
 logger.add("app.log")
