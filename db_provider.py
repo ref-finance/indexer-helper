@@ -137,62 +137,62 @@ def get_history_token_price(id_list: list) -> list:
     incoming,It is necessary to return the price information of two at the same time,usn_flag 1 means no incoming 'usn'
     2 means that it is passed in at the same time 'usn和dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near'
     ,3 means that only 'usn',No incoming 'dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' """
-    usn_flag = 1
+    # usn_flag = 1
     # Special treatment of USN to determine whether USN is included in the input parameter
-    if "usn" in id_list:
-        if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in id_list:
-            usn_flag = 2
-        else:
-            usn_flag = 3
-            id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usn' else i for i in
-                       id_list]
-    usdt_flag = 1
-    # Special treatment of USN to determine whether USN is included in the input parameter
-    if "usdt.tether-token.near" in id_list:
-        if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in id_list:
-            usdt_flag = 2
-        else:
-            usdt_flag = 3
-            id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usdt.tether-token.near'
-                       else i for i in id_list]
-
+    # if "usn" in id_list:
+    #     if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in id_list:
+    #         usn_flag = 2
+    #     else:
+    #         usn_flag = 3
+    #         id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usn' else i for i in
+    #                    id_list]
+    # usdt_flag = 1
+    # # Special treatment of USN to determine whether USN is included in the input parameter
+    # if "usdt.tether-token.near" in id_list:
+    #     if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in id_list:
+    #         usdt_flag = 2
+    #     else:
+    #         usdt_flag = 3
+    #         id_list = ['dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near' if i == 'usdt.tether-token.near'
+    #                    else i for i in id_list]
+    #
     ret = []
     history_token_prices = list_history_token_price(Cfg.NETWORK_ID, id_list)
     for token_price in history_token_prices:
         if not token_price is None:
             float_ratio = format_percentage(float(token_price['price']), float(token_price['history_price']))
-            if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in token_price['contract_address']:
-                if 2 == usn_flag:
-                    new_usn = {
-                        "price": token_price['price'],
-                        "history_price": token_price['history_price'],
-                        "decimal": 18,
-                        "symbol": "USN",
-                        "float_ratio": float_ratio,
-                        "timestamp": token_price['datetime'],
-                        "contract_address": "usn"
-                    }
-                    ret.append(new_usn)
-                elif 3 == usn_flag:
-                    token_price['contract_address'] = "usn"
-                    token_price['symbol'] = "USN"
-                    token_price['decimal'] = 18
+            # if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in token_price['contract_address']:
+                # if 2 == usn_flag:
+                #     new_usn = {
+                #         "price": token_price['price'],
+                #         "history_price": token_price['history_price'],
+                #         "decimal": 18,
+                #         "symbol": "USN",
+                #         "float_ratio": float_ratio,
+                #         "timestamp": token_price['datetime'],
+                #         "contract_address": "usn"
+                #     }
+                #     ret.append(new_usn)
+                # elif 3 == usn_flag:
+                #     token_price['contract_address'] = "usn"
+                #     token_price['symbol'] = "USN"
+                #     token_price['decimal'] = 18
 
-                if 2 == usdt_flag:
-                    new_usdt = {
-                        "price": token_price['price'],
-                        "history_price": token_price['history_price'],
-                        "decimal": 6,
-                        "symbol": "USDt",
-                        "float_ratio": float_ratio,
-                        "timestamp": token_price['datetime'],
-                        "contract_address": "usdt.tether-token.near"
-                    }
-                    ret.append(new_usdt)
-                elif 3 == usdt_flag:
-                    token_price['contract_address'] = "usdt.tether-token.near"
-                    token_price['symbol'] = "USDt"
-                    token_price['decimal'] = 6
+                # if 2 == usdt_flag:
+                #     new_usdt = {
+                #         "price": token_price['price'],
+                #         "history_price": token_price['history_price'],
+                #         "decimal": 6,
+                #         "symbol": "USDt",
+                #         "float_ratio": float_ratio,
+                #         "timestamp": token_price['datetime'],
+                #         "contract_address": "usdt.tether-token.near"
+                #     }
+                #     ret.append(new_usdt)
+                # elif 3 == usdt_flag:
+                #     token_price['contract_address'] = "usdt.tether-token.near"
+                #     token_price['symbol'] = "USDt"
+                #     token_price['decimal'] = 6
             token_price['float_ratio'] = float_ratio
             ret.append(token_price)
     return ret
@@ -714,6 +714,62 @@ def update_account_pool_assets_status():
     except Exception as e:
         # Rollback on error
         db_conn.rollback()
+        print(e)
+    finally:
+        cursor.close()
+
+
+def query_burrow_log(network_id, account_id, page_number, page_size):
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_near_lake_connect(network_id)
+    sql = "select bel.`event`, bel.amount, bel.token_id, bel.`timestamp`, ttr.tx_id, bel.receipt_id from burrow_event_log bel " \
+          "left join t_tx_receipt ttr on bel.receipt_id = ttr.receipt_id where bel.account_id = '%s' and " \
+          "`event` in ('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded') " \
+          "order by bel.`timestamp` desc limit %s, %s" % (account_id, start_number, page_size)
+    sql_count = "select count(*) as total_number from burrow_event_log where account_id = '%s' and `event` in " \
+                "('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded')" % account_id
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        burrow_log = cursor.fetchall()
+        cursor.execute(sql_count)
+        burrow_log_count = cursor.fetchone()
+        return burrow_log, burrow_log_count["total_number"]
+    except Exception as e:
+        print("query burrow_event_log to db error:", e)
+    finally:
+        cursor.close()
+
+
+def handel_page_number(page_number, size):
+    if page_number <= 1:
+        start_number = 0
+    else:
+        start_number = (page_number - 1) * size
+    return start_number
+
+
+def get_history_token_price_by_token(ids, data_time):
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
+    token_data_list = {}
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for token_id in ids:
+            sql = "select symbol, contract_address,price,`decimal`, `timestamp` from mk_history_token_price where " \
+                  "contract_address = '%s' and `timestamp` >= '%s' limit 1" % (token_id, data_time)
+            cursor.execute(sql)
+            ret = cursor.fetchone()
+            token_data = {
+                "symbol": ret["symbol"],
+                "contract_address": ret["contract_address"],
+                "price": float(ret["price"]),
+                "decimal": ret["decimal"],
+                "timestamp": ret["timestamp"]
+            }
+            token_data_list[ret["contract_address"]] = token_data
+        return token_data_list
+    except Exception as e:
+        # Rollback on error
         print(e)
     finally:
         cursor.close()

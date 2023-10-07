@@ -14,20 +14,20 @@ from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
-from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list
+from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
-    query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, query_dcl_user_tvl, query_dcl_user_change_log
+    query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token
 import re
 from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import time
 
-service_version = "20230421.01"
+service_version = "20230920.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -46,7 +46,7 @@ def before_request():
     data = request.args
     for v in data.values():
         v = str(v).lower()
-        pattern = r"(<script>|</script>)|(\*|;)"
+        pattern = r"(<.*?>)"
         r = re.search(pattern, v)
         if r:
             return 'Please enter the parameters of the specification!'
@@ -124,8 +124,8 @@ def handle_get_token_price():
     """
     token_contract_id = request.args.get("token_id", "N/A")
     ret = {"token_contract_id": token_contract_id}
-    if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
-        token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
+    # if token_contract_id == 'usn' or token_contract_id == 'usdt.tether-token.near':
+    #     token_contract_id = "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"
     ret["price"] = get_token_price(Cfg.NETWORK_ID, token_contract_id)
     if ret["price"] is None:
         ret["price"] = "N/A"
@@ -148,24 +148,24 @@ def handle_list_token_price():
                 "symbol": token["SYMBOL"],
             }
     # if usdt exists, mirror its price to USN
-    if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
-        ret["usn"] = {
-            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
-            "decimal": 18,
-            "symbol": "USN",
-        }
-        ret["usdt.tether-token.near"] = {
-            "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
-            "decimal": 6,
-            "symbol": "USDt",
-        }
-    # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
-    if "token.v2.ref-finance.near" in ret:
-        ret["rftt.tkn.near"] = {
-            "price": prices["token.v2.ref-finance.near"],
-            "decimal": 8,
-            "symbol": "RFTT",
-        }
+    # if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
+    #     ret["usn"] = {
+    #         "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
+    #         "decimal": 18,
+    #         "symbol": "USN",
+    #     }
+    #     ret["usdt.tether-token.near"] = {
+    #         "price": prices["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"],
+    #         "decimal": 6,
+    #         "symbol": "USDt",
+    #     }
+    # # if token.v2.ref-finance.near exists, mirror its info to rftt.tkn.near
+    # if "token.v2.ref-finance.near" in ret:
+    #     ret["rftt.tkn.near"] = {
+    #         "price": prices["token.v2.ref-finance.near"],
+    #         "decimal": 8,
+    #         "symbol": "RFTT",
+    #     }
     return compress_response_content(ret)
 
 
@@ -176,10 +176,10 @@ def handle_list_token_price_by_ids():
     list_token_price_by_ids
     """
     ids = request.args.get("ids", "")
-    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|",
-                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
-    ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|",
-                                                            "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    # ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usn|",
+    #                                                         "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
+    # ids = ("|" + ids.lstrip("|").rstrip("|") + "|").replace("|usdt.tether-token.near|",
+    #                                                         "|dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near|")
     id_str_list = ids.lstrip("|").rstrip("|").split("|")
 
     prices = list_token_price_by_id_list(Cfg.NETWORK_ID, [str(x) for x in id_str_list])
@@ -457,6 +457,70 @@ def handle_assets_by_account():
     if ret is None:
         return ""
     return compress_response_content(json.loads(ret))
+
+
+@app.route('/token-price-report', methods=['GET'])
+@flask_cors.cross_origin()
+def token_price_ratio_report():
+    token = request.args.get("token")
+    base_token = request.args.get("base_token")
+    dimension = request.args.get("dimension")
+    if token is None or base_token is None or dimension is None:
+        return "null"
+    redis_key = token + "->" + base_token + "_" + dimension.lower()
+    ret = get_token_price_ratio_report(Cfg.NETWORK_ID, redis_key)
+    if ret is None:
+        return "null"
+    return compress_response_content(json.loads(ret))
+
+
+@app.route('/get-burrow-records', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_burrow_records():
+    account_id = request.args.get("account_id")
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=10)
+    if account_id is None or account_id == '':
+        return ""
+    burrow_log_list, count_number = query_burrow_log(Cfg.NETWORK_ID, account_id, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    for burrow_log in burrow_log_list:
+        if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
+            burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
+        burrow_log["change"] = ""
+        if burrow_log["event"] == "borrow":
+            burrow_log["event"] = "Borrow"
+        if burrow_log["event"] == "decrease_collateral":
+            burrow_log["event"] = "Adjust Collateral"
+            burrow_log["change"] = "decrease"
+        if burrow_log["event"] == "increase_collateral":
+            burrow_log["event"] = "Adjust Collateral"
+            burrow_log["change"] = "increase"
+        if burrow_log["event"] == "deposit":
+            burrow_log["event"] = "Supply"
+        if burrow_log["event"] == "withdraw_succeeded":
+            burrow_log["event"] = "Withdraw"
+    res = {
+        "record_list": burrow_log_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/get-history-token-price-by-token', methods=['GET'])
+@flask_cors.cross_origin()
+def token_history_token_price_by_token():
+    ids = request.args.get("ids", "")
+    id_str_list = ids.split("|")
+    data_time = request.args.get("data_time")
+    ret = get_history_token_price_by_token(id_str_list, data_time)
+    return compress_response_content(ret)
 
 
 @app.route('/get-dcl-pool-log', methods=['GET'])
