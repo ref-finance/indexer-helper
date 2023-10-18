@@ -261,6 +261,30 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
     ret_point_list = []
     if len(point_data) < 1:
         return ret_point_list
+    point_data_object = {}
+    for point in point_data:
+        current_point = point["cp"]
+        point_number = point["point"]
+        point_object = {
+            "tvl_x_l": float(point["tvl_x_l"]),
+            "tvl_y_l": float(point["tvl_y_l"]),
+            "tvl_x_o": float(point["tvl_x_o"]),
+            "tvl_y_o": float(point["tvl_y_o"]),
+            "current_point": current_point
+        }
+        point_data_object[point_number] = point_object
+    point_data_24h_object = {}
+    for point_24h in point_data_24h:
+        point_number = point_24h["point"]
+        fee_x = float(point_24h["fee_x"]) * token_price[0]
+        fee_y = float(point_24h["fee_y"]) * token_price[1]
+        tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / 24
+        tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / 24
+        point_24h_object = {
+            "fee": fee_x + fee_y,
+            "total_liquidity": tvl_x_l_24h + tvl_y_l_24h,
+        }
+        point_data_24h_object[point_number] = point_24h_object
     total_point = end_point - start_point
     pool_id_s = pool_id.split("|")
     fee_tier = pool_id_s[-1]
@@ -296,14 +320,28 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
         end_slot_point_number = start_point_number + slot_point_number
         start_slot_point_number = end_slot_point_number - bin_point_number
         current_point = 0
-        for point in point_data:
-            current_point = point["cp"]
-            point_number = point["point"]
-            if start_slot_point_number <= point_number < end_slot_point_number:
-                ret_point_data["token_x"] = ret_point_data["token_x"] + float(point["tvl_x_l"])
-                ret_point_data["token_y"] = ret_point_data["token_y"] + float(point["tvl_y_l"])
-                ret_point_data["order_x"] = ret_point_data["order_x"] + float(point["tvl_x_o"])
-                ret_point_data["order_y"] = ret_point_data["order_y"] + float(point["tvl_y_o"])
+        # for point in point_data:
+        #     current_point = point["cp"]
+        #     point_number = point["point"]
+        #     if start_slot_point_number <= point_number < end_slot_point_number:
+        #         ret_point_data["token_x"] = ret_point_data["token_x"] + float(point["tvl_x_l"])
+        #         ret_point_data["token_y"] = ret_point_data["token_y"] + float(point["tvl_y_l"])
+        #         ret_point_data["order_x"] = ret_point_data["order_x"] + float(point["tvl_x_o"])
+        #         ret_point_data["order_y"] = ret_point_data["order_y"] + float(point["tvl_y_o"])
+        number = int((end_slot_point_number - start_slot_point_number) / point_delta_number) - 1
+        for o in range(0, number):
+            point_data_number = point_delta_number * o + start_slot_point_number
+            if point_data_number in point_data_object:
+                point_object = point_data_object[point_data_number]
+                ret_point_data["token_x"] = ret_point_data["token_x"] + point_object["tvl_x_l"]
+                ret_point_data["token_y"] = ret_point_data["token_y"] + point_object["tvl_y_l"]
+                ret_point_data["order_x"] = ret_point_data["order_x"] + point_object["tvl_x_o"]
+                ret_point_data["order_y"] = ret_point_data["order_y"] + point_object["tvl_y_o"]
+                current_point = point_object["current_point"]
+            if point_data_number in point_data_24h_object:
+                point_24h_object = point_data_24h_object[point_data_number]
+                ret_point_data["fee"] = ret_point_data["fee"] + point_24h_object["fee"]
+                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + point_24h_object["total_liquidity"]
         if end_slot_point_number >= RIGHT_MOST_POINT:
             end_slot_point_number = RIGHT_MOST_POINT - 1
         liquidity_amount_x = ret_point_data["token_x"] * int("1" + "0" * token_decimal_data[token_x])
@@ -324,15 +362,15 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
             ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point)
         if ret_point_data["order_liquidity"] < 0:
             ret_point_data["order_liquidity"] = 0
-        for point_24h in point_data_24h:
-            point_number = point_24h["point"]
-            if start_slot_point_number <= point_number < end_slot_point_number:
-                fee_x = float(point_24h["fee_x"]) * token_price[0]
-                fee_y = float(point_24h["fee_y"]) * token_price[1]
-                ret_point_data["fee"] = ret_point_data["fee"] + fee_x + fee_y
-                tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / 24
-                tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / 24
-                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + tvl_x_l_24h + tvl_y_l_24h
+        # for point_24h in point_data_24h:
+        #     point_number = point_24h["point"]
+        #     if start_slot_point_number <= point_number < end_slot_point_number:
+        #         fee_x = float(point_24h["fee_x"]) * token_price[0]
+        #         fee_y = float(point_24h["fee_y"]) * token_price[1]
+        #         ret_point_data["fee"] = ret_point_data["fee"] + fee_x + fee_y
+        #         tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / 24
+        #         tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / 24
+        #         ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + tvl_x_l_24h + tvl_y_l_24h
         if ret_point_data["liquidity"] > 0 or ret_point_data["order_liquidity"] > 0:
             ret_point_list.append(ret_point_data)
     return ret_point_list
