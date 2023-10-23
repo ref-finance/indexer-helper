@@ -351,6 +351,13 @@ class Cfg:
             {"SYMBOL": "PEAK", "MD_ID": "marketpeak"},
             {"SYMBOL": "BYTE", "MD_ID": "binarydao"},
             {"SYMBOL": "HERA", "MD_ID": "hera-finance"},
+            {"SYMBOL": "agEUR", "MD_ID": "ageur"},
+            {"SYMBOL": "GUSD", "MD_ID": "gemini-dollar"},
+            {"SYMBOL": "LUSD", "MD_ID": "liquity-usd"},
+            # {"SYMBOL": "EUROC", "MD_ID": ""},
+            {"SYMBOL": "XSGD", "MD_ID": "xsgd"},
+            {"SYMBOL": "CEUR", "MD_ID": "celo-euro"},
+            {"SYMBOL": "BTC.b", "MD_ID": "bitcoin-avalanche-bridged-btc-b"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
