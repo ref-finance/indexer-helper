@@ -241,7 +241,9 @@ def get_pool_point_24h_by_pool_id(network_id, pool_id):
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id)
     r.close()
-    return json.loads(ret)
+    if ret is not None:
+        ret = json.loads(ret)
+    return ret
 
 
 class RedisProvider(object):
