@@ -885,6 +885,7 @@ def handle_pool_point_data_to_redis(network_id, pool_id_list):
             cursor.execute(sql_24h)
             point_data_24h = cursor.fetchall()
             redis_conn.add_pool_point_24h_assets(network_id, pool_id, json.dumps(point_data_24h))
+            redis_conn.add_pool_point_24h_assets(network_id, pool_id + "timestamp", now)
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
     finally:
@@ -1042,6 +1043,12 @@ def query_dcl_points(network_id, pool_id):
     try:
         cursor.execute(sql)
         point_data = cursor.fetchall()
+        pool_id_list = []
+        point_data_timestamp = get_pool_point_24h_by_pool_id(network_id, pool_id + "timestamp")
+        now = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
+        if point_data_timestamp is None or now - int(point_data_timestamp) > 3600:
+            pool_id_list.append(pool_id)
+            handle_pool_point_data_to_redis(network_id, pool_id_list)
         point_data_24h = get_pool_point_24h_by_pool_id(network_id, pool_id)
         return point_data, point_data_24h
     except Exception as e:
