@@ -35,13 +35,14 @@ except ImportError:
 
 
 try:
-    from db_info import NEAR_LAKE_DB_DSN, NEAR_LAKE_DB_UID, NEAR_LAKE_DB_PWD, NEAR_LAKE_DB_HOST, NEAR_LAKE_DB_PORT
+    from db_info import NEAR_LAKE_DB_DSN, NEAR_LAKE_DB_UID, NEAR_LAKE_DB_PWD, NEAR_LAKE_DB_HOST, NEAR_LAKE_DB_PORT, NEAR_LAKE_DCL_DB_DSN
 except ImportError:
     NEAR_LAKE_DB_DSN = "ref"
     NEAR_LAKE_DB_UID = "root"
     NEAR_LAKE_DB_PWD = "root"
     NEAR_LAKE_DB_HOST = "127.0.0.1"
     NEAR_LAKE_DB_PORT = "3306"
+    NEAR_LAKE_DCL_DB_DSN = "ref_dcl_mainnet"
 
 """
 
@@ -138,6 +139,7 @@ class Cfg:
             "REDIS_DCL_POOLS_TVL_LIST_KEY": "DCL_POOLS_TVL_LIST_MAINNET",
             "REDIS_ACCOUNT_POOL_ASSETS_KEY": "ACCOUNT_POOL_ASSETS_MAINNET",
             "REDIS_TOKEN_PRICE_RATIO_REPORT_KEY": "TOKEN_PRICE_RATIO_REPORT_MAINNET",
+            "REDIS_POOL_POINT_24H_DATA_KEY": "REDIS_POOL_POINT_24H_DATA_MAINNET",
             "INDEXER_DSN": INDEXER_DSN,
             "INDEXER_UID": INDEXER_UID,
             "INDEXER_PWD": INDEXER_PWD,
@@ -153,6 +155,7 @@ class Cfg:
             "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
             "NEAR_LAKE_DB_HOST": NEAR_LAKE_DB_HOST,
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
+            "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
         }
     }
