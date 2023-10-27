@@ -331,17 +331,21 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
         number = int((end_slot_point_number - start_slot_point_number) / point_delta_number) - 1
         for o in range(0, number):
             point_data_number = point_delta_number * o + start_slot_point_number
-            if point_data_number in point_data_object:
-                point_object = point_data_object[point_data_number]
-                ret_point_data["token_x"] = ret_point_data["token_x"] + point_object["tvl_x_l"]
-                ret_point_data["token_y"] = ret_point_data["token_y"] + point_object["tvl_y_l"]
-                ret_point_data["order_x"] = ret_point_data["order_x"] + point_object["tvl_x_o"]
-                ret_point_data["order_y"] = ret_point_data["order_y"] + point_object["tvl_y_o"]
-                current_point = point_object["current_point"]
-            if point_data_number in point_data_24h_object:
-                point_24h_object = point_data_24h_object[point_data_number]
-                ret_point_data["fee"] = ret_point_data["fee"] + point_24h_object["fee"]
-                ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + point_24h_object["total_liquidity"]
+            for e in range(0, int(bin_point_number / point_delta_number)):
+                point_data_number_e = point_data_number + point_delta_number * e
+                if point_data_number_e in point_data_object:
+                    point_object = point_data_object.pop(point_data_number_e)
+                    ret_point_data["token_x"] = ret_point_data["token_x"] + point_object["tvl_x_l"]
+                    ret_point_data["token_y"] = ret_point_data["token_y"] + point_object["tvl_y_l"]
+                    ret_point_data["order_x"] = ret_point_data["order_x"] + point_object["tvl_x_o"]
+                    ret_point_data["order_y"] = ret_point_data["order_y"] + point_object["tvl_y_o"]
+                    current_point = point_object["current_point"]
+            for f in range(0, int(bin_point_number / point_delta_number)):
+                point_data_number_e = point_data_number + point_delta_number * f
+                if point_data_number_e in point_data_24h_object:
+                    point_24h_object = point_data_24h_object.pop(point_data_number_e)
+                    ret_point_data["fee"] = ret_point_data["fee"] + point_24h_object["fee"]
+                    ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + point_24h_object["total_liquidity"]
         if end_slot_point_number >= RIGHT_MOST_POINT:
             end_slot_point_number = RIGHT_MOST_POINT - 1
         liquidity_amount_x = ret_point_data["token_x"] * int("1" + "0" * token_decimal_data[token_x])
