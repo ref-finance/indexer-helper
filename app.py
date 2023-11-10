@@ -15,15 +15,19 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account
 from config import Cfg
-from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_burrow_log, get_history_token_price_by_token
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
+from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
+    query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
+    query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token
 import re
 from flask_limiter import Limiter
 from loguru import logger
+from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
+import time
 
-
-service_version = "20230920.01"
+service_version = "20231025.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -524,6 +528,267 @@ def token_history_token_price_by_token():
     data_time = request.args.get("data_time")
     ret = get_history_token_price_by_token(id_str_list, data_time)
     return compress_response_content(ret)
+
+
+@app.route('/get-dcl-pool-log', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_dcl_pool_log():
+    start_block_id = request.args.get("start_block_id")
+    end_block_id = request.args.get("end_block_id")
+    logger.info("start_block_id:{}", start_block_id)
+    logger.info("end_block_id:{}", end_block_id)
+    if start_block_id is None or end_block_id is None:
+        return "[]"
+    ret = query_dcl_pool_log(Cfg.NETWORK_ID, start_block_id, end_block_id)
+    if ret is None:
+        return "[]"
+    dcl_pool_log_data = combine_dcl_pool_log(ret)
+    return compress_response_content(dcl_pool_log_data)
+
+
+@app.route('/analysis-v2-pool-data', methods=['GET'])
+@flask_cors.cross_origin()
+def analysis_v2_pool_data():
+    file_name = request.args.get("file_name")
+    logger.info("pool file_name:{}", file_name)
+    analysis_v2_pool_data_to_s3(file_name, Cfg.NETWORK_ID)
+    return file_name
+
+
+@app.route('/analysis-v2-pool-account-data', methods=['GET'])
+@flask_cors.cross_origin()
+def analysis_v2_pool_account_data():
+    file_name = request.args.get("file_name")
+    logger.info("account file_name:{}", file_name)
+    analysis_v2_pool_account_data_to_s3(file_name, Cfg.NETWORK_ID)
+    return file_name
+
+
+@app.route('/get-recent-transaction-swap', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_recent_transaction_swap():
+    pool_id = request.args.get("pool_id")
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_swap(Cfg.NETWORK_ID, pool_id)
+        for ret in ret_data:
+            if ret["tx_id"] is None:
+                ret["tx_id"] = get_tx_id(ret["block_hash"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when swap: ", e)
+    return compress_response_content(ret_data)
+
+
+@app.route('/get-recent-transaction-dcl-swap', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_recent_transaction_dcl_swap():
+    pool_id = request.args.get("pool_id")
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_dcl_swap(Cfg.NETWORK_ID, pool_id)
+        for ret in ret_data:
+            if ret["tx_id"] is None:
+                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when dcl-swap: ", e)
+    return compress_response_content(ret_data)
+
+
+@app.route('/get-recent-transaction-liquidity', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_recent_transaction_liquidity():
+    pool_id = request.args.get("pool_id")
+    ret = []
+    liquidity_data_list = query_recent_transaction_liquidity(Cfg.NETWORK_ID, pool_id)
+    if liquidity_data_list is None:
+        return ret
+    try:
+        for liquidity_data in liquidity_data_list:
+            ret_data = {
+                "method_name": liquidity_data["method_name"],
+                "pool_id": liquidity_data["pool_id"],
+                "shares": liquidity_data["shares"],
+                "timestamp": liquidity_data["timestamp"],
+                "tx_id": liquidity_data["tx_id"],
+                "amounts": str(liquidity_data["amounts"]),
+            }
+            if ret_data["tx_id"] is None:
+                ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
+            ret.append(ret_data)
+    except Exception as e:
+        print("Exception when liquidity: ", e)
+    return compress_response_content(ret)
+
+
+@app.route('/get-recent-transaction-dcl-liquidity', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_recent_transaction_dcl_liquidity():
+    pool_id = request.args.get("pool_id")
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_dcl_liquidity(Cfg.NETWORK_ID, pool_id)
+        for ret_d in ret_data:
+            ret_d["amount_x"] = str(int(ret_d["amount_x"]))
+            ret_d["amount_y"] = str(int(ret_d["amount_y"]))
+            if ret_d["tx_id"] is None:
+                ret_d["tx_id"] = get_tx_id(ret_d["receipt_id"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when dcl-liquidity: ", e)
+    return compress_response_content(ret_data)
+
+
+@app.route('/get-recent-transaction-limit-order', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_recent_transaction_limit_order():
+    pool_id = request.args.get("pool_id")
+    ret_data = []
+    try:
+        ret_data = query_recent_transaction_limit_order(Cfg.NETWORK_ID, pool_id)
+        for ret in ret_data:
+            if ret["tx_id"] is None:
+                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when limit-order: ", e)
+    return compress_response_content(ret_data)
+
+
+@app.route('/get-dcl-points', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_dcl_points():
+    pool_id = request.args.get("pool_id")
+    slot_number = request.args.get("slot_number", type=int, default=50)
+    start_point = request.args.get("start_point", type=int, default=-800000)
+    end_point = request.args.get("end_point", type=int, default=800000)
+    if pool_id is None:
+        return "null"
+    pool_id_s = pool_id.split("|")
+    token_x = pool_id_s[0]
+    token_y = pool_id_s[1]
+    token_list = [token_x, token_y]
+    token_price = list_token_price_by_id_list(Cfg.NETWORK_ID, token_list)
+    all_point_data, all_point_data_24h = query_dcl_points(Cfg.NETWORK_ID, pool_id)
+    point_data = handle_point_data(all_point_data, int(start_point), int(end_point))
+    point_data_24h = handle_point_data(all_point_data_24h, int(start_point), int(end_point))
+    ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point),
+                                          point_data_24h, token_price)
+    ret_data = {}
+    top_bin_fee_data = handle_top_bin_fee(ret_point_data)
+    ret_data["point_data"] = ret_point_data
+    ret_data["top_bin_fee_data"] = top_bin_fee_data
+    return compress_response_content(ret_data)
+
+
+@app.route('/get-fee-by-account', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_fee_by_account():
+    ret_data = {}
+    pool_id = request.args.get("pool_id")
+    account_id = request.args.get("account_id")
+    if pool_id is None or account_id is None:
+        return "null"
+    # unclaimed_fee_data = query_dcl_user_unclaimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
+    claimed_fee_data = query_dcl_user_claimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
+    fee_x = 0
+    fee_y = 0
+    # for unclaimed_fee in unclaimed_fee_data:
+    #     if not unclaimed_fee["unclaimed_fee_x"] is None:
+    #         fee_x = fee_x + int(unclaimed_fee["unclaimed_fee_x"])
+    #     if not unclaimed_fee["unclaimed_fee_y"] is None:
+    #         fee_y = fee_y + int(unclaimed_fee["unclaimed_fee_y"])
+    for claimed_fee in claimed_fee_data:
+        if not claimed_fee["claimed_fee_x"] is None:
+            fee_x = fee_x + int(claimed_fee["claimed_fee_x"])
+        if not claimed_fee["claimed_fee_y"] is None:
+            fee_y = fee_y + int(claimed_fee["claimed_fee_y"])
+    unclaimed_fee_data_24h = query_dcl_user_unclaimed_fee_24h(Cfg.NETWORK_ID, pool_id, account_id)
+    claimed_fee_data_24h = query_dcl_user_claimed_fee_24h(Cfg.NETWORK_ID, pool_id, account_id)
+    fee_x_24h = 0
+    fee_y_24h = 0
+    for unclaimed_fee_24h in unclaimed_fee_data_24h:
+        if not unclaimed_fee_24h["unclaimed_fee_x"] is None:
+            fee_x_24h = fee_x_24h + int(unclaimed_fee_24h["unclaimed_fee_x"])
+        if not unclaimed_fee_24h["unclaimed_fee_y"] is None:
+            fee_y_24h = fee_y_24h + int(unclaimed_fee_24h["unclaimed_fee_y"])
+    for claimed_fee_24h in claimed_fee_data_24h:
+        if not claimed_fee_24h["claimed_fee_x"] is None:
+            fee_x_24h = fee_x_24h + int(claimed_fee_24h["claimed_fee_x"])
+        if not claimed_fee_24h["claimed_fee_y"] is None:
+            fee_y_24h = fee_y_24h + int(claimed_fee_24h["claimed_fee_y"])
+    total_earned_fee = {
+        "total_fee_x": fee_x,
+        "total_fee_y": fee_y
+    }
+    total_fee_24h = {
+        "fee_x": fee_x - fee_x_24h,
+        "fee_y": fee_y - fee_y_24h,
+    }
+    # if total_fee_24h["fee_x"] < 0:
+    #     total_fee_24h["fee_x"] = 0
+    # if total_fee_24h["fee_y"] < 0:
+    #     total_fee_24h["fee_y"] = 0
+    user_tvl_data = query_dcl_user_tvl(Cfg.NETWORK_ID, pool_id, account_id)
+    token_x = 0
+    token_y = 0
+    user_token_timestamp = 0
+    for user_tvl in user_tvl_data:
+        if not user_tvl["timestamp"] is None:
+            user_token_timestamp = user_tvl["timestamp"]
+            if not user_tvl["tvl_x_l"] is None:
+                token_x = token_x + float(user_tvl["tvl_x_l"])
+            if not user_tvl["tvl_y_l"] is None:
+                token_y = token_y + float(user_tvl["tvl_y_l"])
+    user_token = {
+        "token_x": token_x,
+        "token_y": token_y,
+        "timestamp": user_token_timestamp,
+    }
+    change_log_data = query_dcl_user_change_log(Cfg.NETWORK_ID, pool_id, account_id, user_token_timestamp)
+    ret_change_log_data = []
+    for change_log in change_log_data:
+        change_log_timestamp = int(int(change_log["timestamp"]) / 1000000000)
+        if change_log_timestamp > user_token_timestamp:
+            continue
+        if change_log["token_x"] == "" or change_log["token_y"] == "":
+            continue
+        change_token_x = int(change_log["token_x"])
+        change_token_y = int(change_log["token_y"])
+        if change_log["event_method"] == "liquidity_removed":
+            change_token_x = 0 - int(change_log["token_x"])
+            change_token_y = 0 - int(change_log["token_y"])
+        if change_log["event_method"] == "liquidity_merge":
+            if change_log["remove_token_x"] == "" or change_log["merge_token_x"] == "" or change_log["remove_token_y"] == "" or change_log["merge_token_y"] == "":
+                continue
+            change_token_x = 0 - (int(change_log["remove_token_x"]) - int(change_log["merge_token_x"]))
+            change_token_y = 0 - (int(change_log["remove_token_y"]) - int(change_log["merge_token_y"]))
+        change_log = {
+            "event_method": change_log["event_method"],
+            "token_x": change_token_x,
+            "token_y": change_token_y,
+            "timestamp": change_log["timestamp"],
+        }
+        ret_change_log_data.append(change_log)
+    ret_data["total_earned_fee"] = total_earned_fee
+    ret_data["apr"] = {
+        "fee_data": total_fee_24h,
+        "user_token": user_token,
+        "change_log_data": ret_change_log_data
+    }
+    return compress_response_content(ret_data)
+
+
+@app.route('/get-dcl-points-by-account', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_dcl_points_by_account():
+    pool_id = request.args.get("pool_id")
+    slot_number = request.args.get("slot_number", type=int, default=50)
+    start_point = request.args.get("start_point", type=int, default=-800000)
+    end_point = request.args.get("end_point", type=int, default=800000)
+    account_id = request.args.get("account_id")
+    if pool_id is None or account_id is None:
+        return "null"
+    point_data = query_dcl_points_by_account(Cfg.NETWORK_ID, pool_id, account_id, int(start_point), int(end_point))
+    ret_point_data = handle_dcl_point_bin_by_account(pool_id, point_data, int(slot_number), account_id, int(start_point), int(end_point))
+    return compress_response_content(ret_point_data)
 
 
 logger.add("app.log")
