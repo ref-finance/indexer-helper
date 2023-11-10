@@ -9,6 +9,7 @@ import time
 import sys
 from db_provider import add_history_token_price
 
+
 def pool_price(network_id, tokens):
     # tokens = [{"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8}, ...]
     # return [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "wrap.testnet", "price": "nnnnnn"}, ...]
@@ -74,17 +75,17 @@ def pool_price(network_id, tokens):
     return pool_tokens_price
 
 
-def market_price(network_id, tokens):
+def market_price(network_id, tokens, base_tokens):
     # tokens = [{"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8}, ...]
     # return [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "", "price": "nnnnnn"}, ...]
     market_tokens_price = []
     md_ids = []
+    base_md_ids = []
     obj = None
     try:
         conn = http.client.HTTPSConnection(Cfg.MARKET_URL, port=443)
-        headers = {"Content-type": "application/json; charset=utf-8",
-                "cache-control": "no-cache"}
-        
+        headers = {"Content-type": "application/json; charset=utf-8", "cache-control": "no-cache"}
+
         for token in tokens:
             md_ids.append(token["MD_ID"])
 
@@ -94,8 +95,19 @@ def market_price(network_id, tokens):
         res = conn.getresponse()
         print(res.status, res.reason)
         data = res.read()
+
+        for base_token in base_tokens:
+            base_md_ids.append(base_token["MD_ID"])
+
+        base_token_str = ",".join(base_md_ids)
+        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd" % base_token_str, headers=headers)
+        base_res = conn.getresponse()
+        print(res.status, base_res.reason)
+        base_data = base_res.read()
         conn.close()
         obj = json.loads(data.decode("utf-8"))
+        base_obj = json.loads(base_data.decode("utf-8"))
+        handel_base_token_price(network_id, base_tokens, base_obj)
         # {'tether': {'usd': 1.0}, 'near': {'usd': 3.29}, 'dai': {'usd': 1.0}}
         print('[debug][%s]%s' % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), obj))
     except Exception as e:
@@ -128,7 +140,7 @@ def update_price(network_id):
             market_tokens.append(token)
     
     # [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "wrap.testnet", "price": "nnnnnn"}, ...]
-    tokens_price = market_price(network_id, market_tokens)
+    tokens_price = market_price(network_id, market_tokens, Cfg.TOKENS["BASE_MAINNET"])
     for token in tokens_price:
         price_ref[token["NEAR_ID"]] = token["price"]
 
@@ -191,8 +203,31 @@ def get_base_id_price(tokens_price, price_ref, decimals, base_id):
     return ref_token_price
 
 
+def handel_base_token_price(network_id, base_tokens, base_obj):
+    tokens_price = []
+    if base_obj and len(base_obj) > 0:
+        for base_token in base_tokens:
+            md_id = base_token["MD_ID"]
+            if md_id in base_obj:
+                tokens_price.append({
+                    "SYMBOL": base_token["SYMBOL"],
+                    "price": '{:.9f}'.format(base_obj[md_id]["usd"])
+                })
+    try:
+        if len(tokens_price) > 0:
+            conn = RedisProvider()
+            conn.begin_pipe()
+            for token in tokens_price:
+                conn.add_base_token_price(network_id, token["SYMBOL"], token["price"])
+            conn.end_pipe()
+            conn.close()
+    except Exception as e:
+        print("Error occurred when update base token price to Redis, cancel pipe. Error is: ", e)
+
+
 if __name__ == '__main__':
     # update_price("TESTNET")
+    # market_price("MAINNET", [{"SYMBOL": "near", "NEAR_ID": "wrap.near", "MD_ID": "near", "DECIMAL": 24}], Cfg.TOKENS["BASE_MAINNET"])
     if len(sys.argv) == 2:
         network_id = str(sys.argv[1]).upper()
         if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
