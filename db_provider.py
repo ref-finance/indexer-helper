@@ -976,9 +976,9 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
 
 def query_recent_transaction_liquidity(network_id, pool_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select ll.method_name, ll.pool_id, ll.shares, ll.`timestamp`, tr.tx_id, ll.amounts,ll.block_hash from " \
-          "near_lake_liquidity_log ll left join t_tx_receipt tr on ll.block_hash = tr.receipt_id where " \
-          "ll.pool_id = '%s' order by ll.id desc limit 50" % pool_id
+    sql = "select ll.method_name, ll.pool_id, ll.shares, ll.`timestamp`, tr.tx_id, ll.amounts,ll.block_hash, " \
+          "ll.amount_in, ll.amount_out from near_lake_liquidity_log ll left join t_tx_receipt tr on " \
+          "ll.block_hash = tr.receipt_id where ll.pool_id = '%s' order by ll.id desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
