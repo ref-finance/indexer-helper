@@ -27,7 +27,7 @@ from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import time
 
-service_version = "20231025.01"
+service_version = "20231127.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -604,13 +604,16 @@ def handle_recent_transaction_liquidity():
         return ret
     try:
         for liquidity_data in liquidity_data_list:
+            amounts = str(liquidity_data["amounts"])
+            if "['0', '0']" == amounts:
+                amounts = str([liquidity_data["amount_in"], liquidity_data["amount_out"]])
             ret_data = {
                 "method_name": liquidity_data["method_name"],
                 "pool_id": liquidity_data["pool_id"],
                 "shares": liquidity_data["shares"],
                 "timestamp": liquidity_data["timestamp"],
                 "tx_id": liquidity_data["tx_id"],
-                "amounts": str(liquidity_data["amounts"]),
+                "amounts": amounts,
             }
             if ret_data["tx_id"] is None:
                 ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
