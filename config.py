@@ -376,6 +376,14 @@ class Cfg:
             {"SYMBOL": "CVR", "MD_ID": "caviar"},
             {"SYMBOL": "PEARL", "MD_ID": "pearl"},
             {"SYMBOL": "MATIC", "MD_ID": "matic-network"},
+            {"SYMBOL": "APE", "MD_ID": "apecoin"},
+            {"SYMBOL": "HAPI", "MD_ID": "hapi"},
+            {"SYMBOL": "KNC", "MD_ID": "kyber-network-crystal"},
+            {"SYMBOL": "LDO", "MD_ID": "lido-dao"},
+            {"SYMBOL": "LINK", "MD_ID": "chainlink"},
+            {"SYMBOL": "PEPE", "MD_ID": "pepe"},
+            {"SYMBOL": "SHIB", "MD_ID": "shiba-inu"},
+            {"SYMBOL": "UNI", "MD_ID": "uniswap"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
