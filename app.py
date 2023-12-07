@@ -27,7 +27,7 @@ from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import time
 
-service_version = "20231127.01"
+service_version = "20231207.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -347,6 +347,12 @@ def handle_to_coingecko():
             key = "%s-%s" % (pool["token_symbols"][0], pool["token_symbols"][1])
             # add token0_ref_price = token1_price * token1_balance / token0_balance 
             if balance0 > 0 and balance1 > 0:
+                vol_to_other_token = {"input": "0", "output": "0"}
+                vol_from_other_token = {"input": "0", "output": "0"}
+                if "vol01" in pool:
+                    vol_to_other_token = pool["vol01"]
+                if "vol10" in pool:
+                    vol_from_other_token = pool["vol10"]
                 ret[key] = {
                     "pool_id": pool["id"],
                     "token_symbol": pool["token_symbols"][0],
@@ -355,8 +361,8 @@ def handle_to_coingecko():
                     "liquidity_amounts": pool["amounts"],
                     "price_in_usd": str(float(prices[token1]) * balance1 / balance0) if token1 in prices else "N/A",
                     "price_in_other_token": str(balance1 / balance0),
-                    "vol_to_other_token": pool["vol01"],
-                    "vol_from_other_token": pool["vol10"],
+                    "vol_to_other_token": vol_to_other_token,
+                    "vol_from_other_token": vol_from_other_token,
                 }
 
     return compress_response_content(ret)
