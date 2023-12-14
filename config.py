@@ -285,6 +285,7 @@ class Cfg:
             {"SYMBOL": "USDt", "NEAR_ID": "usdt.tether-token.near", "MD_ID": "tether", "DECIMAL": 6},
             {"SYMBOL": "USN", "NEAR_ID": "usn", "MD_ID": "v2.ref-finance.near|3269|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "USDC", "NEAR_ID": "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1", "MD_ID": "usd-coin", "DECIMAL": 6},
+            {"SYMBOL": "NEAT", "NEAR_ID": "neat.nrc-20.near", "MD_ID": "v2.ref-finance.near|4243|wrap.near", "DECIMAL": 8},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
