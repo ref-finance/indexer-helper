@@ -61,7 +61,7 @@ def get_ratio(amount_in, amount_out):
     except Exception as e:
         print("get ratio error:", e)
         return ratio
-    return '%.8f' % ratio
+    return '%.12f' % ratio
 
 
 def handle_token_price_ratio_report_d(network_id, token_pair, token_price_data, now_time):
