@@ -29,13 +29,13 @@ jobs:
           name: mydist
           path: mydist
 
-      - name: deploy to remote server [44.200.248.182]
+      - name: deploy to remote server [54.84.46.117]
         uses: easingthemes/ssh-deploy@v2.2.11
         with:
           # 服务器私钥
           SSH_PRIVATE_KEY:  ${{ secrets.SSH_PRIVATE_KEY_PROD_01 }}
           # Server IP
-          REMOTE_HOST:  44.200.248.182
+          REMOTE_HOST:  54.84.46.117
           # Username
           REMOTE_USER:  root
           # Port
@@ -50,23 +50,23 @@ jobs:
           EXCLUDE: ".git, .github"
 
 
-      - name: Execute SSH commmands on remote server[44.200.248.182]
+      - name: Execute SSH commmands on remote server[54.84.46.117]
         uses: appleboy/ssh-action@master
         with:
-          host: 44.200.248.182
+          host: 54.84.46.117
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY_PROD_01 }}
           port: 60022
           script: |
             sh /data/web/indexer-helper/boot.sh restart
             
-      - name: deploy to remote server [3.228.195.200]
+      - name: deploy to remote server [18.207.83.196]
         uses: easingthemes/ssh-deploy@v2.2.11
         with:
           # Private Key
           SSH_PRIVATE_KEY:  ${{ secrets.SSH_PRIVATE_KEY_PROD_02 }}
           # Server IP
-          REMOTE_HOST:  3.228.195.200
+          REMOTE_HOST:  18.207.83.196
           # Useranme
           REMOTE_USER:  root
           # Port
@@ -81,10 +81,10 @@ jobs:
           EXCLUDE: ".git, .github"
 
 
-      - name: Execute SSH commmands on remote server [3.228.195.200]
+      - name: Execute SSH commmands on remote server [18.207.83.196]
         uses: appleboy/ssh-action@master
         with:
-          host: 3.228.195.200
+          host: 18.207.83.196
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY_PROD_02 }}
           port: 60022
