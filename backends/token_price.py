@@ -63,7 +63,7 @@ def pool_price(network_id, tokens):
                 price = json.loads(json_str)
             if token["NEAR_ID"] == "token.v2.ref-finance.near":
                 debug_price = int(price) / 1000000000000000000000000.0
-                print('[debug][%s]REF-wNEAR:%.08f' % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), debug_price))
+                print('[debug][%s]REF-wNEAR:%.12f' % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), debug_price))
             pool_tokens_price.append({"NEAR_ID": token["NEAR_ID"], "BASE_ID": base, "price": price})
 
     except MultiNodeJsonProviderError as e:
@@ -157,12 +157,12 @@ def update_price(network_id):
                         ref_token_price = get_base_id_price(tokens_price, price_ref, decimals, token["BASE_ID"])
                         if ref_token_price > 0:
                             price = int(token["price"]) / 100000000 * ref_token_price
-                            conn.add_token_price(network_id, token["NEAR_ID"], "%.08f" % price)
+                            conn.add_token_price(network_id, token["NEAR_ID"], "%.12f" % price)
                     elif token["BASE_ID"] in price_ref:
                         # print(int(token["price"]) / int("1"*decimals[token["BASE_ID"]]))
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
-                        # print(token["NEAR_ID"], "%.08f" % price)
-                        conn.add_token_price(network_id, token["NEAR_ID"], "%.08f" % price)
+                        # print(token["NEAR_ID"], "%.12f" % price)
+                        conn.add_token_price(network_id, token["NEAR_ID"], "%.12f" % price)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
                 else:
@@ -181,10 +181,10 @@ def update_price(network_id):
                         ref_token_price = get_base_id_price(tokens_price, price_ref, decimals, token["BASE_ID"])
                         if ref_token_price > 0:
                             price = int(token["price"]) / 100000000 * ref_token_price
-                            add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]], network_id)
+                            add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
                     elif token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
-                        add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.08f" % price, decimals[token["NEAR_ID"]], network_id)
+                        add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
                 else:
