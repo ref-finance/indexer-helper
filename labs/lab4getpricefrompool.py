@@ -106,8 +106,8 @@ def update_price(network_id):
                     if token["BASE_ID"] in price_ref:
                         # print(int(token["price"]) / int("1"*decimals[token["BASE_ID"]]))
                         price = int(token["price"]) / int("1"+"0"*decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
-                        # print(token["NEAR_ID"], "%.08f" % price)
-                        conn.add_token_price(network_id, token["NEAR_ID"], "%.08f" % price)
+                        # print(token["NEAR_ID"], "%.12f" % price)
+                        conn.add_token_price(network_id, token["NEAR_ID"], "%.12f" % price)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
                 else:
