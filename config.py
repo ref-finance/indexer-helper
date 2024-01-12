@@ -388,7 +388,15 @@ class Cfg:
             {"SYMBOL": "LINK", "MD_ID": "chainlink"},
             {"SYMBOL": "PEPE", "MD_ID": "pepe"},
             {"SYMBOL": "SHIB", "MD_ID": "shiba-inu"},
-            {"SYMBOL": "UNI", "MD_ID": "uniswap"},
+            {"SYMBOL": "sDAI", "MD_ID": "savings-xdai"},
+            {"SYMBOL": "wstETH", "MD_ID": "wrapped-steth"},
+            {"SYMBOL": "crvUSD", "MD_ID": "crvusd"},
+            {"SYMBOL": "AURA", "MD_ID": "aura-finance"},
+            {"SYMBOL": "BAL", "MD_ID": "balancer"},
+            {"SYMBOL": "staBAL3", "MD_ID": "balancer-stable-usd"},
+            {"SYMBOL": "COW", "MD_ID": "cow-protocol"},
+            {"SYMBOL": "stEUR", "MD_ID": "staked-ageur"},
+            {"SYMBOL": "EURe", "MD_ID": "monerium-eur-money"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
