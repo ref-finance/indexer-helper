@@ -289,7 +289,8 @@ class Cfg:
             {"SYMBOL": "LONK", "NEAR_ID": "token.lonkingnearbackto2024.near", "MD_ID": "v2.ref-finance.near|4314|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "GEAR", "NEAR_ID": "gear.enleap.near", "MD_ID": "v2.ref-finance.near|3411|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "BLACKDRAGON", "NEAR_ID": "blackdragon.tkn.near", "MD_ID": "v2.ref-finance.near|4276|wrap.near", "DECIMAL": 24},
-	    {"SYMBOL": "SHITZU", "NEAR_ID": "token.0xshitzu.near", "MD_ID": "v2.ref-finance.near|4369|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "SHITZU", "NEAR_ID": "token.0xshitzu.near", "MD_ID": "v2.ref-finance.near|4369|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "JUMP", "NEAR_ID": "jumptoken.jumpfinance.near", "MD_ID": "v2.ref-finance.near|4292|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
