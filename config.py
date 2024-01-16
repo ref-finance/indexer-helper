@@ -398,6 +398,13 @@ class Cfg:
             {"SYMBOL": "COW", "MD_ID": "cow-protocol"},
             {"SYMBOL": "stEUR", "MD_ID": "staked-ageur"},
             {"SYMBOL": "EURe", "MD_ID": "monerium-eur-money"},
+            {"SYMBOL": "RDNT", "MD_ID": "radiant-capital"},
+            {"SYMBOL": "AVAX", "MD_ID": "avalanche-2"},
+            {"SYMBOL": "QI", "MD_ID": "benqi"},
+            {"SYMBOL": "WELL", "MD_ID": "moonwell-artemis"},
+            {"SYMBOL": "SONNE", "MD_ID": "sonne-finance"},
+            {"SYMBOL": "MENDI", "MD_ID": "mendi-finance"},
+            {"SYMBOL": "LEND", "MD_ID": "lendle"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
