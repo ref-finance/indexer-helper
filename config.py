@@ -425,7 +425,7 @@ class Cfg:
             {"SYMBOL": "FXS", "MD_ID": "frax-share"},
             {"SYMBOL": "VELO", "MD_ID": "velodrome-finance"},
             {"SYMBOL": "ZF", "MD_ID": "zkswap-finance"},
-            {"SYMBOL": "VC", "MD_ID": "velocore"},
+            {"SYMBOL": "velocore", "MD_ID": "velocore"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
