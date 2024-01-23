@@ -429,6 +429,12 @@ class Cfg:
             {"SYMBOL": "VELO", "MD_ID": "velodrome-finance"},
             {"SYMBOL": "ZF", "MD_ID": "zkswap-finance"},
             {"SYMBOL": "velocore", "MD_ID": "velocore"},
+	    {"SYMBOL": "WPC", "MD_ID": "wepiggy-coin"},
+            {"SYMBOL": "LODE", "MD_ID": "lodestar"},
+            {"SYMBOL": "MAGIC", "MD_ID": "magic"},
+            {"SYMBOL": "FRAX", "MD_ID": "frax"},
+            {"SYMBOL": "DPX", "MD_ID": "dopex"},
+            {"SYMBOL": "AAVE", "MD_ID": "aave"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
