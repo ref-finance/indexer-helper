@@ -293,6 +293,7 @@ class Cfg:
             {"SYMBOL": "JUMP", "NEAR_ID": "jumptoken.jumpfinance.near", "MD_ID": "v2.ref-finance.near|4292|wrap.near", "DECIMAL": 18},
 	    {"SYMBOL": "ZML", "NEAR_ID": "ft.zomland.near", "MD_ID": "v2.ref-finance.near|4148|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "LOL", "NEAR_ID": "memelol.near", "MD_ID": "v2.ref-finance.near|4389|wrap.near", "DECIMAL": 24},
+	    {"SYMBOL": "NDC", "NEAR_ID": "ndc.tkn.near", "MD_ID": "v2.ref-finance.near|4353|blackdragon.tkn.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
