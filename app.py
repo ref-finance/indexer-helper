@@ -621,6 +621,7 @@ def handle_recent_transaction_liquidity():
                 "timestamp": liquidity_data["timestamp"],
                 "tx_id": liquidity_data["tx_id"],
                 "amounts": amounts,
+                "receipt_id": liquidity_data["receipt_id"]
             }
             # if ret_data["tx_id"] is None:
             #     ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
