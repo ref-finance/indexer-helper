@@ -161,6 +161,9 @@ def update_price(network_id):
                     elif token["BASE_ID"] in price_ref:
                         # print(int(token["price"]) / int("1"*decimals[token["BASE_ID"]]))
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+                        # take those pool token price as ref for other pool token
+                        if token["NEAR_ID"] not in price_ref:
+                            price_ref[token["NEAR_ID"]] = token["price"]
                         # print(token["NEAR_ID"], "%.12f" % price)
                         conn.add_token_price(network_id, token["NEAR_ID"], "%.12f" % price)
                     else:
@@ -184,6 +187,7 @@ def update_price(network_id):
                             add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
                     elif token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+
                         add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
