@@ -163,7 +163,7 @@ def update_price(network_id):
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
                         # take those pool token price as ref for other pool token
                         if token["NEAR_ID"] not in price_ref:
-                            price_ref[token["NEAR_ID"]] = token["price"]
+                            price_ref[token["NEAR_ID"]] = price
                         # print(token["NEAR_ID"], "%.12f" % price)
                         conn.add_token_price(network_id, token["NEAR_ID"], "%.12f" % price)
                     else:
