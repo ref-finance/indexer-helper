@@ -435,6 +435,7 @@ class Cfg:
             {"SYMBOL": "FRAX", "MD_ID": "frax"},
             {"SYMBOL": "DPX", "MD_ID": "dopex"},
             {"SYMBOL": "AAVE", "MD_ID": "aave"},
+	    {"SYMBOL": "GRAI", "MD_ID": "grai"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
