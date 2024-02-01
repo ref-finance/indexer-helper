@@ -436,6 +436,8 @@ class Cfg:
             {"SYMBOL": "DPX", "MD_ID": "dopex"},
             {"SYMBOL": "AAVE", "MD_ID": "aave"},
 	    {"SYMBOL": "GRAI", "MD_ID": "grai"},
+	    {"SYMBOL": "sfrxETH", "MD_ID": "staked-frax-ether"},
+	    {"SYMBOL": "stMATIC", "MD_ID": "lido-staked-matic"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
