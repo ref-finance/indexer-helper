@@ -438,6 +438,13 @@ class Cfg:
 	    {"SYMBOL": "GRAI", "MD_ID": "grai"},
 	    {"SYMBOL": "sfrxETH", "MD_ID": "staked-frax-ether"},
 	    {"SYMBOL": "stMATIC", "MD_ID": "lido-staked-matic"},
+	    {"SYMBOL": "USDD", "MD_ID": "usdd"},
+	    {"SYMBOL": "Decentralized USD", "MD_ID": "decentralized-usd"},
+	    {"SYMBOL": "sUSD", "MD_ID": "nusd"},
+	    {"SYMBOL": "Op", "MD_ID": "optimism"},
+	    {"SYMBOL": "STG", "MD_ID": "stargate-finance"},
+	    {"SYMBOL": "SNX", "MD_ID": "havven"},
+	    {"SYMBOL": "RAM", "MD_ID": "ramses-exchange"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
