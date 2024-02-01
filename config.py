@@ -349,7 +349,7 @@ class Cfg:
             {"SYMBOL": "m.USDT", "MD_ID": "tether"},
             {"SYMBOL": "m.USDC", "MD_ID": "usd-coin"},
             {"SYMBOL": "MAIA", "MD_ID": "maia"},
-            {"SYMBOL": "miMATIC", "MD_ID": "mimatic"},
+            {"SYMBOL": "MAI", "MD_ID": "mimatic"},
             {"SYMBOL": "WMATIC", "MD_ID": "wmatic"},
             {"SYMBOL": "CASH", "MD_ID": "stabl-fi"},
             {"SYMBOL": "RETRO", "MD_ID": "retro-finance"},
