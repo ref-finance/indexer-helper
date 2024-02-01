@@ -441,10 +441,11 @@ class Cfg:
 	    {"SYMBOL": "USDD", "MD_ID": "usdd"},
 	    {"SYMBOL": "Decentralized USD", "MD_ID": "decentralized-usd"},
 	    {"SYMBOL": "sUSD", "MD_ID": "nusd"},
-	    {"SYMBOL": "Op", "MD_ID": "optimism"},
+	    {"SYMBOL": "OP", "MD_ID": "optimism"},
 	    {"SYMBOL": "STG", "MD_ID": "stargate-finance"},
 	    {"SYMBOL": "SNX", "MD_ID": "havven"},
 	    {"SYMBOL": "RAM", "MD_ID": "ramses-exchange"},
+	    {"SYMBOL": "THE", "MD_ID": "thena"},
         ],
     }
     MARKET_URL = "api.coingecko.com"
