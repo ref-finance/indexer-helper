@@ -44,6 +44,12 @@ except ImportError:
     NEAR_LAKE_DB_PORT = "3306"
     NEAR_LAKE_DCL_DB_DSN = "ref_dcl_mainnet"
 
+
+try:
+    from db_info import MARKET_KEY
+except ImportError:
+    MARKET_KEY = ""
+
 """
 
 """
@@ -448,7 +454,8 @@ class Cfg:
 	    {"SYMBOL": "THE", "MD_ID": "thena"},
         ],
     }
-    MARKET_URL = "api.coingecko.com"
+    MARKET_URL = "pro-api.coingecko.com"
+    MARKET_KEY = MARKET_KEY
 
 
 if __name__ == '__main__':

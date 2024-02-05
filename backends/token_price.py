@@ -91,7 +91,7 @@ def market_price(network_id, tokens, base_tokens):
 
         token_str = ",".join(md_ids)
         # print(token_str)
-        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd" % token_str, headers=headers)
+        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd&x_cg_pro_api_key=%s" % (token_str, Cfg.MARKET_KEY), headers=headers)
         res = conn.getresponse()
         print(res.status, res.reason)
         data = res.read()
@@ -100,7 +100,7 @@ def market_price(network_id, tokens, base_tokens):
             base_md_ids.append(base_token["MD_ID"])
 
         base_token_str = ",".join(base_md_ids)
-        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd" % base_token_str, headers=headers)
+        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd&x_cg_pro_api_key=%s" % (base_token_str, Cfg.MARKET_KEY), headers=headers)
         base_res = conn.getresponse()
         print(res.status, base_res.reason)
         base_data = base_res.read()
