@@ -77,9 +77,9 @@ def handle_latest_actions(account_id):
     try:
         ret = get_actions(Cfg.NETWORK_ID, account_id)
         json_obj = json.loads(ret)
-        for obj in json_obj:
-            if obj[1] == "":
-                obj[1] = get_tx_id(obj[7], Cfg.NETWORK_ID)
+        # for obj in json_obj:
+        #     if obj[1] == "":
+        #         obj[1] = get_tx_id(obj[7], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when get_actions: ", e)
 
@@ -502,8 +502,8 @@ def handle_burrow_records():
     else:
         total_page = int(count_number / page_size) + 1
     for burrow_log in burrow_log_list:
-        if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
-            burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
+        # if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
+        #     burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
         burrow_log["change"] = ""
         if burrow_log["event"] == "borrow":
             burrow_log["event"] = "Borrow"
@@ -578,9 +578,9 @@ def handle_recent_transaction_swap():
     ret_data = []
     try:
         ret_data = query_recent_transaction_swap(Cfg.NETWORK_ID, pool_id)
-        for ret in ret_data:
-            if ret["tx_id"] is None:
-                ret["tx_id"] = get_tx_id(ret["block_hash"], Cfg.NETWORK_ID)
+        # for ret in ret_data:
+        #     if ret["tx_id"] is None:
+        #         ret["tx_id"] = get_tx_id(ret["block_hash"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when swap: ", e)
     return compress_response_content(ret_data)
@@ -593,9 +593,9 @@ def handle_recent_transaction_dcl_swap():
     ret_data = []
     try:
         ret_data = query_recent_transaction_dcl_swap(Cfg.NETWORK_ID, pool_id)
-        for ret in ret_data:
-            if ret["tx_id"] is None:
-                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+        # for ret in ret_data:
+        #     if ret["tx_id"] is None:
+        #         ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when dcl-swap: ", e)
     return compress_response_content(ret_data)
@@ -621,9 +621,10 @@ def handle_recent_transaction_liquidity():
                 "timestamp": liquidity_data["timestamp"],
                 "tx_id": liquidity_data["tx_id"],
                 "amounts": amounts,
+                "receipt_id": liquidity_data["receipt_id"]
             }
-            if ret_data["tx_id"] is None:
-                ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
+            # if ret_data["tx_id"] is None:
+            #     ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
             ret.append(ret_data)
     except Exception as e:
         print("Exception when liquidity: ", e)
@@ -640,8 +641,8 @@ def handle_recent_transaction_dcl_liquidity():
         for ret_d in ret_data:
             ret_d["amount_x"] = str(int(ret_d["amount_x"]))
             ret_d["amount_y"] = str(int(ret_d["amount_y"]))
-            if ret_d["tx_id"] is None:
-                ret_d["tx_id"] = get_tx_id(ret_d["receipt_id"], Cfg.NETWORK_ID)
+            # if ret_d["tx_id"] is None:
+            #     ret_d["tx_id"] = get_tx_id(ret_d["receipt_id"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when dcl-liquidity: ", e)
     return compress_response_content(ret_data)
@@ -654,9 +655,9 @@ def handle_recent_transaction_limit_order():
     ret_data = []
     try:
         ret_data = query_recent_transaction_limit_order(Cfg.NETWORK_ID, pool_id)
-        for ret in ret_data:
-            if ret["tx_id"] is None:
-                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+        # for ret in ret_data:
+        #     if ret["tx_id"] is None:
+        #         ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when limit-order: ", e)
     return compress_response_content(ret_data)
