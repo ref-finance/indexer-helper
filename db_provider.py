@@ -495,7 +495,7 @@ def get_dcl_token_price(network_id):
 
 def query_limit_order_log(network_id, owner_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select order_id, tx_id from near_lake_limit_order_mainnet where type = 'order_added' and owner_id = '%s'" % owner_id
+    sql = "select order_id, tx_id, receipt_id from near_lake_limit_order_mainnet where type = 'order_added' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -511,7 +511,7 @@ def query_limit_order_log(network_id, owner_id):
 
 def query_limit_order_swap(network_id, owner_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp from " \
+    sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp, receipt_id from " \
           "near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
@@ -722,10 +722,10 @@ def update_account_pool_assets_status():
 def query_burrow_log(network_id, account_id, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_near_lake_connect(network_id)
-    sql = "select bel.`event`, bel.amount, bel.token_id, bel.`timestamp`, ttr.tx_id, bel.receipt_id from burrow_event_log bel " \
-          "left join t_tx_receipt ttr on bel.receipt_id = ttr.receipt_id where bel.account_id = '%s' and " \
-          "`event` in ('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded') " \
-          "order by bel.`timestamp` desc limit %s, %s" % (account_id, start_number, page_size)
+    sql = "select `event`, amount, token_id, `timestamp`, '' as tx_id, receipt_id from burrow_event_log " \
+          "where account_id = '%s' and `event` in ('borrow','decrease_collateral','deposit'," \
+          "'increase_collateral','repay','withdraw_succeeded')  order by `timestamp` desc " \
+          "limit %s, %s" % (account_id, start_number, page_size)
     sql_count = "select count(*) as total_number from burrow_event_log where account_id = '%s' and `event` in " \
                 "('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded')" % account_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -944,9 +944,8 @@ def add_dcl_user_liquidity_fee_data(data_list, network_id):
 
 def query_recent_transaction_swap(network_id, pool_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select sl.token_in, sl.token_out, sl.swap_in, sl.swap_out,sl.`timestamp`, tr.tx_id,sl.block_hash from " \
-          "near_lake_swap_log sl left join t_tx_receipt tr on sl.block_hash = tr.receipt_id where " \
-          "sl.pool_id = '%s' order by sl.id desc limit 50" % pool_id
+    sql = "select token_in, token_out, swap_in, swap_out,`timestamp`, '' as tx_id,block_hash as receipt_id from " \
+          "near_lake_swap_log where pool_id = '%s' order by id desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -960,9 +959,8 @@ def query_recent_transaction_swap(network_id, pool_id):
 
 def query_recent_transaction_dcl_swap(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
-    sql = "select ts.token_in, ts.token_out, ts.amount_in, ts.amount_out,ts.`timestamp`, rtr.tx_id,ts.tx_id as " \
-          "receipt_id from ref_dcl_mainnet.t_swap ts left join ref.t_tx_receipt rtr on ts.tx_id = rtr.receipt_id " \
-          "where ts.amount_in > '0' and ts.pool_id like '%"+pool_id+"%' order by ts.id desc limit 50"
+    sql = "select token_in, token_out, amount_in, amount_out,`timestamp`, '' as tx_id,tx_id as receipt_id from " \
+          "ref_dcl_mainnet.t_swap where amount_in > '0' and pool_id like '%"+pool_id+"%' order by id desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -976,9 +974,8 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
 
 def query_recent_transaction_liquidity(network_id, pool_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "select ll.method_name, ll.pool_id, ll.shares, ll.`timestamp`, tr.tx_id, ll.amounts,ll.block_hash, " \
-          "ll.amount_in, ll.amount_out from near_lake_liquidity_log ll left join t_tx_receipt tr on " \
-          "ll.block_hash = tr.receipt_id where ll.pool_id = '%s' order by ll.id desc limit 50" % pool_id
+    sql = "select method_name, pool_id, shares, `timestamp`, '' as tx_id, amounts,block_hash as receipt_id, " \
+          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by id desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -992,15 +989,15 @@ def query_recent_transaction_liquidity(network_id, pool_id):
 
 def query_recent_transaction_dcl_liquidity(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
-    sql = "select all_data.method_name,all_data.amount_x,all_data.amount_y,all_data.`timestamp`,tr.tx_id," \
+    sql = "select all_data.method_name,all_data.amount_x,all_data.amount_y,all_data.`timestamp`,'' as tx_id," \
           "all_data.receipt_id from (select tla.event_method as method_name, sum(cast(tla.paid_token_x as " \
           "decimal(64, 0))) as amount_x, sum(cast(tla.paid_token_y as decimal(64, 0))) as amount_y, tla.`timestamp`, " \
           "tla.tx_id as receipt_id from t_liquidity_added as tla where tla.pool_id = '%s' and " \
           "tla.event_method != 'liquidity_merge' group by tx_id union all select tlr.event_method as method_name, " \
           "sum(cast(tlr.refund_token_x as decimal(64, 0))) as amount_x,sum(cast(tlr.refund_token_y as decimal(64, 0))) " \
           "as amount_y, tlr.`timestamp`, tlr.tx_id as receipt_id from t_liquidity_removed as tlr where " \
-          "tlr.pool_id = '%s' and tlr.removed_amount > 0 group by tx_id) as all_data left join ref.t_tx_receipt tr " \
-          "on all_data.receipt_id = tr.receipt_id order by `timestamp` desc limit 50" % (pool_id, pool_id)
+          "tlr.pool_id = '%s' and tlr.removed_amount > 0 group by tx_id) as all_data" \
+          " order by `timestamp` desc limit 50" % (pool_id, pool_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -1014,14 +1011,13 @@ def query_recent_transaction_dcl_liquidity(network_id, pool_id):
 
 def query_recent_transaction_limit_order(network_id, pool_id):
     db_conn = get_near_lake_dcl_connect(network_id)
-    sql = "select all_data.method_name,all_data.sell_token,all_data.amount,all_data.point,all_data.`timestamp`," \
-          "tr.tx_id,all_data.tx_id as receipt_id from (select 'order_cancelled' as method_name, sell_token, " \
+    sql = "select all_data.method_name,all_data.sell_token,all_data.amount,all_data.point,all_data.`timestamp`, " \
+          "'' as tx_id,all_data.tx_id as receipt_id from (select 'order_cancelled' as method_name, sell_token,  " \
           "actual_cancel_amount as amount, point,`timestamp`,tx_id from t_order_cancelled where pool_id = '%s' " \
-          "and actual_cancel_amount != '0' union all select 'order_added' as method_name, sell_token, " \
-          "original_amount as amount, point,`timestamp`,tx_id from t_order_added where pool_id = '%s' and " \
-          "(args like '%%%%LimitOrderWithSwap%%%%' or args like '%%%%LimitOrder%%%%')) as all_data " \
-          "left join ref.t_tx_receipt tr on all_data.tx_id = tr.receipt_id order by all_data.`timestamp` " \
-          "desc limit 50" % (pool_id, pool_id)
+          "and actual_cancel_amount != '0' union all select 'order_added' as method_name, sell_token,  " \
+          "original_amount as amount, point,`timestamp`,tx_id from t_order_added where pool_id = '%s' and  " \
+          "(args like '%%%%LimitOrderWithSwap%%%%' or args like '%%%%LimitOrder%%%%')) as all_data order by " \
+          "all_data.`timestamp`  desc limit 50" % (pool_id, pool_id)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
