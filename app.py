@@ -802,7 +802,7 @@ def handle_dcl_points_by_account():
     return compress_response_content(ret_point_data)
 
 
-@app.route('/total_supple', methods=['GET'])
+@app.route('/total_supply', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_total_supple():
     ret = "99990506.142591673655212239"
