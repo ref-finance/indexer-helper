@@ -732,6 +732,15 @@ def compute_deposit_x_y_buckup(liquidity, left_point, right_point, current_point
     return user_liquidity_x, user_liquidity_y
 
 
+def get_circulating_supply():
+    circulating_supply_url = "https://api.stats.ref.finance/api/marketcap"
+    requests.packages.urllib3.disable_warnings()
+    circulating_supply_ret = requests.get(url=circulating_supply_url, verify=False)
+    circulating_supply_data = json.loads(circulating_supply_ret.text)
+    circulating_supply = circulating_supply_data["circulatingSupply"]
+    return str(circulating_supply)
+
+
 if __name__ == '__main__':
     # from config import Cfg
     # from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata

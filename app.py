@@ -15,7 +15,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
@@ -27,7 +27,7 @@ from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import time
 
-service_version = "20240113.02"
+service_version = "20240206.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -800,6 +800,20 @@ def handle_dcl_points_by_account():
     point_data = query_dcl_points_by_account(Cfg.NETWORK_ID, pool_id, account_id, int(start_point), int(end_point))
     ret_point_data = handle_dcl_point_bin_by_account(pool_id, point_data, int(slot_number), account_id, int(start_point), int(end_point))
     return compress_response_content(ret_point_data)
+
+
+@app.route('/total_supple', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_total_supple():
+    ret = "99990506.142591673655212239"
+    return ret
+
+
+@app.route('/circulating_supply', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_circulating_supply():
+    ret = get_circulating_supply()
+    return ret
 
 
 logger.add("app.log")
