@@ -27,7 +27,7 @@ from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import time
 
-service_version = "20240206.01"
+service_version = "20240207.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -235,7 +235,15 @@ def handle_list_top_pools():
     metadata = list_token_metadata(Cfg.NETWORK_ID)
 
     combine_pools_info(pools, prices, metadata)
-
+    list_top_pools_log = []
+    for pool in pools:
+        pool_log = {
+            "id": pool["id"],
+            "token_account_ids": pool["token_account_ids"],
+            "amounts": pool["amounts"],
+        }
+        list_top_pools_log.append(pool_log)
+    logger.info("list_top_pools_data:{}", list_top_pools_log)
     return compress_response_content(pools)
 
 
