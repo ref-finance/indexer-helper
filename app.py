@@ -25,6 +25,7 @@ import re
 from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
+import time
 import datetime
 
 service_version = "20240207.01"
@@ -63,7 +64,6 @@ def hello_world():
 @flask_cors.cross_origin()
 @limiter.limit("1/5 second")
 def handle_timestamp():
-    logger.info("request ip:{}", "ip_address")
     import time
     return jsonify({"ts": int(time.time())})
 
