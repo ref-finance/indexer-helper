@@ -34,7 +34,7 @@ Welcome = 'Welcome to ref datacenter API server, version ' + service_version + '
 app = Flask(__name__)
 limiter = Limiter(
     app,
-    # key_func=get_ip_address,
+    key_func=get_ip_address,
     default_limits=["20 per second"],
     # storage_uri="redis://:@127.0.0.1:6379/2"
     storage_uri="redis://:@" + Cfg.REDIS["REDIS_HOST"] + ":6379/2"
