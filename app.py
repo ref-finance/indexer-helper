@@ -26,6 +26,7 @@ from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import time
+import datetime
 
 service_version = "20240207.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -824,7 +825,9 @@ def handle_circulating_supply():
     return ret
 
 
-logger.add("app.log")
+current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+log_file = "app-%s.log" % current_date
+logger.add(log_file)
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
     app.logger.info(Welcome)
