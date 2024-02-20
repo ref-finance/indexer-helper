@@ -301,6 +301,7 @@ class Cfg:
             {"SYMBOL": "LOL", "NEAR_ID": "memelol.near", "MD_ID": "v2.ref-finance.near|4389|wrap.near", "DECIMAL": 24},
 	    {"SYMBOL": "NDC", "NEAR_ID": "ndc.tkn.near", "MD_ID": "v2.ref-finance.near|4353|blackdragon.tkn.near", "DECIMAL": 18},
             {"SYMBOL": "PUMPOPOLY", "NEAR_ID": "token.pumpopoly.near", "MD_ID": "v2.ref-finance.near|3066|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "LNR", "NEAR_ID": "802d89b6e511b335f05024a65161bce7efc3f311.factory.bridge.near", "MD_ID": "linear-protocol-lnr", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
