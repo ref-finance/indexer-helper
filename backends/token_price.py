@@ -91,7 +91,7 @@ def market_price(network_id, tokens, base_tokens):
 
         token_str = ",".join(md_ids)
         # print(token_str)
-        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd" % token_str, headers=headers)
+        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd&x_cg_pro_api_key=%s" % (token_str, Cfg.MARKET_KEY), headers=headers)
         res = conn.getresponse()
         print(res.status, res.reason)
         data = res.read()
@@ -100,7 +100,7 @@ def market_price(network_id, tokens, base_tokens):
             base_md_ids.append(base_token["MD_ID"])
 
         base_token_str = ",".join(base_md_ids)
-        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd" % base_token_str, headers=headers)
+        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd&x_cg_pro_api_key=%s" % (base_token_str, Cfg.MARKET_KEY), headers=headers)
         base_res = conn.getresponse()
         print(res.status, base_res.reason)
         base_data = base_res.read()
@@ -161,6 +161,9 @@ def update_price(network_id):
                     elif token["BASE_ID"] in price_ref:
                         # print(int(token["price"]) / int("1"*decimals[token["BASE_ID"]]))
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+                        # take those pool token price as ref for other pool token
+                        if token["NEAR_ID"] not in price_ref:
+                            price_ref[token["NEAR_ID"]] = price
                         # print(token["NEAR_ID"], "%.12f" % price)
                         conn.add_token_price(network_id, token["NEAR_ID"], "%.12f" % price)
                     else:
@@ -184,6 +187,7 @@ def update_price(network_id):
                             add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
                     elif token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+
                         add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))

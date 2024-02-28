@@ -44,6 +44,12 @@ except ImportError:
     NEAR_LAKE_DB_PORT = "3306"
     NEAR_LAKE_DCL_DB_DSN = "ref_dcl_mainnet"
 
+
+try:
+    from db_info import MARKET_KEY
+except ImportError:
+    MARKET_KEY = ""
+
 """
 
 """
@@ -291,6 +297,11 @@ class Cfg:
             {"SYMBOL": "BLACKDRAGON", "NEAR_ID": "blackdragon.tkn.near", "MD_ID": "v2.ref-finance.near|4276|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "SHITZU", "NEAR_ID": "token.0xshitzu.near", "MD_ID": "v2.ref-finance.near|4369|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "JUMP", "NEAR_ID": "jumptoken.jumpfinance.near", "MD_ID": "v2.ref-finance.near|4292|wrap.near", "DECIMAL": 18},
+	    {"SYMBOL": "ZML", "NEAR_ID": "ft.zomland.near", "MD_ID": "v2.ref-finance.near|4148|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "LOL", "NEAR_ID": "memelol.near", "MD_ID": "v2.ref-finance.near|4389|wrap.near", "DECIMAL": 24},
+	    {"SYMBOL": "NDC", "NEAR_ID": "ndc.tkn.near", "MD_ID": "v2.ref-finance.near|4353|blackdragon.tkn.near", "DECIMAL": 18},
+            {"SYMBOL": "PUMPOPOLY", "NEAR_ID": "token.pumpopoly.near", "MD_ID": "v2.ref-finance.near|3066|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "LNR", "NEAR_ID": "802d89b6e511b335f05024a65161bce7efc3f311.factory.bridge.near", "MD_ID": "linear-protocol-lnr", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
@@ -346,7 +357,7 @@ class Cfg:
             {"SYMBOL": "m.USDT", "MD_ID": "tether"},
             {"SYMBOL": "m.USDC", "MD_ID": "usd-coin"},
             {"SYMBOL": "MAIA", "MD_ID": "maia"},
-            {"SYMBOL": "miMATIC", "MD_ID": "mimatic"},
+            {"SYMBOL": "MAI", "MD_ID": "mimatic"},
             {"SYMBOL": "WMATIC", "MD_ID": "wmatic"},
             {"SYMBOL": "CASH", "MD_ID": "stabl-fi"},
             {"SYMBOL": "RETRO", "MD_ID": "retro-finance"},
@@ -404,7 +415,8 @@ class Cfg:
             {"SYMBOL": "WELL", "MD_ID": "moonwell-artemis"},
             {"SYMBOL": "SONNE", "MD_ID": "sonne-finance"},
             {"SYMBOL": "MENDI", "MD_ID": "mendi-finance"},
-            {"SYMBOL": "SUSHI", "MD_ID": "sushi"},
+            {"SYMBOL": "LEND", "MD_ID": "lendle"},
+	    {"SYMBOL": "SUSHI", "MD_ID": "sushi"},
             {"SYMBOL": "SLIZ", "MD_ID": "solidlizard"},
             {"SYMBOL": "AERO", "MD_ID": "aerodrome-finance"},
             {"SYMBOL": "BVM", "MD_ID": "base-velocimeter"},
@@ -424,10 +436,28 @@ class Cfg:
             {"SYMBOL": "FXS", "MD_ID": "frax-share"},
             {"SYMBOL": "VELO", "MD_ID": "velodrome-finance"},
             {"SYMBOL": "ZF", "MD_ID": "zkswap-finance"},
-            {"SYMBOL": "VC", "MD_ID": "velocore"},
+            {"SYMBOL": "velocore", "MD_ID": "velocore"},
+	    {"SYMBOL": "WPC", "MD_ID": "wepiggy-coin"},
+            {"SYMBOL": "LODE", "MD_ID": "lodestar"},
+            {"SYMBOL": "MAGIC", "MD_ID": "magic"},
+            {"SYMBOL": "FRAX", "MD_ID": "frax"},
+            {"SYMBOL": "DPX", "MD_ID": "dopex"},
+            {"SYMBOL": "AAVE", "MD_ID": "aave"},
+	    {"SYMBOL": "GRAI", "MD_ID": "grai"},
+	    {"SYMBOL": "sfrxETH", "MD_ID": "staked-frax-ether"},
+	    {"SYMBOL": "stMATIC", "MD_ID": "lido-staked-matic"},
+	    {"SYMBOL": "USDD", "MD_ID": "usdd"},
+	    {"SYMBOL": "Decentralized USD", "MD_ID": "decentralized-usd"},
+	    {"SYMBOL": "sUSD", "MD_ID": "nusd"},
+	    {"SYMBOL": "OP", "MD_ID": "optimism"},
+	    {"SYMBOL": "STG", "MD_ID": "stargate-finance"},
+	    {"SYMBOL": "SNX", "MD_ID": "havven"},
+	    {"SYMBOL": "RAM", "MD_ID": "ramses-exchange"},
+	    {"SYMBOL": "THE", "MD_ID": "thena"},
         ],
     }
-    MARKET_URL = "api.coingecko.com"
+    MARKET_URL = "pro-api.coingecko.com"
+    MARKET_KEY = MARKET_KEY
 
 
 if __name__ == '__main__':

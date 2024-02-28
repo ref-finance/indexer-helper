@@ -15,7 +15,7 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
@@ -26,8 +26,9 @@ from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import time
+import datetime
 
-service_version = "20240113.02"
+service_version = "20240220.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -77,9 +78,9 @@ def handle_latest_actions(account_id):
     try:
         ret = get_actions(Cfg.NETWORK_ID, account_id)
         json_obj = json.loads(ret)
-        for obj in json_obj:
-            if obj[1] == "":
-                obj[1] = get_tx_id(obj[7], Cfg.NETWORK_ID)
+        # for obj in json_obj:
+        #     if obj[1] == "":
+        #         obj[1] = get_tx_id(obj[7], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when get_actions: ", e)
 
@@ -235,7 +236,15 @@ def handle_list_top_pools():
     metadata = list_token_metadata(Cfg.NETWORK_ID)
 
     combine_pools_info(pools, prices, metadata)
-
+    list_top_pools_log = []
+    for pool in pools:
+        pool_log = {
+            "id": pool["id"],
+            "token_account_ids": pool["token_account_ids"],
+            "amounts": pool["amounts"],
+        }
+        list_top_pools_log.append(pool_log)
+    logger.info("list_top_pools_data:{}", list_top_pools_log)
     return compress_response_content(pools)
 
 
@@ -502,8 +511,8 @@ def handle_burrow_records():
     else:
         total_page = int(count_number / page_size) + 1
     for burrow_log in burrow_log_list:
-        if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
-            burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
+        # if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
+        #     burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
         burrow_log["change"] = ""
         if burrow_log["event"] == "borrow":
             burrow_log["event"] = "Borrow"
@@ -578,9 +587,9 @@ def handle_recent_transaction_swap():
     ret_data = []
     try:
         ret_data = query_recent_transaction_swap(Cfg.NETWORK_ID, pool_id)
-        for ret in ret_data:
-            if ret["tx_id"] is None:
-                ret["tx_id"] = get_tx_id(ret["block_hash"], Cfg.NETWORK_ID)
+        # for ret in ret_data:
+        #     if ret["tx_id"] is None:
+        #         ret["tx_id"] = get_tx_id(ret["block_hash"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when swap: ", e)
     return compress_response_content(ret_data)
@@ -593,9 +602,9 @@ def handle_recent_transaction_dcl_swap():
     ret_data = []
     try:
         ret_data = query_recent_transaction_dcl_swap(Cfg.NETWORK_ID, pool_id)
-        for ret in ret_data:
-            if ret["tx_id"] is None:
-                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+        # for ret in ret_data:
+        #     if ret["tx_id"] is None:
+        #         ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when dcl-swap: ", e)
     return compress_response_content(ret_data)
@@ -621,9 +630,10 @@ def handle_recent_transaction_liquidity():
                 "timestamp": liquidity_data["timestamp"],
                 "tx_id": liquidity_data["tx_id"],
                 "amounts": amounts,
+                "receipt_id": liquidity_data["receipt_id"]
             }
-            if ret_data["tx_id"] is None:
-                ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
+            # if ret_data["tx_id"] is None:
+            #     ret_data["tx_id"] = get_tx_id(liquidity_data["block_hash"], Cfg.NETWORK_ID)
             ret.append(ret_data)
     except Exception as e:
         print("Exception when liquidity: ", e)
@@ -640,8 +650,8 @@ def handle_recent_transaction_dcl_liquidity():
         for ret_d in ret_data:
             ret_d["amount_x"] = str(int(ret_d["amount_x"]))
             ret_d["amount_y"] = str(int(ret_d["amount_y"]))
-            if ret_d["tx_id"] is None:
-                ret_d["tx_id"] = get_tx_id(ret_d["receipt_id"], Cfg.NETWORK_ID)
+            # if ret_d["tx_id"] is None:
+            #     ret_d["tx_id"] = get_tx_id(ret_d["receipt_id"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when dcl-liquidity: ", e)
     return compress_response_content(ret_data)
@@ -654,9 +664,9 @@ def handle_recent_transaction_limit_order():
     ret_data = []
     try:
         ret_data = query_recent_transaction_limit_order(Cfg.NETWORK_ID, pool_id)
-        for ret in ret_data:
-            if ret["tx_id"] is None:
-                ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
+        # for ret in ret_data:
+        #     if ret["tx_id"] is None:
+        #         ret["tx_id"] = get_tx_id(ret["receipt_id"], Cfg.NETWORK_ID)
     except Exception as e:
         print("Exception when limit-order: ", e)
     return compress_response_content(ret_data)
@@ -801,7 +811,23 @@ def handle_dcl_points_by_account():
     return compress_response_content(ret_point_data)
 
 
-logger.add("app.log")
+@app.route('/total_supply', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_total_supple():
+    ret = "99990506.142591673655212239"
+    return ret
+
+
+@app.route('/circulating_supply', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_circulating_supply():
+    ret = get_circulating_supply()
+    return ret
+
+
+current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+log_file = "app-%s.log" % current_date
+logger.add(log_file)
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
     app.logger.info(Welcome)
