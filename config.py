@@ -305,7 +305,7 @@ class Cfg:
             {"SYMBOL": "FRAX", "NEAR_ID": "853d955acef822db058eb8505911ed77f175b99e.factory.bridge.near", "MD_ID": "frax", "DECIMAL": 18},
             {"SYMBOL": "sFRAX", "NEAR_ID": "a663b02cf0a4b149d2ad41910cb81e23e1c41c32.factory.bridge.near","MD_ID": "staked-frax", "DECIMAL": 18},
             {"SYMBOL": "BENDOG", "NEAR_ID": "benthedog.near", "MD_ID": "v2.ref-finance.near|4530|wrap.near", "DECIMAL": 9},
-            #{"SYMBOL": "UWON", "NEAR_ID": "438e48ed4ce6beecf503d43b9dbd3c30d516e7fd.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4528|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "UWON", "NEAR_ID": "438e48ed4ce6beecf503d43b9dbd3c30d516e7fd.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4528|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
