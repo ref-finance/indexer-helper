@@ -459,6 +459,7 @@ class Cfg:
             {"SYMBOL": "RAM", "MD_ID": "ramses-exchange"},
             {"SYMBOL": "THE", "MD_ID": "thena"},
             {"SYMBOL": "Lynex", "MD_ID": "lynex"},
+            {"SYMBOL": "XVS", "MD_ID": "venus"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
