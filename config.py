@@ -307,6 +307,7 @@ class Cfg:
             {"SYMBOL": "BENDOG", "NEAR_ID": "benthedog.near", "MD_ID": "v2.ref-finance.near|4530|wrap.near", "DECIMAL": 9},
             {"SYMBOL": "UWON", "NEAR_ID": "438e48ed4ce6beecf503d43b9dbd3c30d516e7fd.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4528|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "NVIDIA", "NEAR_ID": "nearnvidia.near", "MD_ID": "v2.ref-finance.near|4547|wrap.near", "DECIMAL": 8},
+            {"SYMBOL": "BEAN", "NEAR_ID": "bean.tkn.near", "MD_ID": "v2.ref-finance.near|4472|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
