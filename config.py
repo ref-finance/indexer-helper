@@ -464,6 +464,7 @@ class Cfg:
             {"SYMBOL": "XVS", "MD_ID": "venus"},
             {"SYMBOL": "VALAS", "MD_ID": "valas-finance"},
             {"SYMBOL": "MANTA", "MD_ID": "manta-network"},
+            {"SYMBOL": "MIM", "MD_ID": "magic-internet-money"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
