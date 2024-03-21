@@ -28,7 +28,7 @@ from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_po
 import time
 import datetime
 
-service_version = "20240312.01"
+service_version = "20240321.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
