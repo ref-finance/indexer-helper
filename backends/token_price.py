@@ -116,7 +116,7 @@ def market_price(network_id, tokens, base_tokens):
     if obj and len(obj) > 0:
         for token in tokens:
             md_id = token["MD_ID"]
-            if md_id in obj:
+            if md_id in obj and "usd" in obj[md_id]:
                 market_tokens_price.append({
                     "NEAR_ID": token["NEAR_ID"], 
                     "BASE_ID": "", 
@@ -212,7 +212,7 @@ def handel_base_token_price(network_id, base_tokens, base_obj):
     if base_obj and len(base_obj) > 0:
         for base_token in base_tokens:
             md_id = base_token["MD_ID"]
-            if md_id in base_obj:
+            if md_id in base_obj and "usd" in base_obj[md_id]:
                 tokens_price.append({
                     "SYMBOL": base_token["SYMBOL"],
                     "price": '{:.9f}'.format(base_obj[md_id]["usd"])
