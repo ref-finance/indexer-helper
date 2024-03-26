@@ -467,6 +467,9 @@ class Cfg:
             {"SYMBOL": "MANTA", "MD_ID": "manta-network"},
             {"SYMBOL": "MIM", "MD_ID": "magic-internet-money"},
             {"SYMBOL": "CAKE", "MD_ID": "pancakeswap-token"},
+            {"SYMBOL": "THALES", "MD_ID": "thales"},
+            {"SYMBOL": "HAN", "MD_ID": "hanchain"},
+            {"SYMBOL": "LYRA", "MD_ID": "lyra-finance"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
