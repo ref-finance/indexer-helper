@@ -14,7 +14,7 @@ def pool_price(network_id, tokens):
     # tokens = [{"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8}, ...]
     # return [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "wrap.testnet", "price": "nnnnnn"}, ...]
     pool_tokens_price = []
-    print("pool_price tokens:", tokens)
+    # print("pool_price tokens:", tokens)
     try:
         conn = MultiNodeJsonProvider(network_id)
         for token in tokens:
