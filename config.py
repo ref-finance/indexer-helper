@@ -485,6 +485,7 @@ class Cfg:
             {"SYMBOL": "BCat", "MD_ID": "bananacat"},
             {"SYMBOL": "wstETH", "MD_ID": "aave-v3-wsteth"},
             {"SYMBOL": "ezETH", "MD_ID": "renzo-restaked-eth"},
+            {"SYMBOL": "oETH", "MD_ID": "origin-ether"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
