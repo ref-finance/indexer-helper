@@ -474,7 +474,7 @@ class Cfg:
             {"SYMBOL": "OMNI", "MD_ID": "omni"},
             {"SYMBOL": "BAG", "MD_ID": "bag"},
             {"SYMBOL": "DACKIE", "MD_ID": "dackieswap"},
-            {"SYMBOL": "USDB", "MD_ID": "usd-balance"},
+            {"SYMBOL": "USDB", "MD_ID": "usdb"},
             {"SYMBOL": "OLE", "MD_ID": "olecoin"},
             {"SYMBOL": "SBF", "MD_ID": "sam-bankmeme-fried"},
             {"SYMBOL": "GLORY", "MD_ID": "sekai-glory"},
