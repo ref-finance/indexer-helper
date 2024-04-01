@@ -488,6 +488,7 @@ class Cfg:
             {"SYMBOL": "oETH", "MD_ID": "origin-ether"},
             {"SYMBOL": "WMETIS", "MD_ID": "wmetis"},
             {"SYMBOL": "artMETIS", "MD_ID": "wmetis"},
+            {"SYMBOL": "XFIT", "MD_ID": "xfit"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
