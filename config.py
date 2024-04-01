@@ -487,6 +487,7 @@ class Cfg:
             {"SYMBOL": "ezETH", "MD_ID": "renzo-restaked-eth"},
             {"SYMBOL": "oETH", "MD_ID": "origin-ether"},
             {"SYMBOL": "WMETIS", "MD_ID": "wmetis"},
+            {"SYMBOL": "artMETIS", "MD_ID": "wmetis"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
