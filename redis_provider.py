@@ -149,6 +149,19 @@ def list_token_metadata(network_id):
     return metadata_obj
 
 
+def list_token_metadata_v2(network_id):
+    import json
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"])
+    r.close()
+    metadata_obj = {}
+    for key, value in ret.items():
+        token_data = json.loads(value)
+        token_data.pop("icon")
+        metadata_obj[key] = token_data
+    return metadata_obj
+
+
 def get_proposal_hash_by_id(network_id: str, id_list: list) -> list:
     proposal_list = []
     r=redis.StrictRedis(connection_pool=pool)
