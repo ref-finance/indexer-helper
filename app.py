@@ -12,7 +12,7 @@ import json
 import logging
 from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price, list_base_token_price
-from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool
+from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_metadata_v2
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply
@@ -28,7 +28,7 @@ from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_po
 import time
 import datetime
 
-service_version = "20240321.01"
+service_version = "20240403.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -204,6 +204,16 @@ def handle_list_token():
     list_token
     """
     ret = list_token_metadata(Cfg.NETWORK_ID)
+    return compress_response_content(ret)
+
+
+@app.route('/list-token-v2', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_list_token_v2():
+    """
+    list_token
+    """
+    ret = list_token_metadata_v2(Cfg.NETWORK_ID)
     return compress_response_content(ret)
 
 
