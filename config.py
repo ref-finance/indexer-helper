@@ -489,6 +489,11 @@ class Cfg:
             {"SYMBOL": "WMETIS", "MD_ID": "wmetis"},
             {"SYMBOL": "artMETIS", "MD_ID": "wmetis"},
             {"SYMBOL": "XFIT", "MD_ID": "xfit"},
+            {"SYMBOL": "YES", "MD_ID": "yes-money"},
+            {"SYMBOL": "mwstETH-WPUNKS:20", "MD_ID": "metastreet-v2-mwsteth-wpunks-20"},
+            {"SYMBOL": "JUICE", "MD_ID": "juice-finance"},
+            {"SYMBOL": "$WAI", "MD_ID": "ai-waifu"},
+            {"SYMBOL": "ANDY", "MD_ID": "andyerc"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
