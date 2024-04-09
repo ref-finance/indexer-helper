@@ -164,6 +164,10 @@ class Cfg:
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
             "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
+            "CRYPTO_AES_KEY": "8309c61008a5f5ba6c51bbf977781c55",
+            "AUTH_SWITCH": True,
+            "AUTH_LIST": ["http://127.0.0.1:28080/authentication"],
+            "SIGN_EXPIRE": 300
         }
     }
     TOKENS = {

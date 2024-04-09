@@ -25,8 +25,9 @@ import re
 from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
-import time
 import datetime
+from auth.crypto_utl import decrypt
+import time
 
 service_version = "20240403.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -45,8 +46,19 @@ limiter = Limiter(
 @app.before_request
 def before_request():
     # Processing get requests
-    headers = request.headers.get("Authentication")
+    headers_authentication = request.headers.get("Authentication")
     path = request.url
+    if Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_SWITCH"] and path in Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_LIST"]:
+        try:
+            decrypted_data = json.loads(decrypt(headers_authentication, Cfg.NETWORK[Cfg.NETWORK_ID]["CRYPTO_AES_KEY"]))
+            flip_time = int(decrypted_data["time"])
+            if path != decrypted_data["path"]:
+                return 'path error', 401
+            if int(time.time()) - flip_time > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"] or flip_time - int(time.time()) > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"]:
+                return 'time expired', 401
+        except Exception as e:
+            logger.error("decrypt error:", e)
+            return 'Authentication error', 401
     data = request.args
     for v in data.values():
         v = str(v).lower()
@@ -54,6 +66,14 @@ def before_request():
         r = re.search(pattern, v)
         if r:
             return 'Please enter the parameters of the specification!'
+
+
+@app.route('/authentication', methods=['GET'])
+@flask_cors.cross_origin()
+def handle_authentication():
+    headers_authentication = request.headers.get("Authentication")
+    ret = decrypt(headers_authentication, Cfg.NETWORK[Cfg.NETWORK_ID]["CRYPTO_AES_KEY"])
+    return ret
 
 
 # route()Method is used to set the route; Similar to spring routing configuration
