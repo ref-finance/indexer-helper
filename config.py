@@ -495,6 +495,7 @@ class Cfg:
             {"SYMBOL": "JUICE", "MD_ID": "juice-finance"},
             {"SYMBOL": "$WAI", "MD_ID": "ai-waifu"},
             {"SYMBOL": "ANDY", "MD_ID": "andyerc"},
+            {"SYMBOL": "SEAM", "MD_ID": "seamless-protocol"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
