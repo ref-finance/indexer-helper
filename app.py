@@ -46,19 +46,22 @@ limiter = Limiter(
 @app.before_request
 def before_request():
     # Processing get requests
-    headers_authentication = request.headers.get("Authentication")
-    path = request.url
-    if Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_SWITCH"] and path in Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_LIST"]:
+    path = request.path
+    if Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_SWITCH"]:
         try:
+            headers_authentication = request.headers.get("Authentication")
+            if headers_authentication is None or headers_authentication == "":
+                return 'Authentication error'
             decrypted_data = json.loads(decrypt(headers_authentication, Cfg.NETWORK[Cfg.NETWORK_ID]["CRYPTO_AES_KEY"]))
             flip_time = int(decrypted_data["time"])
             if path != decrypted_data["path"]:
-                return 'path error', 401
-            if int(time.time()) - flip_time > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"] or flip_time - int(time.time()) > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"]:
-                return 'time expired', 401
+                return 'path error'
+            if int(time.time()) - flip_time > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"] or flip_time - int(
+                    time.time()) > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"]:
+                return 'time expired'
         except Exception as e:
             logger.error("decrypt error:", e)
-            return 'Authentication error', 401
+            return 'Authentication error'
     data = request.args
     for v in data.values():
         v = str(v).lower()
@@ -71,9 +74,24 @@ def before_request():
 @app.route('/authentication', methods=['GET'])
 @flask_cors.cross_origin()
 def handle_authentication():
-    headers_authentication = request.headers.get("Authentication")
-    ret = decrypt(headers_authentication, Cfg.NETWORK[Cfg.NETWORK_ID]["CRYPTO_AES_KEY"])
-    return ret
+    decrypted_data = "null"
+    path = request.path
+    if Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_SWITCH"]:
+        try:
+            headers_authentication = request.headers.get("Authentication")
+            if headers_authentication is None or headers_authentication == "":
+                return 'Authentication error'
+            decrypted_data = json.loads(decrypt(headers_authentication, Cfg.NETWORK[Cfg.NETWORK_ID]["CRYPTO_AES_KEY"]))
+            flip_time = int(decrypted_data["time"])
+            if path != decrypted_data["path"]:
+                return 'path error'
+            if int(time.time()) - flip_time > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"] or flip_time - int(
+                    time.time()) > Cfg.NETWORK[Cfg.NETWORK_ID]["SIGN_EXPIRE"]:
+                return 'time expired'
+        except Exception as e:
+            logger.error("decrypt error:", e)
+            return 'Authentication error'
+    return decrypted_data
 
 
 # route()Method is used to set the route; Similar to spring routing configuration
