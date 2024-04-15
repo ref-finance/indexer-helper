@@ -496,6 +496,7 @@ class Cfg:
             {"SYMBOL": "$WAI", "MD_ID": "ai-waifu"},
             {"SYMBOL": "ANDY", "MD_ID": "andyerc"},
             {"SYMBOL": "SEAM", "MD_ID": "seamless-protocol"},
+            {"SYMBOL": "rsETH", "MD_ID": "kelp-dao-restaked-eth"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
