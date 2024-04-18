@@ -497,6 +497,18 @@ class Cfg:
             {"SYMBOL": "ANDY", "MD_ID": "andyerc"},
             {"SYMBOL": "SEAM", "MD_ID": "seamless-protocol"},
             {"SYMBOL": "rsETH", "MD_ID": "kelp-dao-restaked-eth"},
+            {"SYMBOL": "LEET", "MD_ID": "leetswap-canto"},
+            {"SYMBOL": "FPI", "MD_ID": "frax-price-index"},
+            {"SYMBOL": "FPIS", "MD_ID": "frax-price-index-share"},
+            {"SYMBOL": "ankrETH", "MD_ID": "ankreth"},
+            {"SYMBOL": "weETH", "MD_ID": "wrapped-eeth"},
+            {"SYMBOL": "EURA", "MD_ID": "ageur"},
+            {"SYMBOL": "CRV", "MD_ID": "curve-dao-token"},
+            {"SYMBOL": "DUSD", "MD_ID": "davos-protocol"},
+            {"SYMBOL": "MaticX", "MD_ID": "stader-maticx"},
+            {"SYMBOL": "ZENF", "MD_ID": "zenland"},
+            {"SYMBOL": "RPL", "MD_ID": "rocket-pool"},
+            {"SYMBOL": "LYNX", "MD_ID": "lynex"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
