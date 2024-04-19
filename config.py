@@ -509,6 +509,8 @@ class Cfg:
             {"SYMBOL": "ZENF", "MD_ID": "zenland"},
             {"SYMBOL": "RPL", "MD_ID": "rocket-pool"},
             {"SYMBOL": "LYNX", "MD_ID": "lynex"},
+            {"SYMBOL": "ZETA", "MD_ID": "zetachain"},
+            {"SYMBOL": "USDV", "MD_ID": "usdv-2"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
