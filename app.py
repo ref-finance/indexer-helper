@@ -20,7 +20,8 @@ from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
-    query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token
+    query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
+    query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data
 import re
 from flask_limiter import Limiter
 from loguru import logger
@@ -29,7 +30,7 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 
-service_version = "20240409.01"
+service_version = "20240417.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -873,6 +874,34 @@ def handle_total_supple():
 def handle_circulating_supply():
     ret = get_circulating_supply()
     return ret
+
+
+@app.route('/crm/orderly/trading-data', methods=['GET', 'POST', 'PUT'])
+@flask_cors.cross_origin()
+def handle_crm_orderly_data():
+    try:
+        ret = {
+            "code": 0,
+            "msg": "success"
+        }
+        json_data = request.get_json()
+        broker_id = json_data["data"]["broker_id"]
+        if "health_check" == broker_id:
+            return ret
+        logger.info(f"orderly trading data:{json_data}")
+        signature = request.headers.get("signature")
+        logger.info("signature:{}", signature)
+        trading_data_info = json_data["data"]
+        trading_data_info["timestamp"] = json_data["timestamp"]
+        symbol_data = trading_data_info["symbol"].split("_")
+        trading_data_info["data_source"] = "orderly"
+        trading_data_info["trading_type"] = symbol_data[0]
+        trading_data_info["token_in"] = symbol_data[1]
+        trading_data_info["token_out"] = symbol_data[2]
+        add_orderly_trading_data(trading_data_info)
+        return ret
+    except Exception as e:
+        logger.error("handle orderly trading data error:{}", e)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")

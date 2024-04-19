@@ -52,6 +52,16 @@ def get_near_lake_dcl_connect(network_id: str):
     return conn
 
 
+def get_crm_db_connect(network_id: str):
+    conn = pymysql.connect(
+        host=Cfg.NETWORK[network_id]["DB_HOST"],
+        port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
+        user=Cfg.NETWORK[network_id]["DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
+        db="crm")
+    return conn
+
+
 def get_liquidity_pools(network_id, account_id):
     ret = []
     db_conn = get_near_lake_connect(network_id)
@@ -1181,6 +1191,31 @@ def query_dcl_user_change_log(network_id, pool_id, account_id, user_token_timest
         return recent_transaction_data
     except Exception as e:
         print("query t_liquidity_added to db error:", e)
+    finally:
+        cursor.close()
+
+
+def add_orderly_trading_data(trading_data_info):
+    db_conn = get_crm_db_connect(Cfg.NETWORK_ID)
+    sql = "insert into t_trading(data_source, trading_type, token_in, token_out, side, `status`, order_id, " \
+          "account_id, price, type, quantity, amount, executed, visible, total_fee, fee_asset, client_order_id, " \
+          "average_executed_price, created_time, updated_time, `timestamp`, create_time) values(%s,%s,%s,%s,%s,%s," \
+          "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())"
+    par = (trading_data_info["data_source"], trading_data_info["trading_type"], trading_data_info["token_in"],
+           trading_data_info["token_out"], trading_data_info["side"], trading_data_info["status"],
+           trading_data_info["order_id"], trading_data_info["account_id"], trading_data_info["price"],
+           trading_data_info["type"], trading_data_info["quantity"], trading_data_info["amount"],
+           trading_data_info["executed"], trading_data_info["visible"], trading_data_info["total_fee"],
+           trading_data_info["fee_asset"], trading_data_info["client_order_id"],
+           trading_data_info["average_executed_price"], trading_data_info["created_time"],
+           trading_data_info["updated_time"], trading_data_info["timestamp"])
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, par)
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        raise e
     finally:
         cursor.close()
 
