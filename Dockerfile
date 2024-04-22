@@ -1,6 +1,6 @@
 FROM python:3.10
 
-ADD ./ /indexer/
+COPY ./ /indexer/
 WORKDIR /indexer/
 
 RUN python3 -m venv venv && \
