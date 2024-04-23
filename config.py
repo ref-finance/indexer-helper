@@ -46,7 +46,7 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY
+    from db_info import MARKET_KEY, MARKET_URL
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
