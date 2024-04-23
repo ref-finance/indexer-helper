@@ -2,11 +2,10 @@ import sys
 sys.path.append('../')
 from near_multinode_rpc_provider import MultiNodeJsonProviderError,  MultiNodeJsonProvider
 from redis_provider import RedisProvider
-import http.client
+import requests
 from config import Cfg
 import json
 import time
-import sys
 from db_provider import add_history_token_price
 
 
@@ -76,39 +75,13 @@ def pool_price(network_id, tokens):
 
 
 def market_price(network_id, tokens, base_tokens):
-    # tokens = [{"SYMBOL": "ref", "NEAR_ID": "rft.tokenfactory.testnet", "MD_ID": "ref-finance.testnet|24|wrap.testnet", "DECIMAL": 8}, ...]
-    # return [{"NEAR_ID": "rft.tokenfactory.testnet", "BASE_ID": "", "price": "nnnnnn"}, ...]
     market_tokens_price = []
-    md_ids = []
-    base_md_ids = []
     obj = None
     try:
-        conn = http.client.HTTPSConnection(Cfg.MARKET_URL, port=443)
-        headers = {"Content-type": "application/json; charset=utf-8", "cache-control": "no-cache"}
-
-        for token in tokens:
-            md_ids.append(token["MD_ID"])
-
-        token_str = ",".join(md_ids)
-        # print(token_str)
-        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd&x_cg_pro_api_key=%s" % (token_str, Cfg.MARKET_KEY), headers=headers)
-        res = conn.getresponse()
-        print(res.status, res.reason)
-        data = res.read()
-
-        for base_token in base_tokens:
-            base_md_ids.append(base_token["MD_ID"])
-
-        base_token_str = ",".join(base_md_ids)
-        conn.request("GET", "/api/v3/simple/price?ids=%s&vs_currencies=usd&x_cg_pro_api_key=%s" % (base_token_str, Cfg.MARKET_KEY), headers=headers)
-        base_res = conn.getresponse()
-        print(res.status, base_res.reason)
-        base_data = base_res.read()
-        conn.close()
-        obj = json.loads(data.decode("utf-8"))
-        base_obj = json.loads(base_data.decode("utf-8"))
-        handel_base_token_price(network_id, base_tokens, base_obj)
-        # {'tether': {'usd': 1.0}, 'near': {'usd': 3.29}, 'dai': {'usd': 1.0}}
+        response = requests.get(Cfg.MARKET_URL)
+        data = response.text
+        obj = json.loads(data)
+        handel_base_token_price(network_id, base_tokens, obj)
         print('[debug][%s]%s' % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), obj))
     except Exception as e:
         print("Error: ", e)
