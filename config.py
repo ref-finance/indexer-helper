@@ -49,6 +49,7 @@ try:
     from db_info import MARKET_KEY
 except ImportError:
     MARKET_KEY = ""
+    MARKET_URL = ""
 
 """
 
@@ -499,7 +500,7 @@ class Cfg:
             {"SYMBOL": "rsETH", "MD_ID": "kelp-dao-restaked-eth"},
         ],
     }
-    MARKET_URL = "http://127.0.0.1:8002/get_market_token_price"
+    MARKET_URL = MARKET_URL
     MARKET_KEY = MARKET_KEY
 
 
