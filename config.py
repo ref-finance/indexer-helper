@@ -49,6 +49,7 @@ try:
     from db_info import MARKET_KEY
 except ImportError:
     MARKET_KEY = ""
+    MARKET_URL = ""
 
 """
 
@@ -514,7 +515,7 @@ class Cfg:
             {"SYMBOL": "ORBIT", "MD_ID": "orbit-protocol"},
         ],
     }
-    MARKET_URL = "pro-api.coingecko.com"
+    MARKET_URL = MARKET_URL
     MARKET_KEY = MARKET_KEY
 
 
