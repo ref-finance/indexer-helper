@@ -511,6 +511,7 @@ class Cfg:
             {"SYMBOL": "LYNX", "MD_ID": "lynex"},
             {"SYMBOL": "ZETA", "MD_ID": "zetachain"},
             {"SYMBOL": "USDV", "MD_ID": "usdv-2"},
+            {"SYMBOL": "ORBIT", "MD_ID": "orbit-protocol"},
         ],
     }
     MARKET_URL = "pro-api.coingecko.com"
