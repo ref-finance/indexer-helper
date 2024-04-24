@@ -10,7 +10,7 @@ except ImportError:
     MAINNET_RPC_URL= ["https://rpc.mainnet.near.org", ]
 
 try:
-    from redis_info import REDIS_HOST, REDIS_PORT
+    from db_info import REDIS_HOST, REDIS_PORT
 except ImportError:
     REDIS_HOST = "127.0.0.1"
     REDIS_PORT = "6379"
