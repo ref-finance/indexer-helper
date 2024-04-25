@@ -6,7 +6,7 @@ import requests
 from config import Cfg
 import json
 import time
-from db_provider import add_history_token_price
+# from db_provider import add_history_token_price
 
 
 def pool_price(network_id, tokens):
@@ -149,25 +149,25 @@ def update_price(network_id):
     except Exception as e:
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
 
-    try:
-        if len(tokens_price) > 0:
-            for token in tokens_price:
-                if token["BASE_ID"] != "":
-                    if token["NEAR_ID"] == "xtoken.ref-finance.near":
-                        ref_token_price = get_base_id_price(tokens_price, price_ref, decimals, token["BASE_ID"])
-                        if ref_token_price > 0:
-                            price = int(token["price"]) / 100000000 * ref_token_price
-                            add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
-                    elif token["BASE_ID"] in price_ref:
-                        price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
-
-                        add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
-                    else:
-                        print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
-                else:
-                    add_history_token_price(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["NEAR_ID"]], network_id)
-    except Exception as e:
-        print("Error occurred when update to db, Error is: ", e)
+    # try:
+    #     if len(tokens_price) > 0:
+    #         for token in tokens_price:
+    #             if token["BASE_ID"] != "":
+    #                 if token["NEAR_ID"] == "xtoken.ref-finance.near":
+    #                     ref_token_price = get_base_id_price(tokens_price, price_ref, decimals, token["BASE_ID"])
+    #                     if ref_token_price > 0:
+    #                         price = int(token["price"]) / 100000000 * ref_token_price
+    #                         add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
+    #                 elif token["BASE_ID"] in price_ref:
+    #                     price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
+    #
+    #                     add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
+    #                 else:
+    #                     print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
+    #             else:
+    #                 add_history_token_price(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["NEAR_ID"]], network_id)
+    # except Exception as e:
+    #     print("Error occurred when update to db, Error is: ", e)
 
 
 def get_base_id_price(tokens_price, price_ref, decimals, base_id):

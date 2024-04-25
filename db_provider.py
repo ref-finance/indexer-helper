@@ -329,20 +329,20 @@ def add_dcl_pools_to_db(data_list, network_id):
     zero_point = int(time.time()) - int(time.time() - time.timezone) % 86400
     time_array = time.localtime(zero_point)
     check_point = time.strftime("%Y-%m-%d", time_array)
-    db_conn = get_db_connect(network_id)
-
-    db_table = "t_dcl_pools_data"
-    if network_id == "MAINNET":
-        db_table = "t_dcl_pools_data_mainnet"
-
-    sql = "insert into " + db_table + "(pool_id, token_x, token_y, volume_x_in, volume_y_in, volume_x_out, " \
-          "volume_y_out, total_order_x, total_order_y, total_x, total_y, total_fee_x_charged, total_fee_y_charged, " \
-          "volume_x_in_grow, volume_y_in_grow, volume_x_out_grow, volume_y_out_grow, total_order_x_grow, " \
-          "total_order_y_grow, token_x_price, token_y_price, token_x_decimal, token_y_decimal, timestamp, create_time) " \
-          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())"
-
-    insert_data = []
-    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    # db_conn = get_db_connect(network_id)
+    #
+    # db_table = "t_dcl_pools_data"
+    # if network_id == "MAINNET":
+    #     db_table = "t_dcl_pools_data_mainnet"
+    #
+    # sql = "insert into " + db_table + "(pool_id, token_x, token_y, volume_x_in, volume_y_in, volume_x_out, " \
+    #       "volume_y_out, total_order_x, total_order_y, total_x, total_y, total_fee_x_charged, total_fee_y_charged, " \
+    #       "volume_x_in_grow, volume_y_in_grow, volume_x_out_grow, volume_y_out_grow, total_order_x_grow, " \
+    #       "total_order_y_grow, token_x_price, token_y_price, token_x_decimal, token_y_decimal, timestamp, create_time) " \
+    #       "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())"
+    #
+    # insert_data = []
+    # cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         token_price = get_dcl_token_price(network_id)
         for data in data_list:
@@ -357,13 +357,13 @@ def add_dcl_pools_to_db(data_list, network_id):
                 token_y_price = token_price[data["token_y"]]["price"]
                 token_y_decimal = token_price[data["token_y"]]["decimal"]
 
-            insert_data.append((data["pool_id"], data["token_x"], data["token_y"], data["volume_x_in"],
-                                data["volume_y_in"], data["volume_x_out"], data["volume_y_out"], data["total_order_x"],
-                                data["total_order_y"], data["total_x"], data["total_y"], data["total_fee_x_charged"],
-                                data["total_fee_y_charged"], data["volume_x_in_grow"],
-                                data["volume_y_in_grow"], data["volume_x_out_grow"], data["volume_y_out_grow"],
-                                data["total_order_x_grow"], data["total_order_y_grow"], token_x_price,
-                                token_y_price, token_x_decimal, token_y_decimal, now))
+            # insert_data.append((data["pool_id"], data["token_x"], data["token_y"], data["volume_x_in"],
+            #                     data["volume_y_in"], data["volume_x_out"], data["volume_y_out"], data["total_order_x"],
+            #                     data["total_order_y"], data["total_x"], data["total_y"], data["total_fee_x_charged"],
+            #                     data["total_fee_y_charged"], data["volume_x_in_grow"],
+            #                     data["volume_y_in_grow"], data["volume_x_out_grow"], data["volume_y_out_grow"],
+            #                     data["total_order_x_grow"], data["total_order_y_grow"], token_x_price,
+            #                     token_y_price, token_x_decimal, token_y_decimal, now))
 
             pool_id = data["pool_id"] + "_" + check_point
             order_x_price = (int(data["total_x"]) - int(data["total_fee_x_charged"])) / int("1" + "0" * int(token_x_decimal)) * float(token_x_price)
@@ -376,17 +376,18 @@ def add_dcl_pools_to_db(data_list, network_id):
             }
             add_dcl_pools_tvl_to_redis(network_id, pool_id, pool_tvl_data)
 
-        cursor.executemany(sql, insert_data)
-        db_conn.commit()
+        # cursor.executemany(sql, insert_data)
+        # db_conn.commit()
         handle_dcl_pools_to_redis_data(network_id, zero_point)
 
     except Exception as e:
         # Rollback on error
-        db_conn.rollback()
+        # db_conn.rollback()
         print("insert dcl_pools to db error:", e)
-        print("insert dcl_pools to db insert_data:", insert_data)
+        # print("insert dcl_pools to db insert_data:", insert_data)
     finally:
-        cursor.close()
+        # cursor.close()
+        pass
 
 
 def handle_dcl_pools_to_redis_data(network_id, zero_point):
