@@ -836,34 +836,6 @@ def handle_circulating_supply():
     return ret
 
 
-@app.route('/crm/orderly/trading-data', methods=['GET', 'POST', 'PUT'])
-@flask_cors.cross_origin()
-def handle_crm_orderly_data():
-    try:
-        ret = {
-            "code": 0,
-            "msg": "success"
-        }
-        json_data = request.get_json()
-        broker_id = json_data["data"]["broker_id"]
-        if "health_check" == broker_id:
-            return ret
-        logger.info(f"orderly trading data:{json_data}")
-        signature = request.headers.get("signature")
-        logger.info("signature:{}", signature)
-        trading_data_info = json_data["data"]
-        trading_data_info["timestamp"] = json_data["timestamp"]
-        symbol_data = trading_data_info["symbol"].split("_")
-        trading_data_info["data_source"] = "orderly"
-        trading_data_info["trading_type"] = symbol_data[0]
-        trading_data_info["token_in"] = symbol_data[1]
-        trading_data_info["token_out"] = symbol_data[2]
-        add_orderly_trading_data(trading_data_info)
-        return ret
-    except Exception as e:
-        logger.error("handle orderly trading data error:{}", e)
-
-
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 log_file = "app-%s.log" % current_date
 logger.add(log_file)
