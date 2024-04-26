@@ -8,6 +8,7 @@ from flask import Flask
 from flask import request
 from flask import jsonify
 import flask_cors
+from flask_cors import CORS
 import json
 import logging
 from indexer_provider import get_proposal_id_hash
@@ -35,6 +36,7 @@ Welcome = 'Welcome to ref datacenter API server, version ' + service_version + '
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
 limiter = Limiter(
     app,
     key_func=get_ip_address,
