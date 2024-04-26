@@ -7,8 +7,6 @@ from http.client import responses
 from flask import Flask
 from flask import request
 from flask import jsonify
-import flask_cors
-from flask_cors import CORS
 import json
 import logging
 from indexer_provider import get_proposal_id_hash
@@ -31,12 +29,11 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 
-service_version = "20240417.01"
+service_version = "20240426.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
 limiter = Limiter(
     app,
     key_func=get_ip_address,
@@ -75,7 +72,6 @@ def before_request():
 
 
 @app.route('/authentication', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_authentication():
     decrypted_data = "null"
     path = request.path
@@ -104,7 +100,6 @@ def hello_world():
 
 
 @app.route('/timestamp', methods=['GET'])
-@flask_cors.cross_origin()
 @limiter.limit("1/5 second")
 def handle_timestamp():
     import time
@@ -112,7 +107,6 @@ def handle_timestamp():
 
 
 @app.route('/latest-actions/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_latest_actions(account_id):
     """
     get user's latest actions
@@ -131,7 +125,6 @@ def handle_latest_actions(account_id):
 
 
 @app.route('/liquidity-pools/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_liquidity_pools(account_id):
     """
     get user's liqudity pools
@@ -152,7 +145,6 @@ def handle_liquidity_pools(account_id):
 
 
 @app.route('/list-farms', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_farms():
     """
     list_farms
@@ -162,7 +154,6 @@ def handle_list_farms():
 
 
 @app.route('/get-token-price', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_get_token_price():
     """
     list_token_price
@@ -178,7 +169,6 @@ def handle_get_token_price():
 
 
 @app.route('/list-token-price', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_token_price():
     """
     list_token_price
@@ -215,14 +205,12 @@ def handle_list_token_price():
 
 
 @app.route('/get-token-price-by-dapdap', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_base_token_price():
     prices = list_base_token_price(Cfg.NETWORK_ID)
     return compress_response_content(prices)
 
 
 @app.route('/list-token-price-by-ids', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_token_price_by_ids():
     """
     list_token_price_by_ids
@@ -241,7 +229,6 @@ def handle_list_token_price_by_ids():
 
 
 @app.route('/list-token', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_token():
     """
     list_token
@@ -251,7 +238,6 @@ def handle_list_token():
 
 
 @app.route('/list-token-v2', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_token_v2():
     """
     list_token
@@ -261,7 +247,6 @@ def handle_list_token_v2():
 
 
 @app.route('/get-pool', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_get_pool():
     """
     get_pool
@@ -278,7 +263,6 @@ def handle_get_pool():
 
 
 @app.route('/list-top-pools', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_top_pools():
     """
     list_top_pools
@@ -302,7 +286,6 @@ def handle_list_top_pools():
 
 
 @app.route('/list-pools', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_pools():
     """
     list_pools
@@ -320,7 +303,6 @@ def handle_list_pools():
 
 
 @app.route('/list-pools-by-tokens', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_pools_by_tokens():
     """
     list_pools_by_tokens
@@ -338,7 +320,6 @@ def handle_list_pools_by_tokens():
 
 
 @app.route('/list-pools-by-ids', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_list_pools_by_ids():
     """
     list_pools_by_ids
@@ -356,7 +337,6 @@ def handle_list_pools_by_ids():
 
 
 @app.route('/whitelisted-active-pools', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_whitelisted_active_pools():
     """
     handle_whitelisted_active_pools
@@ -385,7 +365,6 @@ def handle_whitelisted_active_pools():
 
 
 @app.route('/to-coingecko', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_to_coingecko():
     """
     handle_price_to_coingecko
@@ -408,7 +387,7 @@ def handle_to_coingecko():
                 float(pool['amounts'][1]) / (10 ** metadata[token1]["decimals"])
             )
             key = "%s-%s" % (pool["token_symbols"][0], pool["token_symbols"][1])
-            # add token0_ref_price = token1_price * token1_balance / token0_balance 
+            # add token0_ref_price = token1_price * token1_balance / token0_balance
             if balance0 > 0 and balance1 > 0:
                 vol_to_other_token = {"input": "0", "output": "0"}
                 vol_from_other_token = {"input": "0", "output": "0"}
@@ -432,7 +411,6 @@ def handle_to_coingecko():
 
 
 @app.route('/list-history-token-price-by-ids', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_history_token_price_by_ids():
     ids = request.args.get("ids", "")
     ids = ("|" + ids.lstrip("|").rstrip("|") + "|")
@@ -443,14 +421,12 @@ def handle_history_token_price_by_ids():
 
 
 @app.route('/get-service-version', methods=['GET'])
-@flask_cors.cross_origin()
 @limiter.limit("1/second")
 def get_service_version():
     return jsonify(service_version)
 
 
 @app.route('/get-proposal-hash-by-id', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_proposal_hash():
     ret = []
     proposal_id = request.args.get("proposal_id")
@@ -471,7 +447,6 @@ def handle_proposal_hash():
 
 
 @app.route('/get-24h-volume-by-id', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_24h_pool_volume():
     pool_id = request.args.get("pool_id")
     if pool_id is None:
@@ -481,7 +456,6 @@ def handle_24h_pool_volume():
 
 
 @app.route('/get-dcl-pools-volume', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_dcl_pools_volume():
     pool_id = request.args.get("pool_id")
     if pool_id is None:
@@ -491,14 +465,12 @@ def handle_dcl_pools_volume():
 
 
 @app.route('/get-24h-volume-list', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_24h_pool_volume_list():
     res = get_24h_pool_volume_list(Cfg.NETWORK_ID)
     return compress_response_content(res)
 
 
 @app.route('/get-dcl-pools-tvl-list', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_dcl_pools_tvl_list():
     pool_id = request.args.get("pool_id")
     if pool_id is None:
@@ -508,21 +480,18 @@ def handle_dcl_pools_tvl_list():
 
 
 @app.route('/get-limit-order-log-by-account/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
 def get_limit_order_log_by_account(account_id):
     res = query_limit_order_log(Cfg.NETWORK_ID, account_id)
     return compress_response_content(res)
 
 
 @app.route('/get-limit-order-swap-by-account/<account_id>', methods=['GET'])
-@flask_cors.cross_origin()
 def get_limit_order_swap_by_account(account_id):
     res = query_limit_order_swap(Cfg.NETWORK_ID, account_id)
     return compress_response_content(res)
 
 
 @app.route('/get-assets-by-account', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_assets_by_account():
     account_id = request.args.get("account_id")
     dimension = request.args.get("dimension")
@@ -536,7 +505,6 @@ def handle_assets_by_account():
 
 
 @app.route('/token-price-report', methods=['GET'])
-@flask_cors.cross_origin()
 def token_price_ratio_report():
     token = request.args.get("token")
     base_token = request.args.get("base_token")
@@ -551,7 +519,6 @@ def token_price_ratio_report():
 
 
 @app.route('/get-burrow-records', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_burrow_records():
     account_id = request.args.get("account_id")
     page_number = request.args.get("page_number", type=int, default=1)
@@ -590,7 +557,6 @@ def handle_burrow_records():
 
 
 @app.route('/get-history-token-price-by-token', methods=['GET'])
-@flask_cors.cross_origin()
 def token_history_token_price_by_token():
     ids = request.args.get("ids", "")
     id_str_list = ids.split("|")
@@ -600,7 +566,6 @@ def token_history_token_price_by_token():
 
 
 @app.route('/get-dcl-pool-log', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_dcl_pool_log():
     start_block_id = request.args.get("start_block_id")
     end_block_id = request.args.get("end_block_id")
@@ -616,7 +581,6 @@ def handle_dcl_pool_log():
 
 
 @app.route('/analysis-v2-pool-data', methods=['GET'])
-@flask_cors.cross_origin()
 def analysis_v2_pool_data():
     file_name = request.args.get("file_name")
     logger.info("pool file_name:{}", file_name)
@@ -625,7 +589,6 @@ def analysis_v2_pool_data():
 
 
 @app.route('/analysis-v2-pool-account-data', methods=['GET'])
-@flask_cors.cross_origin()
 def analysis_v2_pool_account_data():
     file_name = request.args.get("file_name")
     logger.info("account file_name:{}", file_name)
@@ -634,7 +597,6 @@ def analysis_v2_pool_account_data():
 
 
 @app.route('/get-recent-transaction-swap', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_recent_transaction_swap():
     pool_id = request.args.get("pool_id")
     ret_data = []
@@ -649,7 +611,6 @@ def handle_recent_transaction_swap():
 
 
 @app.route('/get-recent-transaction-dcl-swap', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_recent_transaction_dcl_swap():
     pool_id = request.args.get("pool_id")
     ret_data = []
@@ -664,7 +625,6 @@ def handle_recent_transaction_dcl_swap():
 
 
 @app.route('/get-recent-transaction-liquidity', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_recent_transaction_liquidity():
     pool_id = request.args.get("pool_id")
     ret = []
@@ -694,7 +654,6 @@ def handle_recent_transaction_liquidity():
 
 
 @app.route('/get-recent-transaction-dcl-liquidity', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_recent_transaction_dcl_liquidity():
     pool_id = request.args.get("pool_id")
     ret_data = []
@@ -711,7 +670,6 @@ def handle_recent_transaction_dcl_liquidity():
 
 
 @app.route('/get-recent-transaction-limit-order', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_recent_transaction_limit_order():
     pool_id = request.args.get("pool_id")
     ret_data = []
@@ -726,7 +684,6 @@ def handle_recent_transaction_limit_order():
 
 
 @app.route('/get-dcl-points', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_dcl_points():
     pool_id = request.args.get("pool_id")
     slot_number = request.args.get("slot_number", type=int, default=50)
@@ -752,7 +709,6 @@ def handle_dcl_points():
 
 
 @app.route('/get-fee-by-account', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_fee_by_account():
     ret_data = {}
     pool_id = request.args.get("pool_id")
@@ -850,7 +806,6 @@ def handle_fee_by_account():
 
 
 @app.route('/get-dcl-points-by-account', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_dcl_points_by_account():
     pool_id = request.args.get("pool_id")
     slot_number = request.args.get("slot_number", type=int, default=50)
@@ -865,21 +820,18 @@ def handle_dcl_points_by_account():
 
 
 @app.route('/total_supply', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_total_supple():
     ret = "99990506.142591673655212239"
     return ret
 
 
 @app.route('/circulating_supply', methods=['GET'])
-@flask_cors.cross_origin()
 def handle_circulating_supply():
     ret = get_circulating_supply()
     return ret
 
 
 @app.route('/crm/orderly/trading-data', methods=['GET', 'POST', 'PUT'])
-@flask_cors.cross_origin()
 def handle_crm_orderly_data():
     try:
         ret = {
