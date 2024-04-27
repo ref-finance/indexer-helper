@@ -513,6 +513,7 @@ class Cfg:
             {"SYMBOL": "ZETA", "MD_ID": "zetachain"},
             {"SYMBOL": "USDV", "MD_ID": "usdv-2"},
             {"SYMBOL": "ORBIT", "MD_ID": "orbit-protocol"},
+            {"SYMBOL": "wrsETH", "MD_ID": "kelp-dao-restaked-eth"},
         ],
     }
     MARKET_URL = MARKET_URL
