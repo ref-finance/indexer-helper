@@ -569,11 +569,11 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
             network_id = str(sys.argv[1]).upper()
             if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
-                height_folder_name = download_file_s3()
-                print("start add_data_to_db")
-                folder_path = add_data_to_db(height_folder_name, network_id)
-                print("start clear_folder")
-                clear_folder(folder_path)
+                # height_folder_name = download_file_s3()
+                # print("start add_data_to_db")
+                # folder_path = add_data_to_db(height_folder_name, network_id)
+                # print("start clear_folder")
+                # clear_folder(folder_path)
                 print("start handle_account_pool_assets_data")
                 handle_account_pool_assets_data(network_id)
                 print("analysis_pool_and_farm_data end")
