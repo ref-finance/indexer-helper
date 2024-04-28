@@ -165,6 +165,7 @@ class Cfg:
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
             "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
+            "CONNECT_TIMEOUT": 30
         }
     }
     TOKENS = {
