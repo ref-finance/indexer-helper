@@ -307,7 +307,7 @@ class Cfg:
             {"SYMBOL": "sFRAX", "NEAR_ID": "a663b02cf0a4b149d2ad41910cb81e23e1c41c32.factory.bridge.near","MD_ID": "staked-frax", "DECIMAL": 18},
             {"SYMBOL": "BENDOG", "NEAR_ID": "benthedog.near", "MD_ID": "v2.ref-finance.near|4530|wrap.near", "DECIMAL": 9},
             {"SYMBOL": "UWON", "NEAR_ID": "438e48ed4ce6beecf503d43b9dbd3c30d516e7fd.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4528|wrap.near", "DECIMAL": 18},
-            {"SYMBOL": "NVIDIA", "NEAR_ID": "nearnvidia.near", "MD_ID": "v2.ref-finance.near|4547|wrap.near", "DECIMAL": 8},
+            {"SYMBOL": "NEARVIDIA", "NEAR_ID": "nearnvidia.near", "MD_ID": "v2.ref-finance.near|4547|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "BEAN", "NEAR_ID": "bean.tkn.near", "MD_ID": "v2.ref-finance.near|4472|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "SOL", "NEAR_ID": "22.contract.portalbridge.near", "MD_ID": "solana", "DECIMAL": 8},
             {"SYMBOL": "USM", "NEAR_ID": "usmeme.tg", "MD_ID": "v2.ref-finance.near|4949|wrap.near", "DECIMAL": 8},
