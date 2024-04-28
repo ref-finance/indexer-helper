@@ -28,7 +28,8 @@ def get_db_connect(network_id: str):
         port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
         user=Cfg.NETWORK[network_id]["DB_UID"],
         passwd=Cfg.NETWORK[network_id]["DB_PWD"],
-        db=Cfg.NETWORK[network_id]["DB_DSN"])
+        db=Cfg.NETWORK[network_id]["DB_DSN"],
+        connect_timeout=Cfg.NETWORK[network_id]["CONNECT_TIMEOUT"])
     return conn
 
 
@@ -38,7 +39,8 @@ def get_near_lake_connect(network_id: str):
         port=int(Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PORT"]),
         user=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_UID"],
         passwd=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PWD"],
-        db=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_DSN"])
+        db=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_DSN"],
+        connect_timeout=Cfg.NETWORK[network_id]["CONNECT_TIMEOUT"])
     return conn
 
 
@@ -48,7 +50,8 @@ def get_near_lake_dcl_connect(network_id: str):
         port=int(Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PORT"]),
         user=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_UID"],
         passwd=Cfg.NETWORK[network_id]["NEAR_LAKE_DB_PWD"],
-        db=Cfg.NETWORK[network_id]["NEAR_LAKE_DCL_DB_DSN"])
+        db=Cfg.NETWORK[network_id]["NEAR_LAKE_DCL_DB_DSN"],
+        connect_timeout=Cfg.NETWORK[network_id]["CONNECT_TIMEOUT"])
     return conn
 
 
@@ -58,7 +61,8 @@ def get_crm_db_connect(network_id: str):
         port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
         user=Cfg.NETWORK[network_id]["DB_UID"],
         passwd=Cfg.NETWORK[network_id]["DB_PWD"],
-        db="crm")
+        db="crm",
+        connect_timeout=Cfg.NETWORK[network_id]["CONNECT_TIMEOUT"])
     return conn
 
 
