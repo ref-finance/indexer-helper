@@ -516,6 +516,7 @@ class Cfg:
             {"SYMBOL": "USDV", "MD_ID": "usdv-2"},
             {"SYMBOL": "ORBIT", "MD_ID": "orbit-protocol"},
             {"SYMBOL": "wrsETH", "MD_ID": "kelp-dao-restaked-eth"},
+            {"SYMBOL": "PUMP", "MD_ID": "pump"},
         ],
     }
     MARKET_URL = MARKET_URL
