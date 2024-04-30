@@ -29,7 +29,7 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 
-service_version = "20240426.01"
+service_version = "20240430.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -421,7 +421,7 @@ def handle_history_token_price_by_ids():
 
 
 @app.route('/get-service-version', methods=['GET'])
-@limiter.limit("1/second")
+@limiter.limit("5/1 second")
 def get_service_version():
     return jsonify(service_version)
 
