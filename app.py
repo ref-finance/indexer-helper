@@ -63,7 +63,6 @@ def hello_world():
 
 @app.route('/timestamp', methods=['GET'])
 @flask_cors.cross_origin()
-@limiter.limit("1/5 second")
 def handle_timestamp():
     import time
     return jsonify({"ts": int(time.time())})
@@ -402,7 +401,6 @@ def handle_history_token_price_by_ids():
 
 @app.route('/get-service-version', methods=['GET'])
 @flask_cors.cross_origin()
-@limiter.limit("1/second")
 def get_service_version():
     return jsonify(service_version)
 
