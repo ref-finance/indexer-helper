@@ -242,7 +242,7 @@ def handle_list_top_pools():
             "amounts": pool["amounts"],
         }
         list_top_pools_log.append(pool_log)
-    logger.info("list_top_pools_data:{}", list_top_pools_log)
+    # logger.info("list_top_pools_data:{}", list_top_pools_log)
     return compress_response_content(pools)
 
 
