@@ -46,10 +46,13 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
+    AUTH_SWITCH = True
+    NOT_AUTH_LIST = ["/crm/orderly/trading-data"]
+    SIGN_EXPIRE = 300
 
 """
 
@@ -166,9 +169,9 @@ class Cfg:
             "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
             "CRYPTO_AES_KEY": "8309c61008a5f5ba6c51bbf977781c55",
-            "AUTH_SWITCH": True,
-            "AUTH_LIST": ["/authentication"],
-            "SIGN_EXPIRE": 300
+            "AUTH_SWITCH": AUTH_SWITCH,
+            "NOT_AUTH_LIST": NOT_AUTH_LIST,
+            "SIGN_EXPIRE": SIGN_EXPIRE
         }
     }
     TOKENS = {

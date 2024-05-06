@@ -47,7 +47,7 @@ limiter = Limiter(
 def before_request():
     # Processing get requests
     path = request.path
-    if Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_SWITCH"]:
+    if Cfg.NETWORK[Cfg.NETWORK_ID]["AUTH_SWITCH"] and path not in Cfg.NETWORK[Cfg.NETWORK_ID]["NOT_AUTH_LIST"]:
         try:
             headers_authentication = request.headers.get("Authentication")
             if headers_authentication is None or headers_authentication == "":
@@ -280,7 +280,7 @@ def handle_list_top_pools():
             "amounts": pool["amounts"],
         }
         list_top_pools_log.append(pool_log)
-    logger.info("list_top_pools_data:{}", list_top_pools_log)
+    # logger.info("list_top_pools_data:{}", list_top_pools_log)
     return compress_response_content(pools)
 
 
