@@ -10,7 +10,7 @@ except ImportError:
     MAINNET_RPC_URL= ["https://rpc.mainnet.near.org", ]
 
 try:
-    from redis_info import REDIS_HOST, REDIS_PORT
+    from db_info import REDIS_HOST, REDIS_PORT
 except ImportError:
     REDIS_HOST = "127.0.0.1"
     REDIS_PORT = "6379"
@@ -46,10 +46,13 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
+    AUTH_SWITCH = True
+    NOT_AUTH_LIST = ["/crm/orderly/trading-data"]
+    SIGN_EXPIRE = 300
 
 """
 
@@ -165,6 +168,10 @@ class Cfg:
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
             "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
+            "CRYPTO_AES_KEY": "8309c61008a5f5ba6c51bbf977781c55",
+            "AUTH_SWITCH": AUTH_SWITCH,
+            "NOT_AUTH_LIST": NOT_AUTH_LIST,
+            "SIGN_EXPIRE": SIGN_EXPIRE
         }
     }
     TOKENS = {
