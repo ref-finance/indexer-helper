@@ -22,25 +22,25 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data
 import re
-from flask_limiter import Limiter
+# from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import datetime
 from auth.crypto_utl import decrypt
 import time
 
-service_version = "20240430.01"
+service_version = "20240507.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
 app = Flask(__name__)
-limiter = Limiter(
-    app,
-    key_func=get_ip_address,
-    default_limits=["20 per second"],
-    # storage_uri="redis://:@127.0.0.1:6379/2"
-    storage_uri="redis://:@" + Cfg.REDIS["REDIS_HOST"] + ":6379/2"
-)
+# limiter = Limiter(
+#     app,
+#     key_func=get_ip_address,
+#     default_limits=["20 per second"],
+#     # storage_uri="redis://:@127.0.0.1:6379/2"
+#     storage_uri="redis://:@" + Cfg.REDIS["REDIS_HOST"] + ":6379/2"
+# )
 
 
 @app.before_request
