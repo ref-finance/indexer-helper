@@ -796,7 +796,7 @@ def handle_circulating_supply():
 def history_token_price_report():
     token = request.args.get("token")
     base_token = request.args.get("base_token")
-    redis_key = token + "->" + base_token + "_m"
+    redis_key = token + "->" + base_token
     ret = get_history_token_price_report(Cfg.NETWORK_ID, redis_key)
     if ret is None:
         return "null"

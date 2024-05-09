@@ -591,6 +591,39 @@ def get_token_price():
         cursor.close()
 
 
+def get_token_price_history(start_time, end_time):
+    tokens = {}
+    db_conn = get_db_connect(Cfg.NETWORK_ID)
+    sql = "select max(id) as id from mk_history_token_price where `timestamp` > '%s' and `timestamp` < '%s' and " \
+          "contract_address in ('wrap.near', '17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1'," \
+          "'token.lonkingnearbackto2024.near', 'blackdragon.tkn.near', 'ftv2.nekotoken.near'," \
+          "'gear.enleap.near', 'nearnvidia.near', 'dragonsoultoken.near') " \
+          "group by contract_address" % (start_time, end_time)
+
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        id_list = [row['id'] for row in cursor.fetchall()]
+        id_params = ",".join([str(id) for id in id_list])
+        sql1 = "select * from mk_history_token_price where id in ({})"
+        cursor.execute(sql1.format(id_params))
+        rows = cursor.fetchall()
+        for row in rows:
+            contract_address = row["contract_address"]
+            token_data = {
+                "contract_address": contract_address,
+                "price": row["price"],
+                "decimal": row["decimal"]
+            }
+            tokens[contract_address] = token_data
+        return tokens
+    except Exception as e:
+        # Rollback on error
+        print(e)
+    finally:
+        cursor.close()
+
+
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):

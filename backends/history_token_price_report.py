@@ -52,11 +52,11 @@ def get_ratio(amount_in, amount_out):
     return '%.12f' % ratio
 
 
-def handle_token_price_ratio_report_m(network_id, token_pair, token_price_data, now_time):
+def handle_token_price_ratio_report(network_id, token_pair, token_price_data, now_time):
     symbols_data = get_token_symbol(network_id)
     token_pair_one = token_pair.split("->")[0]
     token_pair_two = token_pair.split("->")[1]
-    redis_key = token_pair + "_m"
+    redis_key = token_pair
     token_pair_one_price = 0.00
     token_pair_two_price = 0.00
     if token_pair_one in token_price_data:
@@ -99,10 +99,10 @@ def add_token_price_ratio_to_redis(network_id, key, values):
 
 
 def handle_token_price_report_to_redis(network_id, token_price_data):
-    token_pairs = handle_token_pair(network_id)
+    token_pairs = Cfg.NETWORK[network_id]["HISTORY_TOKEN_PRICE_REPORT_PAIR"]
     now_time = int(time.time())
     for token_pair in token_pairs:
-        handle_token_price_ratio_report_m(network_id, token_pair, token_price_data, now_time)
+        handle_token_price_ratio_report(network_id, token_pair, token_price_data, now_time)
 
 
 if __name__ == "__main__":

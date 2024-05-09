@@ -166,7 +166,14 @@ class Cfg:
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
             "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
-            "CONNECT_TIMEOUT": 30
+            "CONNECT_TIMEOUT": 30,
+            "HISTORY_TOKEN_PRICE_REPORT_PAIR": ["wrap.near->17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+                                                "token.lonkingnearbackto2024.near->17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+                                                "blackdragon.tkn.near->17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+                                                "ftv2.nekotoken.near->17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+                                                "gear.enleap.near->17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+                                                "nearnvidia.near->17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+                                                "dragonsoultoken.near->17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1"],
         }
     }
     TOKENS = {
@@ -315,6 +322,7 @@ class Cfg:
             {"SYMBOL": "USM", "NEAR_ID": "usmeme.tg", "MD_ID": "v2.ref-finance.near|4949|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "TOUCHED", "NEAR_ID": "touched.tkn.near", "MD_ID": "v2.ref-finance.near|4771|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "KOK", "NEAR_ID": "nkok.tkn.near", "MD_ID": "v2.ref-finance.near|4820|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "DGS", "NEAR_ID": "dragonsoultoken.near", "MD_ID": "v2.ref-finance.near|4532|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
