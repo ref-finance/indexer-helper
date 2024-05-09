@@ -13,7 +13,7 @@ from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price, list_base_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_metadata_v2
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
-from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
+from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report, get_history_token_price_report
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
@@ -28,7 +28,7 @@ from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_po
 import time
 import datetime
 
-service_version = "20240426.01"
+service_version = "20240509.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -790,6 +790,17 @@ def handle_total_supple():
 def handle_circulating_supply():
     ret = get_circulating_supply()
     return ret
+
+
+@app.route('/history-token-price-report', methods=['GET'])
+def history_token_price_report():
+    token = request.args.get("token")
+    base_token = request.args.get("base_token")
+    redis_key = token + "->" + base_token + "_m"
+    ret = get_history_token_price_report(Cfg.NETWORK_ID, redis_key)
+    if ret is None:
+        return "null"
+    return compress_response_content(json.loads(ret))
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
