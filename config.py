@@ -525,6 +525,13 @@ class Cfg:
             {"SYMBOL": "ORBIT", "MD_ID": "orbit-protocol"},
             {"SYMBOL": "wrsETH", "MD_ID": "kelp-dao-restaked-eth"},
             {"SYMBOL": "PUMP", "MD_ID": "pump"},
+            {"SYMBOL": "pxETH", "MD_ID": "dinero-staked-eth"},
+            {"SYMBOL": "SKY", "MD_ID": "skycoin"},
+            {"SYMBOL": "MUSD", "MD_ID": "monoswap-usd"},
+            {"SYMBOL": "BPT", "MD_ID": "blackpool-token"},
+            {"SYMBOL": "ATH", "MD_ID": "athenadao-token"},
+            {"SYMBOL": "WETH.e", "MD_ID": "weth-plenty-bridge-65aa5342-507c-4f67-8634-1f4376ffdf9a"},
+            {"SYMBOL": "PAC", "MD_ID": "pacmoon"},
         ],
     }
     MARKET_URL = MARKET_URL
