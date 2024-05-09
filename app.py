@@ -857,7 +857,7 @@ def handle_crm_orderly_data():
 
 
 @app.route('/history-token-price-report', methods=['GET'])
-def token_price_ratio_report():
+def history_token_price_report():
     token = request.args.get("token")
     base_token = request.args.get("base_token")
     redis_key = token + "->" + base_token + "_m"
