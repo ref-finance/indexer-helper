@@ -265,6 +265,13 @@ def get_pool_point_24h_by_pool_id(network_id, pool_id):
     return ret
 
 
+def get_history_token_price_report(network_id, key):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_HISTORY_TOKEN_PRICE_REPORT_KEY"], key)
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
@@ -345,6 +352,9 @@ class RedisProvider(object):
 
     def add_pool_point_24h_assets(self, network_id, pool_id, value):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id, value)
+
+    def add_history_token_price_report(self, network_id, key, value):
+        self.r.hset(Cfg.NETWORK[network_id]["REDIS_HISTORY_TOKEN_PRICE_REPORT_KEY"], key, value)
 
     def close(self):
         self.r.close()
