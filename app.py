@@ -21,7 +21,8 @@ from db_provider import get_history_token_price, query_limit_order_log, query_li
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
-    query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data
+    query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
+    add_liquidation_result, get_liquidation_result, update_liquidation_result
 import re
 from flask_limiter import Limiter
 from loguru import logger
@@ -860,6 +861,41 @@ def handle_crm_orderly_data():
         return ret
     except Exception as e:
         logger.error("handle orderly trading data error:{}", e)
+
+
+@app.route('/add-liquidation-result', methods=['POST'])
+@flask_cors.cross_origin()
+def handel_add_liquidation_result():
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": None
+    }
+    try:
+        liquidation_result_data_list = request.json
+        key = liquidation_result_data_list["key"]
+        values = json.dumps(liquidation_result_data_list["values"])
+        ret_data = get_liquidation_result(Cfg.NETWORK_ID, key)
+        if ret_data is None:
+            add_liquidation_result(Cfg.NETWORK_ID, key, values)
+        else:
+            update_liquidation_result(Cfg.NETWORK_ID, key, values)
+    except Exception as e:
+        print("handel_add_liquidation_result error:", e)
+    return ret
+
+
+@app.route('/get-liquidation-result', methods=['GET'])
+@flask_cors.cross_origin()
+def handel_get_liquidation_result():
+    key = request.args.get("key")
+    ret_data = get_liquidation_result(Cfg.NETWORK_ID, key)
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ret_data
+    }
+    return ret
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
