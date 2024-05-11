@@ -869,7 +869,6 @@ def history_token_price_report():
 
 
 @app.route('/add-liquidation-result', methods=['POST'])
-@flask_cors.cross_origin()
 def handel_add_liquidation_result():
     ret = {
         "code": 0,
@@ -891,7 +890,6 @@ def handel_add_liquidation_result():
 
 
 @app.route('/get-liquidation-result', methods=['GET'])
-@flask_cors.cross_origin()
 def handel_get_liquidation_result():
     key = request.args.get("key")
     ret_data = get_liquidation_result(Cfg.NETWORK_ID, key)
