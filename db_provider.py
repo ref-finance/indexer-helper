@@ -74,7 +74,7 @@ def get_burrow_connect(network_id: str):
 
 def get_liquidity_pools(network_id, account_id):
     ret = []
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select DISTINCT(pool_id) as pool_id from near_lake_liquidity_pools where account_id = '%s'" % account_id
     cursor = db_conn.cursor()
     try:
