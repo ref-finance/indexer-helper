@@ -66,9 +66,19 @@ def get_crm_db_connect(network_id: str):
     return conn
 
 
+def get_burrow_connect(network_id: str):
+    conn = pymysql.connect(
+        host=Cfg.NETWORK[network_id]["DB_HOST"],
+        port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
+        user=Cfg.NETWORK[network_id]["DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
+        db="burrow")
+    return conn
+
+
 def get_liquidity_pools(network_id, account_id):
     ret = []
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select DISTINCT(pool_id) as pool_id from near_lake_liquidity_pools where account_id = '%s'" % account_id
     cursor = db_conn.cursor()
     try:
@@ -1254,6 +1264,58 @@ def add_orderly_trading_data(trading_data_info):
     except Exception as e:
         db_conn.rollback()
         raise e
+    finally:
+        cursor.close()
+
+
+def add_liquidation_result(network_id, key, values):
+    now_time = int(time.time())
+    db_conn = get_burrow_connect(network_id)
+
+    sql = "insert into liquidation_result_info(`key`, `values`, `timestamp`, `created_time`, `updated_time`) " \
+          "values('%s','%s',%s, now(), now())" % (key, values, now_time)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert liquidation_result_info to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
+def update_liquidation_result(network_id, key, values):
+    db_conn = get_burrow_connect(network_id)
+    sql = "update liquidation_result_info set `values` = '%s' where `key` = '%s'" % (values, key)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("update liquidation_result_info to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
+def get_liquidation_result(network_id, key):
+    db_conn = get_burrow_connect(network_id)
+    sql = "select `key`, `values`, `timestamp`, `created_time`, `updated_time` from liquidation_result_info " \
+          "where `key` = '%s'" % key
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        row = cursor.fetchone()
+        return row
+    except Exception as e:
+        db_conn.rollback()
+        print("query liquidation_result_info to db error:", e)
     finally:
         cursor.close()
 
