@@ -526,6 +526,8 @@ class Cfg:
             {"SYMBOL": "WETH.e", "MD_ID": "weth-plenty-bridge-65aa5342-507c-4f67-8634-1f4376ffdf9a"},
             {"SYMBOL": "PAC", "MD_ID": "pacmoon"},
             {"SYMBOL": "MODE", "MD_ID": "mode"},
+	    {"SYMBOL": "ETHx", "MD_ID": "stader-ethx"},
+            {"SYMBOL": "stETH", "MD_ID": "staked-ether"},
         ],
     }
     MARKET_URL = MARKET_URL
