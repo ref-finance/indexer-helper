@@ -485,7 +485,7 @@ class Cfg:
             {"SYMBOL": "SBF", "MD_ID": "sam-bankmeme-fried"},
             {"SYMBOL": "GLORY", "MD_ID": "sekai-glory"},
             {"SYMBOL": "CBR", "MD_ID": "cyberblast-token"},
-            {"SYMBOL": "MIA", "MD_ID": "miaswap"},
+            {"SYMBOL": "MIA", "MD_ID": "mia-2d4b"},
             {"SYMBOL": "BINU", "MD_ID": "baseinu"},
             {"SYMBOL": "FINGER", "MD_ID": "finger-blast"},
             {"SYMBOL": "BCat", "MD_ID": "bananacat"},
@@ -529,6 +529,9 @@ class Cfg:
             {"SYMBOL": "MODE", "MD_ID": "mode"},
 	    {"SYMBOL": "ETHx", "MD_ID": "stader-ethx"},
             {"SYMBOL": "stETH", "MD_ID": "staked-ether"},
+	    {"SYMBOL": "BLADE", "MD_ID": "bladeswap"},
+            {"SYMBOL": "KAP", "MD_ID": "kapital-dao"},
+            {"SYMBOL": "EARLY", "MD_ID": "early"},
         ],
     }
     MARKET_URL = MARKET_URL
