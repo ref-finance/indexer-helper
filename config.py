@@ -527,11 +527,15 @@ class Cfg:
             {"SYMBOL": "WETH.e", "MD_ID": "weth-plenty-bridge-65aa5342-507c-4f67-8634-1f4376ffdf9a"},
             {"SYMBOL": "PAC", "MD_ID": "pacmoon"},
             {"SYMBOL": "MODE", "MD_ID": "mode"},
-	    {"SYMBOL": "ETHx", "MD_ID": "stader-ethx"},
+            {"SYMBOL": "ETHx", "MD_ID": "stader-ethx"},
             {"SYMBOL": "stETH", "MD_ID": "staked-ether"},
-	    {"SYMBOL": "BLADE", "MD_ID": "bladeswap"},
+            {"SYMBOL": "BLADE", "MD_ID": "bladeswap"},
             {"SYMBOL": "KAP", "MD_ID": "kapital-dao"},
             {"SYMBOL": "EARLY", "MD_ID": "early"},
+            {"SYMBOL": "KIM", "MD_ID": "kim-token"},
+            {"SYMBOL": "MOCHAD", "MD_ID": "mochadcoin"},
+            {"SYMBOL": "SMD", "MD_ID": "swapmode"},
+            {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
         ],
     }
     MARKET_URL = MARKET_URL
