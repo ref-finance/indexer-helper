@@ -150,7 +150,8 @@ def update_price(network_id):
     except Exception as e:
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
     end_time1 = int(time.time())
-    print("rpc time:", end_time1 - start_time1)
+    if end_time1 - start_time1 > 10:
+        print("rpc time:", end_time1 - start_time1)
     try:
         if len(tokens_price) > 0:
             insert_data_list = []
@@ -182,7 +183,8 @@ def update_price(network_id):
     except Exception as e:
         print("Error occurred when update to db, Error is: ", e)
     end_time2 = int(time.time())
-    print("insert data time:", end_time2 - end_time1)
+    if end_time2 - end_time1 > 10:
+        print("insert data time:", end_time2 - end_time1)
 
 
 def get_symbol(contract_address):
@@ -235,7 +237,8 @@ if __name__ == '__main__':
             start_time = int(time.time())
             update_price(network_id)
             end_time = int(time.time())
-            print("all time:", end_time - start_time)
+            if end_time - start_time > 20:
+                print("all time:", end_time - start_time)
         else:
             print("Error, network_id should be MAINNET, TESTNET or DEVNET")
             exit(1)
