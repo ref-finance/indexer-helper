@@ -100,6 +100,7 @@ def market_price(network_id, tokens, base_tokens):
 
 
 def update_price(network_id):
+    start_time1 = int(time.time())
     pool_tokens = []
     market_tokens = []
     decimals = {}
@@ -208,7 +209,11 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         network_id = str(sys.argv[1]).upper()
         if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
+            start_time = int(time.time())
             update_price(network_id)
+            end_time = int(time.time())
+            if end_time - start_time > 20:
+                print("all time:", end_time - start_time)
         else:
             print("Error, network_id should be MAINNET, TESTNET or DEVNET")
             exit(1)

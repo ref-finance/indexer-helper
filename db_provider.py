@@ -275,6 +275,70 @@ def add_history_token_price(contract_address, symbol, price, decimals, network_i
         cursor.close()
 
 
+def batch_add_history_token_price(data_list, network_id):
+    now = int(time.time())
+    before_time = now - (1 * 24 * 60 * 60)
+    new_token_price = {}
+    old_token_price = {}
+    db_conn = get_db_connect(network_id)
+    sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
+          "`status`, `timestamp`) values(%s,%s,%s,%s, now(), now(), 1, %s)"
+    sql2 = "SELECT contract_address, price FROM mk_history_token_price where contract_address in (%s) " \
+           "and `timestamp` > '%s' group by contract_address"
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["contract_address"], data["symbol"], data["price"], data["decimal"], now))
+            new_token_price[data["contract_address"]] = {"symbol": data["symbol"], "price": data["price"], "decimal": data["decimal"]}
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+        end_time = int(time.time())
+        print("insert to db time:", end_time - now)
+        contract_address_ids = ""
+        par2 = (contract_address_ids, before_time)
+        cursor.execute(sql2, par2)
+        old_rows = cursor.fetchall()
+        end_time1 = int(time.time())
+        print("query old price time:", end_time1 - end_time)
+        for old_row in old_rows:
+            old_token_price[old_row["contract_address"]] = old_row["price"]
+        handle_history_token_price_to_redis(now, new_token_price, old_token_price, network_id)
+        end_time2 = int(time.time())
+        print("add price to redis time:", end_time2 - end_time1)
+    except Exception as e:
+        db_conn.rollback()
+        print("insert mk_history_token_price to db error:", e)
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def handle_history_token_price_to_redis(now, new_token_price, old_token_price, network_id):
+    redis_conn = RedisProvider()
+    redis_conn.begin_pipe()
+    for token, token_data in new_token_price.items():
+        price = token_data["price"]
+        symbol = token_data["symbol"]
+        decimals = token_data["decimal"]
+        old_price = price
+        if token in old_token_price and old_token_price[token] is not None:
+            old_price = old_token_price[token]
+
+        history_token = {
+            "price": price,
+            "history_price": old_price,
+            "symbol": symbol,
+            "datetime": now,
+            "contract_address": token,
+            "decimal": decimals
+        }
+        redis_conn.add_history_token_price(network_id, token, json.dumps(history_token, cls=Encoder))
+    redis_conn.end_pipe()
+    redis_conn.close()
+
+
 def format_percentage(new, old):
     p = 100 * (new - old) / old
     return '%.2f' % p
