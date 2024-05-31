@@ -323,6 +323,7 @@ class Cfg:
             {"SYMBOL": "KOK", "NEAR_ID": "nkok.tkn.near", "MD_ID": "v2.ref-finance.near|4820|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "DGS", "NEAR_ID": "dragonsoultoken.near", "MD_ID": "v2.ref-finance.near|4532|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "SLUSH", "NEAR_ID": "slush.tkn.near", "MD_ID": "v2.ref-finance.near|4623|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "OTTO", "NEAR_ID": "4e807467ba9e3119d5356c5568ef63e9c321b471.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4479|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
@@ -493,7 +494,7 @@ class Cfg:
             {"SYMBOL": "SBF", "MD_ID": "sam-bankmeme-fried"},
             {"SYMBOL": "GLORY", "MD_ID": "sekai-glory"},
             {"SYMBOL": "CBR", "MD_ID": "cyberblast-token"},
-            {"SYMBOL": "MIA", "MD_ID": "miaswap"},
+            {"SYMBOL": "MIA", "MD_ID": "mia-2d4b"},
             {"SYMBOL": "BINU", "MD_ID": "baseinu"},
             {"SYMBOL": "FINGER", "MD_ID": "finger-blast"},
             {"SYMBOL": "BCat", "MD_ID": "bananacat"},
@@ -535,6 +536,15 @@ class Cfg:
             {"SYMBOL": "WETH.e", "MD_ID": "weth-plenty-bridge-65aa5342-507c-4f67-8634-1f4376ffdf9a"},
             {"SYMBOL": "PAC", "MD_ID": "pacmoon"},
             {"SYMBOL": "MODE", "MD_ID": "mode"},
+            {"SYMBOL": "ETHx", "MD_ID": "stader-ethx"},
+            {"SYMBOL": "stETH", "MD_ID": "staked-ether"},
+            {"SYMBOL": "BLADE", "MD_ID": "bladeswap"},
+            {"SYMBOL": "KAP", "MD_ID": "kapital-dao"},
+            {"SYMBOL": "EARLY", "MD_ID": "early"},
+            {"SYMBOL": "KIM", "MD_ID": "kim-token"},
+            {"SYMBOL": "MOCHAD", "MD_ID": "mochadcoin"},
+            {"SYMBOL": "SMD", "MD_ID": "swapmode"},
+            {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
         ],
     }
     MARKET_URL = MARKET_URL

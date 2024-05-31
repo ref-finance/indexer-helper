@@ -30,7 +30,7 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 
-service_version = "20240507.01"
+service_version = "20240530.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
