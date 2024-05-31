@@ -272,6 +272,13 @@ def get_history_token_price_report(network_id, key):
     return ret
 
 
+def get_market_token_price():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get(Cfg.REDIS_TOKEN_MARKET_PRICE_KEY)
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
