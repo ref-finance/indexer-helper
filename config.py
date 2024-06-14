@@ -546,6 +546,7 @@ class Cfg:
             {"SYMBOL": "MOCHAD", "MD_ID": "mochadcoin"},
             {"SYMBOL": "SMD", "MD_ID": "swapmode"},
             {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
+            {"SYMBOL": "USDe", "MD_ID": "ethena-usde"},
         ],
     }
     MARKET_URL = MARKET_URL
