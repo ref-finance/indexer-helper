@@ -6,7 +6,7 @@ import requests
 from config import Cfg
 import json
 import time
-from db_provider import add_history_token_price
+from db_provider import add_history_token_price, batch_add_history_token_price
 
 
 def pool_price(network_id, tokens):
@@ -100,6 +100,7 @@ def market_price(network_id, tokens, base_tokens):
 
 
 def update_price(network_id):
+    start_time1 = int(time.time())
     pool_tokens = []
     market_tokens = []
     decimals = {}
@@ -148,26 +149,51 @@ def update_price(network_id):
             conn.close()
     except Exception as e:
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
-
+    end_time1 = int(time.time())
+    if end_time1 - start_time1 > 10:
+        print("rpc time:", end_time1 - start_time1)
     try:
         if len(tokens_price) > 0:
+            insert_data_list = []
             for token in tokens_price:
                 if token["BASE_ID"] != "":
                     if token["NEAR_ID"] == "xtoken.ref-finance.near":
                         ref_token_price = get_base_id_price(tokens_price, price_ref, decimals, token["BASE_ID"])
                         if ref_token_price > 0:
                             price = int(token["price"]) / 100000000 * ref_token_price
-                            add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
+                            # add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
+                            insert_data_list.append({"contract_address": token["NEAR_ID"], "symbol": get_symbol(token["NEAR_ID"]), "price": "%.12f" % price, "decimal": decimals[token["NEAR_ID"]]})
                     elif token["BASE_ID"] in price_ref:
                         price = int(token["price"]) / int("1" + "0" * decimals[token["BASE_ID"]]) * float(price_ref[token["BASE_ID"]])
 
-                        add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
+                        # add_history_token_price(token["NEAR_ID"], token["BASE_ID"], "%.12f" % price, decimals[token["NEAR_ID"]], network_id)
+                        insert_data_list.append({"contract_address": token["NEAR_ID"], "symbol": get_symbol(token["NEAR_ID"]), "price": "%.12f" % price, "decimal": decimals[token["NEAR_ID"]]})
                     else:
                         print("%s has no ref price %s/usd" % (token["NEAR_ID"], token["BASE_ID"]))
                 else:
-                    add_history_token_price(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["NEAR_ID"]], network_id)
+                    # add_history_token_price(token["NEAR_ID"], token["BASE_ID"], token["price"], decimals[token["NEAR_ID"]], network_id)
+                    insert_data_list.append({"contract_address": token["NEAR_ID"], "symbol": get_symbol(token["NEAR_ID"]), "price": token["price"], "decimal": decimals[token["NEAR_ID"]]})
+                if len(insert_data_list) >= 500:
+                    batch_add_history_token_price(insert_data_list, network_id)
+                    print("insert_data_list number:", len(insert_data_list))
+                    insert_data_list.clear()
+            if len(insert_data_list) > 0:
+                batch_add_history_token_price(insert_data_list, network_id)
+                print("insert_data_list number:", len(insert_data_list))
     except Exception as e:
         print("Error occurred when update to db, Error is: ", e)
+    end_time2 = int(time.time())
+    if end_time2 - end_time1 > 10:
+        print("insert data time:", end_time2 - end_time1)
+
+
+def get_symbol(contract_address):
+    symbol = ""
+    for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
+        if token["NEAR_ID"] in contract_address:
+            symbol = token["SYMBOL"]
+            return symbol
+    return symbol
 
 
 def get_base_id_price(tokens_price, price_ref, decimals, base_id):
@@ -208,7 +234,11 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         network_id = str(sys.argv[1]).upper()
         if network_id in ["MAINNET", "TESTNET", "DEVNET"]:
+            start_time = int(time.time())
             update_price(network_id)
+            end_time = int(time.time())
+            if end_time - start_time > 20:
+                print("all time:", end_time - start_time)
         else:
             print("Error, network_id should be MAINNET, TESTNET or DEVNET")
             exit(1)

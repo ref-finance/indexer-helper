@@ -62,9 +62,19 @@ def get_crm_db_connect(network_id: str):
     return conn
 
 
+def get_burrow_connect(network_id: str):
+    conn = pymysql.connect(
+        host=Cfg.NETWORK[network_id]["DB_HOST"],
+        port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
+        user=Cfg.NETWORK[network_id]["DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
+        db="burrow")
+    return conn
+
+
 def get_liquidity_pools(network_id, account_id):
     ret = []
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select DISTINCT(pool_id) as pool_id from near_lake_liquidity_pools where account_id = '%s'" % account_id
     cursor = db_conn.cursor()
     try:
@@ -80,9 +90,9 @@ def get_liquidity_pools(network_id, account_id):
 
 def get_actions(network_id, account_id):
     json_ret = []
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select `timestamp`,tx_id,receiver_account_id,method_name,args,deposit,`status`,receipt_id " \
-          "from near_lake_latest_actions where predecessor_account_id = '%s' order by id desc limit 10" % account_id
+          "from near_lake_latest_actions where predecessor_account_id = '%s' order by `timestamp` desc limit 10" % account_id
     cursor = db_conn.cursor()
     try:
         cursor.execute(sql)
@@ -259,6 +269,70 @@ def add_history_token_price(contract_address, symbol, price, decimals, network_i
         print(e)
     finally:
         cursor.close()
+
+
+def batch_add_history_token_price(data_list, network_id):
+    now = int(time.time())
+    before_time = now - (1 * 24 * 60 * 60)
+    new_token_price = {}
+    old_token_price = {}
+    db_conn = get_db_connect(network_id)
+    sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
+          "`status`, `timestamp`) values(%s,%s,%s,%s, now(), now(), 1, %s)"
+    sql2 = "SELECT contract_address, price FROM mk_history_token_price where contract_address in (%s) " \
+           "and `timestamp` > '%s' group by contract_address"
+    insert_data = []
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        for data in data_list:
+            insert_data.append((data["contract_address"], data["symbol"], data["price"], data["decimal"], now))
+            new_token_price[data["contract_address"]] = {"symbol": data["symbol"], "price": data["price"], "decimal": data["decimal"]}
+
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+        end_time = int(time.time())
+        print("insert to db time:", end_time - now)
+        contract_address_ids = ""
+        par2 = (contract_address_ids, before_time)
+        cursor.execute(sql2, par2)
+        old_rows = cursor.fetchall()
+        end_time1 = int(time.time())
+        print("query old price time:", end_time1 - end_time)
+        for old_row in old_rows:
+            old_token_price[old_row["contract_address"]] = old_row["price"]
+        handle_history_token_price_to_redis(now, new_token_price, old_token_price, network_id)
+        end_time2 = int(time.time())
+        print("add price to redis time:", end_time2 - end_time1)
+    except Exception as e:
+        db_conn.rollback()
+        print("insert mk_history_token_price to db error:", e)
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def handle_history_token_price_to_redis(now, new_token_price, old_token_price, network_id):
+    redis_conn = RedisProvider()
+    redis_conn.begin_pipe()
+    for token, token_data in new_token_price.items():
+        price = token_data["price"]
+        symbol = token_data["symbol"]
+        decimals = token_data["decimal"]
+        old_price = price
+        if token in old_token_price and old_token_price[token] is not None:
+            old_price = old_token_price[token]
+
+        history_token = {
+            "price": price,
+            "history_price": old_price,
+            "symbol": symbol,
+            "datetime": now,
+            "contract_address": token,
+            "decimal": decimals
+        }
+        redis_conn.add_history_token_price(network_id, token, json.dumps(history_token, cls=Encoder))
+    redis_conn.end_pipe()
+    redis_conn.close()
 
 
 def format_percentage(new, old):
@@ -504,8 +578,8 @@ def get_dcl_token_price(network_id):
 
 
 def query_limit_order_log(network_id, owner_id):
-    db_conn = get_near_lake_connect(network_id)
-    sql = "select order_id, tx_id, receipt_id from near_lake_limit_order_mainnet where type = 'order_added' and owner_id = '%s'" % owner_id
+    db_conn = get_db_connect(network_id)
+    sql = "select order_id, tx_id, receipt_id from near_lake_limit_order where type = 'order_added' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -520,9 +594,9 @@ def query_limit_order_log(network_id, owner_id):
 
 
 def query_limit_order_swap(network_id, owner_id):
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp, receipt_id from " \
-          "near_lake_limit_order_mainnet where type = 'swap' and owner_id = '%s'" % owner_id
+          "near_lake_limit_order where type = 'swap' and owner_id = '%s'" % owner_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -731,7 +805,7 @@ def update_account_pool_assets_status():
 
 def query_burrow_log(network_id, account_id, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select `event`, amount, token_id, `timestamp`, '' as tx_id, receipt_id from burrow_event_log " \
           "where account_id = '%s' and `event` in ('borrow','decrease_collateral','deposit'," \
           "'increase_collateral','repay','withdraw_succeeded')  order by `timestamp` desc " \
@@ -953,9 +1027,9 @@ def add_dcl_user_liquidity_fee_data(data_list, network_id):
 
 
 def query_recent_transaction_swap(network_id, pool_id):
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select token_in, token_out, swap_in, swap_out,`timestamp`, '' as tx_id,block_hash as receipt_id from " \
-          "near_lake_swap_log where pool_id = '%s' order by id desc limit 50" % pool_id
+          "near_lake_swap_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -968,9 +1042,9 @@ def query_recent_transaction_swap(network_id, pool_id):
 
 
 def query_recent_transaction_dcl_swap(network_id, pool_id):
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select token_in, token_out, amount_in, amount_out,`timestamp`, '' as tx_id,tx_id as receipt_id from " \
-          "ref_dcl_mainnet.t_swap where amount_in > '0' and pool_id like '%"+pool_id+"%' order by id desc limit 50"
+          "t_swap where amount_in > '0' and pool_id like '%"+pool_id+"%' order by `timestamp` desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -983,9 +1057,9 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
 
 
 def query_recent_transaction_liquidity(network_id, pool_id):
-    db_conn = get_near_lake_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select method_name, pool_id, shares, `timestamp`, '' as tx_id, amounts,block_hash as receipt_id, " \
-          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by id desc limit 50" % pool_id
+          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -998,7 +1072,7 @@ def query_recent_transaction_liquidity(network_id, pool_id):
 
 
 def query_recent_transaction_dcl_liquidity(network_id, pool_id):
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select all_data.method_name,all_data.amount_x,all_data.amount_y,all_data.`timestamp`,'' as tx_id," \
           "all_data.receipt_id from (select tla.event_method as method_name, sum(cast(tla.paid_token_x as " \
           "decimal(64, 0))) as amount_x, sum(cast(tla.paid_token_y as decimal(64, 0))) as amount_y, tla.`timestamp`, " \
@@ -1020,7 +1094,7 @@ def query_recent_transaction_dcl_liquidity(network_id, pool_id):
 
 
 def query_recent_transaction_limit_order(network_id, pool_id):
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select all_data.method_name,all_data.sell_token,all_data.amount,all_data.point,all_data.`timestamp`, " \
           "'' as tx_id,all_data.tx_id as receipt_id from (select 'order_cancelled' as method_name, sell_token,  " \
           "actual_cancel_amount as amount, point,`timestamp`,tx_id from t_order_cancelled where pool_id = '%s' " \
@@ -1034,7 +1108,7 @@ def query_recent_transaction_limit_order(network_id, pool_id):
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
-        print("query near_lake_limit_order_mainnet to db error:", e)
+        print("query recent_transaction_limit_order to db error:", e)
     finally:
         cursor.close()
 
@@ -1113,7 +1187,7 @@ def query_dcl_user_unclaimed_fee_24h(network_id, pool_id, account_id):
 
 
 def query_dcl_user_claimed_fee(network_id, pool_id, account_id):
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select sum(cast(total_fee_x as decimal(64, 0))) as claimed_fee_x, sum(cast(total_fee_y as " \
           "decimal(64, 0))) as claimed_fee_y from (select sum(cast(claim_fee_token_x as decimal(64, 0))) as " \
           "total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
@@ -1136,7 +1210,7 @@ def query_dcl_user_claimed_fee(network_id, pool_id, account_id):
 def query_dcl_user_claimed_fee_24h(network_id, pool_id, account_id):
     now = int(time.time())
     timestamp = now - (1 * 24 * 60 * 60)
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select sum(cast(total_fee_x as decimal(64, 0))) as claimed_fee_x, sum(cast(total_fee_y as " \
           "decimal(64, 0))) as claimed_fee_y from (select sum(cast(claim_fee_token_x as decimal(64, 0))) as " \
           "total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
@@ -1175,7 +1249,7 @@ def query_dcl_user_tvl(network_id, pool_id, account_id):
 
 def query_dcl_user_change_log(network_id, pool_id, account_id, user_token_timestamp):
     timestamp = user_token_timestamp - (1 * 24 * 60 * 60)
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select event_method,paid_token_x as token_x,paid_token_y as token_y,remove_token_x,remove_token_y," \
           "merge_token_x,merge_token_y,`timestamp` from t_liquidity_added where pool_id = '%s' and owner_id = '%s' " \
           "and event_method in('liquidity_append', 'liquidity_added') and `timestamp` >= '%s' " \
@@ -1216,6 +1290,58 @@ def add_orderly_trading_data(trading_data_info):
     except Exception as e:
         db_conn.rollback()
         raise e
+    finally:
+        cursor.close()
+
+
+def add_liquidation_result(network_id, key, values):
+    now_time = int(time.time())
+    db_conn = get_burrow_connect(network_id)
+
+    sql = "insert into liquidation_result_info(`key`, `values`, `timestamp`, `created_time`, `updated_time`) " \
+          "values('%s','%s',%s, now(), now())" % (key, values, now_time)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert liquidation_result_info to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
+def update_liquidation_result(network_id, key, values):
+    db_conn = get_burrow_connect(network_id)
+    sql = "update liquidation_result_info set `values` = '%s' where `key` = '%s'" % (values, key)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("update liquidation_result_info to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
+def get_liquidation_result(network_id, key):
+    db_conn = get_burrow_connect(network_id)
+    sql = "select `key`, `values`, `timestamp`, `created_time`, `updated_time` from liquidation_result_info " \
+          "where `key` = '%s'" % key
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        row = cursor.fetchone()
+        return row
+    except Exception as e:
+        db_conn.rollback()
+        print("query liquidation_result_info to db error:", e)
     finally:
         cursor.close()
 

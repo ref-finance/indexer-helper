@@ -13,14 +13,15 @@ from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price, list_base_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_metadata_v2
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
-from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report
+from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report, get_history_token_price_report, get_market_token_price
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
-    query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data
+    query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
+    add_liquidation_result, get_liquidation_result, update_liquidation_result
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -29,7 +30,7 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 
-service_version = "20240507.01"
+service_version = "20240613.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -854,6 +855,55 @@ def handle_crm_orderly_data():
         return ret
     except Exception as e:
         logger.error("handle orderly trading data error:{}", e)
+
+
+@app.route('/history-token-price-report', methods=['GET'])
+def history_token_price_report():
+    token = request.args.get("token")
+    base_token = request.args.get("base_token")
+    redis_key = token + "->" + base_token
+    ret = get_history_token_price_report(Cfg.NETWORK_ID, redis_key)
+    if ret is None:
+        return "null"
+    return compress_response_content(json.loads(ret))
+
+
+@app.route('/add-liquidation-result', methods=['POST'])
+def handel_add_liquidation_result():
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": None
+    }
+    try:
+        liquidation_result_data_list = request.json
+        key = liquidation_result_data_list["key"]
+        values = json.dumps(liquidation_result_data_list["values"])
+        ret_data = get_liquidation_result(Cfg.NETWORK_ID, key)
+        if ret_data is None:
+            add_liquidation_result(Cfg.NETWORK_ID, key, values)
+        else:
+            update_liquidation_result(Cfg.NETWORK_ID, key, values)
+    except Exception as e:
+        print("handel_add_liquidation_result error:", e)
+    return ret
+
+
+@app.route('/get-liquidation-result', methods=['GET'])
+def handel_get_liquidation_result():
+    key = request.args.get("key")
+    ret_data = get_liquidation_result(Cfg.NETWORK_ID, key)
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ret_data
+    }
+    return ret
+
+
+@app.route('/get_market_token_price', methods=['GET'])
+def handle_market_token_price():
+    return get_market_token_price()
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")

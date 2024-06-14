@@ -61,6 +61,7 @@ except ImportError:
 class Cfg:
     NETWORK_ID = "MAINNET"
     REFSUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/coolsnake/refsubgraph"
+    REDIS_TOKEN_MARKET_PRICE_KEY = "TOKEN_MARKET_PRICE"
     REDIS = {
         "REDIS_HOST": REDIS_HOST,
         "REDIS_PORT": REDIS_PORT,
@@ -151,6 +152,7 @@ class Cfg:
             "REDIS_ACCOUNT_POOL_ASSETS_KEY": "ACCOUNT_POOL_ASSETS_MAINNET",
             "REDIS_TOKEN_PRICE_RATIO_REPORT_KEY": "TOKEN_PRICE_RATIO_REPORT_MAINNET",
             "REDIS_POOL_POINT_24H_DATA_KEY": "REDIS_POOL_POINT_24H_DATA_MAINNET",
+            "REDIS_HISTORY_TOKEN_PRICE_REPORT_KEY": "HISTORY_TOKEN_PRICE_REPORT_MAINNET",
             "INDEXER_DSN": INDEXER_DSN,
             "INDEXER_UID": INDEXER_UID,
             "INDEXER_PWD": INDEXER_PWD,
@@ -320,6 +322,9 @@ class Cfg:
             {"SYMBOL": "USM", "NEAR_ID": "usmeme.tg", "MD_ID": "v2.ref-finance.near|4949|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "TOUCHED", "NEAR_ID": "touched.tkn.near", "MD_ID": "v2.ref-finance.near|4771|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "KOK", "NEAR_ID": "nkok.tkn.near", "MD_ID": "v2.ref-finance.near|4820|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "DGS", "NEAR_ID": "dragonsoultoken.near", "MD_ID": "v2.ref-finance.near|4532|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "SLUSH", "NEAR_ID": "slush.tkn.near", "MD_ID": "v2.ref-finance.near|4623|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "OTTO", "NEAR_ID": "4e807467ba9e3119d5356c5568ef63e9c321b471.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4479|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
@@ -490,7 +495,7 @@ class Cfg:
             {"SYMBOL": "SBF", "MD_ID": "sam-bankmeme-fried"},
             {"SYMBOL": "GLORY", "MD_ID": "sekai-glory"},
             {"SYMBOL": "CBR", "MD_ID": "cyberblast-token"},
-            {"SYMBOL": "MIA", "MD_ID": "miaswap"},
+            {"SYMBOL": "MIA", "MD_ID": "mia-2d4b"},
             {"SYMBOL": "BINU", "MD_ID": "baseinu"},
             {"SYMBOL": "FINGER", "MD_ID": "finger-blast"},
             {"SYMBOL": "BCat", "MD_ID": "bananacat"},
@@ -524,6 +529,24 @@ class Cfg:
             {"SYMBOL": "ORBIT", "MD_ID": "orbit-protocol"},
             {"SYMBOL": "wrsETH", "MD_ID": "kelp-dao-restaked-eth"},
             {"SYMBOL": "PUMP", "MD_ID": "pump"},
+            {"SYMBOL": "pxETH", "MD_ID": "dinero-staked-eth"},
+            {"SYMBOL": "SKY", "MD_ID": "skycoin"},
+            {"SYMBOL": "MUSD", "MD_ID": "monoswap-usd"},
+            {"SYMBOL": "BPT", "MD_ID": "blackpool-token"},
+            {"SYMBOL": "ATH", "MD_ID": "athenadao-token"},
+            {"SYMBOL": "WETH.e", "MD_ID": "weth-plenty-bridge-65aa5342-507c-4f67-8634-1f4376ffdf9a"},
+            {"SYMBOL": "PAC", "MD_ID": "pacmoon"},
+            {"SYMBOL": "MODE", "MD_ID": "mode"},
+            {"SYMBOL": "ETHx", "MD_ID": "stader-ethx"},
+            {"SYMBOL": "stETH", "MD_ID": "staked-ether"},
+            {"SYMBOL": "BLADE", "MD_ID": "bladeswap"},
+            {"SYMBOL": "KAP", "MD_ID": "kapital-dao"},
+            {"SYMBOL": "EARLY", "MD_ID": "early"},
+            {"SYMBOL": "KIM", "MD_ID": "kim-token"},
+            {"SYMBOL": "MOCHAD", "MD_ID": "mochadcoin"},
+            {"SYMBOL": "SMD", "MD_ID": "swapmode"},
+            {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
+            {"SYMBOL": "USDe", "MD_ID": "ethena-usde"},
         ],
     }
     MARKET_URL = MARKET_URL
