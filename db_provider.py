@@ -92,7 +92,7 @@ def get_actions(network_id, account_id):
     json_ret = []
     db_conn = get_db_connect(network_id)
     sql = "select `timestamp`,tx_id,receiver_account_id,method_name,args,deposit,`status`,receipt_id " \
-          "from near_lake_latest_actions where predecessor_account_id = '%s' order by id desc limit 10" % account_id
+          "from near_lake_latest_actions where predecessor_account_id = '%s' order by `timestamp` desc limit 10" % account_id
     cursor = db_conn.cursor()
     try:
         cursor.execute(sql)
@@ -1029,7 +1029,7 @@ def add_dcl_user_liquidity_fee_data(data_list, network_id):
 def query_recent_transaction_swap(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select token_in, token_out, swap_in, swap_out,`timestamp`, '' as tx_id,block_hash as receipt_id from " \
-          "near_lake_swap_log where pool_id = '%s' order by id desc limit 50" % pool_id
+          "near_lake_swap_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -1044,7 +1044,7 @@ def query_recent_transaction_swap(network_id, pool_id):
 def query_recent_transaction_dcl_swap(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select token_in, token_out, amount_in, amount_out,`timestamp`, '' as tx_id,tx_id as receipt_id from " \
-          "t_swap where amount_in > '0' and pool_id like '%"+pool_id+"%' order by id desc limit 50"
+          "t_swap where amount_in > '0' and pool_id like '%"+pool_id+"%' order by `timestamp` desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -1059,7 +1059,7 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
 def query_recent_transaction_liquidity(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select method_name, pool_id, shares, `timestamp`, '' as tx_id, amounts,block_hash as receipt_id, " \
-          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by id desc limit 50" % pool_id
+          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
