@@ -547,6 +547,7 @@ class Cfg:
             {"SYMBOL": "SMD", "MD_ID": "swapmode"},
             {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
             {"SYMBOL": "USDe", "MD_ID": "ethena-usde"},
+            {"SYMBOL": "DETH", "MD_ID": "stakehouse-deth"},
         ],
     }
     MARKET_URL = MARKET_URL
