@@ -56,8 +56,8 @@ def get_crm_db_connect(network_id: str):
     conn = pymysql.connect(
         host=Cfg.NETWORK[network_id]["DB_HOST"],
         port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
-        user=Cfg.NETWORK[network_id]["DB_UID"],
-        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
+        user=Cfg.NETWORK[network_id]["CRM_DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["CRM_DB_PWD"],
         db="crm")
     return conn
 
@@ -66,8 +66,8 @@ def get_burrow_connect(network_id: str):
     conn = pymysql.connect(
         host=Cfg.NETWORK[network_id]["DB_HOST"],
         port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
-        user=Cfg.NETWORK[network_id]["DB_UID"],
-        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
+        user=Cfg.NETWORK[network_id]["BURROW_DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["BURROW_DB_PWD"],
         db="burrow")
     return conn
 
