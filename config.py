@@ -25,13 +25,17 @@ except ImportError:
     INDEXER_PORT = "5432"
 
 try:
-    from db_info import DB_DSN, DB_UID, DB_PWD, DB_HOST, DB_PORT
+    from db_info import DB_DSN, DB_UID, DB_PWD, DB_HOST, DB_PORT, CRM_DB_UID, CRM_DB_PWD, BURROW_DB_UID, BURROW_DB_PWD
 except ImportError:
     DB_DSN = "ref"
     DB_UID = "root"
     DB_PWD = "root"
     DB_HOST = "127.0.0.1"
     DB_PORT = "3306"
+    CRM_DB_UID = "root"
+    CRM_DB_PWD = "root"
+    BURROW_DB_UID = "root"
+    BURROW_DB_PWD = "root"
 
 
 try:
@@ -164,6 +168,10 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "CRM_DB_UID": CRM_DB_UID,
+            "CRM_DB_PWD": CRM_DB_PWD,
+            "BURROW_DB_UID": BURROW_DB_UID,
+            "BURROW_DB_PWD": BURROW_DB_PWD,
             "NEAR_LAKE_DB_DSN": NEAR_LAKE_DB_DSN,
             "NEAR_LAKE_DB_UID": NEAR_LAKE_DB_UID,
             "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
