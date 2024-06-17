@@ -46,13 +46,14 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
     AUTH_SWITCH = True
     NOT_AUTH_LIST = ["/crm/orderly/trading-data"]
     SIGN_EXPIRE = 300
+    CRYPTO_AES_KEY = "8309c61008a5f5ba6c51bbf977781c55"
 
 """
 
@@ -170,7 +171,7 @@ class Cfg:
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
             "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
-            "CRYPTO_AES_KEY": "8309c61008a5f5ba6c51bbf977781c55",
+            "CRYPTO_AES_KEY": CRYPTO_AES_KEY,
             "AUTH_SWITCH": AUTH_SWITCH,
             "NOT_AUTH_LIST": NOT_AUTH_LIST,
             "SIGN_EXPIRE": SIGN_EXPIRE
@@ -547,6 +548,7 @@ class Cfg:
             {"SYMBOL": "SMD", "MD_ID": "swapmode"},
             {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
             {"SYMBOL": "USDe", "MD_ID": "ethena-usde"},
+            {"SYMBOL": "DETH", "MD_ID": "stakehouse-deth"},
         ],
     }
     MARKET_URL = MARKET_URL
