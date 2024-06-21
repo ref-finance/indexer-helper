@@ -334,6 +334,7 @@ class Cfg:
             {"SYMBOL": "DGS", "NEAR_ID": "dragonsoultoken.near", "MD_ID": "v2.ref-finance.near|4532|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "SLUSH", "NEAR_ID": "slush.tkn.near", "MD_ID": "v2.ref-finance.near|4623|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "OTTO", "NEAR_ID": "4e807467ba9e3119d5356c5568ef63e9c321b471.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4479|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "BABYBLACKDRAGON", "NEAR_ID": "babyblackdragon.tkn.near", "MD_ID": "v2.ref-finance.near|4840|wrap.near", "DECIMAL": 24},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
@@ -557,6 +558,8 @@ class Cfg:
             {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
             {"SYMBOL": "USDe", "MD_ID": "ethena-usde"},
             {"SYMBOL": "DETH", "MD_ID": "stakehouse-deth"},
+	    {"SYMBOL": "ASTR", "MD_ID": "astar"},
+            {"SYMBOL": "vASTR", "MD_ID": "bifrost-voucher-astr"},
         ],
     }
     MARKET_URL = MARKET_URL
