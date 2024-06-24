@@ -120,6 +120,7 @@ def handle_token_price_ratio_report_w(network_id, token_pair, token_price_data, 
         "price": ratio,
         "date_time": handle_hour_stamp(now_time)
     }
+    update_flag = False
     ret = get_token_price_ratio_report(network_id, redis_key)
     if ret is None:
         price_list = []
@@ -130,20 +131,21 @@ def handle_token_price_ratio_report_w(network_id, token_pair, token_price_data, 
         }
         price_list.append(price_data)
         redis_values["price_list"] = price_list
+        update_flag = True
     else:
         redis_values = json.loads(ret)
         price_list = redis_values["price_list"]
         if len(price_list) >= 2:
-            last_time2 = price_list[-2]["date_time"]
-            last_time1 = price_list[-1]["date_time"]
-            new_time = last_time2 + 14400
-            if new_time != last_time1 or new_time == handle_hour_stamp(now_time):
-                price_list.pop(-1)
-        price_list.append(price_data)
+            last_time_w = price_list[-1]["date_time"]
+            if handle_day_stamp(now_time) - last_time_w >= 14400:
+                price_list.append(price_data)
+                update_flag = True
         if len(price_list) > 42:
             price_list.pop(0)
+            update_flag = True
         redis_values["price_list"] = price_list
-    add_token_price_ratio_to_redis(network_id, redis_key, redis_values)
+    if update_flag:
+        add_token_price_ratio_to_redis(network_id, redis_key, redis_values)
 
 
 def handle_token_price_ratio_report_m(network_id, token_pair, token_price_data, now_time):
@@ -205,6 +207,7 @@ def handle_token_price_ratio_report_y(network_id, token_pair, token_price_data, 
         "price": ratio,
         "date_time": handle_day_stamp(now_time)
     }
+    update_flag = True
     ret = get_token_price_ratio_report(network_id, redis_key)
     if ret is None:
         price_list = []
@@ -215,18 +218,21 @@ def handle_token_price_ratio_report_y(network_id, token_pair, token_price_data, 
         }
         price_list.append(price_data)
         redis_values["price_list"] = price_list
+        update_flag = True
     else:
         redis_values = json.loads(ret)
         price_list = redis_values["price_list"]
         if len(price_list) >= 2:
-            last_time2 = price_list[-2]["date_time"]
-            last_time1 = price_list[-1]["date_time"]
-            new_time = last_time2 + 259200
-            if new_time != last_time1 or new_time == handle_day_stamp(now_time):
-                price_list.pop(-1)
-        price_list.append(price_data)
+            last_time_y = price_list[-1]["date_time"]
+            if handle_day_stamp(now_time) - last_time_y >= 259200:
+                price_list.append(price_data)
+                update_flag = True
+            if len(price_list) > 120:
+                price_list.pop(0)
+                update_flag = True
         redis_values["price_list"] = price_list
-    add_token_price_ratio_to_redis(network_id, redis_key, redis_values)
+    if update_flag:
+        add_token_price_ratio_to_redis(network_id, redis_key, redis_values)
 
 
 def handle_token_price_ratio_report_all(network_id, token_pair, token_price_data, now_time):
@@ -247,6 +253,7 @@ def handle_token_price_ratio_report_all(network_id, token_pair, token_price_data
         "price": ratio,
         "date_time": handle_day_stamp(now_time)
     }
+    update_flag = True
     ret = get_token_price_ratio_report(network_id, redis_key)
     if ret is None:
         price_list = []
@@ -257,18 +264,18 @@ def handle_token_price_ratio_report_all(network_id, token_pair, token_price_data
         }
         price_list.append(price_data)
         redis_values["price_list"] = price_list
+        update_flag = True
     else:
         redis_values = json.loads(ret)
         price_list = redis_values["price_list"]
         if len(price_list) >= 2:
-            last_time2 = price_list[-2]["date_time"]
-            last_time1 = price_list[-1]["date_time"]
-            new_time = last_time2 + 259200
-            if new_time != last_time1 or new_time == handle_day_stamp(now_time):
-                price_list.pop(-1)
-        price_list.append(price_data)
+            last_time_all = price_list[-1]["date_time"]
+            if handle_day_stamp(now_time) - last_time_all >= 259200:
+                price_list.append(price_data)
+                update_flag = True
         redis_values["price_list"] = price_list
-    add_token_price_ratio_to_redis(network_id, redis_key, redis_values)
+    if update_flag:
+        add_token_price_ratio_to_redis(network_id, redis_key, redis_values)
 
 
 def add_token_price_ratio_to_redis(network_id, key, values):
