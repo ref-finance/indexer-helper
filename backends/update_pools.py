@@ -88,6 +88,7 @@ def internal_get_token_metadata(conn, contract_id):
 
 
 def internal_get_pools(network_id: str, number: int) -> list:
+    update_time = int(time.time())
     pools = []
     token_metadata = {}
     seeds = set()
@@ -140,6 +141,7 @@ def internal_get_pools(network_id: str, number: int) -> list:
                 pool["farming"] = False
 
             pool["token_symbols"] = []
+            pool["update_time"] = update_time
             for x in pool["token_account_ids"]:
                 if x in token_metadata:
                     if token_metadata[x] != "":

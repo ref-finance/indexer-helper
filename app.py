@@ -30,7 +30,7 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 
-service_version = "20240617.01"
+service_version = "20240625.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -273,15 +273,6 @@ def handle_list_top_pools():
     metadata = list_token_metadata(Cfg.NETWORK_ID)
 
     combine_pools_info(pools, prices, metadata)
-    list_top_pools_log = []
-    for pool in pools:
-        pool_log = {
-            "id": pool["id"],
-            "token_account_ids": pool["token_account_ids"],
-            "amounts": pool["amounts"],
-        }
-        list_top_pools_log.append(pool_log)
-    # logger.info("list_top_pools_data:{}", list_top_pools_log)
     return compress_response_content(pools)
 
 
@@ -904,6 +895,53 @@ def handel_get_liquidation_result():
 @app.route('/get_market_token_price', methods=['GET'])
 def handle_market_token_price():
     return get_market_token_price()
+
+
+@app.route('/list-top-pools-v2', methods=['GET'])
+def handle_list_top_pools_v2():
+    """
+    list_top_pools
+    """
+    ret_data = {"update_flag": False, "update_time": None}
+    pools = list_top_pools(Cfg.NETWORK_ID)
+    prices = list_token_price(Cfg.NETWORK_ID)
+    metadata = list_token_metadata(Cfg.NETWORK_ID)
+
+    combine_pools_info(pools, prices, metadata)
+    now_time = int(time.time())
+    min_time = now_time
+    ret_list_top_pools = []
+    for pool in pools:
+        amount_flag = False
+        price_flag = False
+        tokens = pool['token_account_ids']
+        amounts = pool['amounts']
+        for i in range(len(amounts)):
+            if int(amounts[i]) > 0:
+                amount_flag = True
+        if not amount_flag:
+            continue
+        for x in range(len(tokens)):
+            if tokens[x] in prices:
+                price_flag = True
+        if price_flag:
+            if float(pool["tvl"]) > 10:
+                ret_list_top_pools.append(pool)
+                if "update_time" in pool:
+                    update_time = int(pool["update_time"])
+                    if update_time < min_time:
+                        min_time = update_time
+        else:
+            ret_list_top_pools.append(pool)
+            if "update_time" in pool:
+                update_time = int(pool["update_time"])
+                if update_time < min_time:
+                    min_time = update_time
+    ret_data["pool_list"] = ret_list_top_pools
+    ret_data["timestamp"] = now_time
+    ret_data["update_time"] = min_time
+    ret_data["update_flag"] = now_time - min_time < 120
+    return compress_response_content(ret_data)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
