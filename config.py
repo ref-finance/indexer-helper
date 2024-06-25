@@ -50,7 +50,7 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
@@ -58,6 +58,8 @@ except ImportError:
     NOT_AUTH_LIST = ["/crm/orderly/trading-data"]
     SIGN_EXPIRE = 300
     CRYPTO_AES_KEY = "8309c61008a5f5ba6c51bbf977781c55"
+    REF_URL = ""
+    REF_SDK_URL = ""
 
 """
 
@@ -559,12 +561,14 @@ class Cfg:
             {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
             {"SYMBOL": "USDe", "MD_ID": "ethena-usde"},
             {"SYMBOL": "DETH", "MD_ID": "stakehouse-deth"},
-	    {"SYMBOL": "ASTR", "MD_ID": "astar"},
+	        {"SYMBOL": "ASTR", "MD_ID": "astar"},
             {"SYMBOL": "vASTR", "MD_ID": "bifrost-voucher-astr"},
         ],
     }
     MARKET_URL = MARKET_URL
     MARKET_KEY = MARKET_KEY
+    REF_URL = REF_URL
+    REF_SDK_URL = REF_SDK_URL
 
 
 if __name__ == '__main__':
