@@ -46,10 +46,12 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL
+    from db_info import MARKET_KEY, MARKET_URL, REF_URL, REF_SDK_URL
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
+    REF_URL = ""
+    REF_SDK_URL = ""
 
 """
 
@@ -541,12 +543,14 @@ class Cfg:
             {"SYMBOL": "M-BTC", "MD_ID": "merlin-s-seal-btc"},
             {"SYMBOL": "USDe", "MD_ID": "ethena-usde"},
             {"SYMBOL": "DETH", "MD_ID": "stakehouse-deth"},
-	    {"SYMBOL": "ASTR", "MD_ID": "astar"},
+	        {"SYMBOL": "ASTR", "MD_ID": "astar"},
             {"SYMBOL": "vASTR", "MD_ID": "bifrost-voucher-astr"},
         ],
     }
     MARKET_URL = MARKET_URL
     MARKET_KEY = MARKET_KEY
+    REF_URL = REF_URL,
+    REF_SDK_URL = REF_SDK_URL
 
 
 if __name__ == '__main__':
