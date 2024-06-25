@@ -549,7 +549,7 @@ class Cfg:
     }
     MARKET_URL = MARKET_URL
     MARKET_KEY = MARKET_KEY
-    REF_URL = REF_URL,
+    REF_URL = REF_URL
     REF_SDK_URL = REF_SDK_URL
 
 
