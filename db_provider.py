@@ -860,7 +860,7 @@ def get_history_token_price_by_token(ids, data_time):
 
 
 def query_dcl_pool_log(network_id, start_block_id, end_block_id):
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select * from (select tla.event_method, tla.pool_id, '' as order_id, tla.lpt_id, '' as swapper, " \
           "'' as token_in, '' as token_out, '' as amount_in, '' as amount_out, '' as created_at, '' as cancel_at, " \
           "'' as completed_at, tla.owner_id, '' as `point`, '' as sell_token, '' as buy_token, " \
