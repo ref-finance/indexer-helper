@@ -545,6 +545,7 @@ class Cfg:
             {"SYMBOL": "DETH", "MD_ID": "stakehouse-deth"},
 	        {"SYMBOL": "ASTR", "MD_ID": "astar"},
             {"SYMBOL": "vASTR", "MD_ID": "bifrost-voucher-astr"},
+            {"SYMBOL": "BLAST", "MD_ID": "blast"},
         ],
     }
     MARKET_URL = MARKET_URL
