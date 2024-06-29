@@ -320,6 +320,8 @@ class Cfg:
             {"SYMBOL": "OTTO", "NEAR_ID": "4e807467ba9e3119d5356c5568ef63e9c321b471.factory.bridge.near", "MD_ID": "v2.ref-finance.near|4479|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "BABYBLACKDRAGON", "NEAR_ID": "babyblackdragon.tkn.near", "MD_ID": "v2.ref-finance.near|4840|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "FAST", "NEAR_ID": "edge-fast.near", "MD_ID": "v2.ref-finance.near|5167|wrap.near", "DECIMAL": 24},
+            {"SYMBOL": "HAT", "NEAR_ID": "hat.tkn.near", "MD_ID": "v2.ref-finance.near|5179|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "INTEL", "NEAR_ID": "intel.tkn.near", "MD_ID": "v2.ref-finance.near|4663|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
             {"SYMBOL": "cbETH", "MD_ID": "coinbase-wrapped-staked-eth"},
