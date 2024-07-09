@@ -1346,6 +1346,26 @@ def get_liquidation_result(network_id, key):
         cursor.close()
 
 
+def add_user_wallet_info(network_id, account_id, wallet_address):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select id from t_user_wallet_info where account_id = '%s' and wallet_address = '%s'" % (account_id, wallet_address)
+    sql = "insert into t_user_wallet_info(account_id, wallet_address, `created_time`, `updated_time`) " \
+          "values('%s','%s', now(), now())" % (account_id, wallet_address)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(query_sql)
+        row = cursor.fetchone()
+        if row is None:
+            cursor.execute(sql)
+            db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert t_user_wallet_info to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()

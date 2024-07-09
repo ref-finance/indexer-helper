@@ -6,6 +6,7 @@ from flask import request
 import requests
 from db_provider import add_tx_receipt, query_tx_by_receipt
 from config import Cfg
+from near_multinode_rpc_provider import MultiNodeJsonProviderError, MultiNodeJsonProvider
 
 LEFT_MOST_POINT = -800000
 RIGHT_MOST_POINT = 800000
@@ -739,6 +740,30 @@ def get_circulating_supply():
     circulating_supply_data = json.loads(circulating_supply_ret.text)
     circulating_supply = circulating_supply_data["circulatingSupply"]
     return str(circulating_supply)
+
+
+def get_lp_lock_info(network_id):
+    try:
+        conn = MultiNodeJsonProvider(network_id)
+        ret = conn.view_call(Cfg.NETWORK[network_id]["TOKEN_LOCKER_CONTRACT"], "get_accounts_paged", b'{}')
+        json_str = "".join([chr(x) for x in ret["result"]])
+        accounts_paged = json.loads(json_str)
+        pool_data = {}
+        pool_ids = set()
+        for account in accounts_paged:
+            locked_tokens = account["locked_tokens"]
+            for key, values in locked_tokens.items():
+                pool_id = key.split("@:")[1]
+                pool_ids.add(pool_id)
+                if pool_id in pool_data:
+                    pool_data[pool_id] = pool_data[pool_id] + int(values["locked_balance"])
+                else:
+                    pool_data[pool_id] = int(values["locked_balance"])
+        return pool_data, list(pool_ids)
+    except MultiNodeJsonProviderError as e:
+        print("RPC Error: ", e)
+    except Exception as e:
+        print("Error: ", e)
 
 
 if __name__ == '__main__':
