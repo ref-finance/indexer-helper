@@ -756,9 +756,10 @@ def get_lp_lock_info(network_id):
                 pool_id = key.split("@:")[1]
                 pool_ids.add(pool_id)
                 if pool_id in pool_data:
-                    pool_data[pool_id] = pool_data[pool_id] + int(values["locked_balance"])
+                    pool_data[pool_id]["locked_details"].append(values)
+                    pool_data[pool_id]["locked_balance"] = pool_data[pool_id]["locked_balance"] + int(values["locked_balance"])
                 else:
-                    pool_data[pool_id] = int(values["locked_balance"])
+                    pool_data[pool_id] = {"locked_balance": int(values["locked_balance"]), "locked_details": [values]}
         return pool_data, list(pool_ids)
     except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)

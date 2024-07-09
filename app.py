@@ -945,14 +945,18 @@ def handel_lp_lock_info():
         pools = list_pools_by_id_list(Cfg.NETWORK_ID, pool_ids)
         pool_info = {}
         for pool in pools:
-            pool_info[pool["id"]] = int(pool["shares_total_supply"])
+            pool_info[pool["id"]] = pool["shares_total_supply"]
         for key, values in account_paged.items():
             if key in pool_info:
+                locked_details = values["locked_details"]
+                for locked_detail in locked_details:
+                    locked_detail["percent"] = '{:.12f}'.format((int(locked_detail["locked_balance"]) / int(pool_info[key])) * 100)
                 ret_data = {
-                    "percent": '{:.12f}'.format((values / pool_info[key]) * 100),
-                    "lock_amount": str(values),
-                    "shares_total_supply": str(pool_info[key]),
-                    "lock_id": key
+                    "percent": '{:.12f}'.format((values["locked_balance"] / int(pool_info[key])) * 100),
+                    "lock_amount": str(values["locked_balance"]),
+                    "shares_total_supply": pool_info[key],
+                    "lock_id": key,
+                    "locked_details": locked_details
                 }
                 ret_data_list.append(ret_data)
         ret = {
