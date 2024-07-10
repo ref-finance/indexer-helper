@@ -129,6 +129,7 @@ class Cfg:
             "REF_CONTRACT": "v2.ref-finance.near",
             "XREF_CONTRACT": "xtoken.ref-finance.near",
             "BOOSTFARM_CONTRACT": "boostfarm.ref-labs.near",
+            "TOKEN_LOCKER_CONTRACT": "token-locker.ref-labs.near",
             "USN_CONTRACT": "usn",
             "DCL_POOL_CONTRACT": "dclv2.ref-labs.near",
             "DCL_CONTRACT": "dclv2.ref-labs.near",
