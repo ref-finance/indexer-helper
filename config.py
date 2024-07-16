@@ -549,6 +549,12 @@ class Cfg:
 	        {"SYMBOL": "ASTR", "MD_ID": "astar"},
             {"SYMBOL": "vASTR", "MD_ID": "bifrost-voucher-astr"},
             {"SYMBOL": "BLAST", "MD_ID": "blast"},
+            {"SYMBOL": "mETH", "MD_ID": "mantle-staked-ether"},
+            {"SYMBOL": "eETH", "MD_ID": "ether-fi-staked-eth"},
+            {"SYMBOL": "instETH", "MD_ID": "inception-restaked-steth"},
+            {"SYMBOL": "mstETH", "MD_ID": "eigenpie-msteth"},
+            {"SYMBOL": "pufETH", "MD_ID": "pufeth"},
+            {"SYMBOL": "inrETH", "MD_ID": "inception-restaked-reth"},
         ],
     }
     MARKET_URL = MARKET_URL
