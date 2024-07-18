@@ -2,7 +2,7 @@ import json
 
 from config import Cfg
 import redis
-from db_provider import get_redis_data, batch_get_redis_data
+from data_utils import get_redis_data, batch_get_redis_data
 
 pool = redis.ConnectionPool(host=Cfg.REDIS["REDIS_HOST"], port=int(Cfg.REDIS["REDIS_PORT"]), decode_responses=True)
 
