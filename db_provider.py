@@ -1366,6 +1366,50 @@ def add_user_wallet_info(network_id, account_id, wallet_address):
         cursor.close()
 
 
+def add_redis_data(network_id, key, values):
+    now_time = int(time.time())
+    db_conn = get_burrow_connect(network_id)
+
+    sql = """
+        INSERT INTO t_indexer_redis_data (key, values, timestamp, created_time, updated_time)
+        VALUES (%s, %s, %s, now(), now())
+        ON DUPLICATE KEY UPDATE
+        key = VALUES(key),
+        timestamp = VALUES(timestamp),
+        created_time = VALUES(created_time),
+        updated_time = VALUES(updated_time)
+    """
+
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (key, values, now_time))
+        db_conn.commit()
+
+    except Exception as e:
+        # Rollback on error
+        db_conn.rollback()
+        print("insert liquidation_result_info to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
+def get_redis_data(network_id, key):
+    db_conn = get_burrow_connect(network_id)
+    sql = "select `key`, `values`, `timestamp`, `created_time`, `updated_time` from t_indexer_redis_data " \
+          "where `key` = '%s'" % key
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        row = cursor.fetchone()
+        return row
+    except Exception as e:
+        db_conn.rollback()
+        print("query liquidation_result_info to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
