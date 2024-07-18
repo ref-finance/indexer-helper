@@ -509,6 +509,7 @@ def add_24h_dcl_pools_to_redis(network_id, dcl_pools_data):
                 volume = volume_y
             redis_conn.begin_pipe()
             redis_conn.add_twenty_four_hour_pools_data(network_id, pool_data["pool_id"], str(volume))
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_data["pool_id"], str(volume))
             redis_conn.end_pipe()
 
         redis_conn.close()
@@ -542,6 +543,7 @@ def add_list_dcl_pools_to_redis(network_id, dcl_pools_data, zero_point):
             }
             redis_conn.begin_pipe()
             redis_conn.add_dcl_pools_data(network_id, pool_id, json.dumps(pool_volume_data, cls=Encoder), pool_data["pool_id"])
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + pool_data["pool_id"], pool_id, json.dumps(pool_volume_data))
             redis_conn.end_pipe()
 
         redis_conn.close()
@@ -552,10 +554,11 @@ def add_list_dcl_pools_to_redis(network_id, dcl_pools_data, zero_point):
 
 
 def add_dcl_pools_tvl_to_redis(network_id, pool_id, pool_tvl_data):
+    redis_conn = RedisProvider()
     try:
-        redis_conn = RedisProvider()
         redis_conn.begin_pipe()
         redis_conn.add_dcl_pools_tvl_data(network_id, pool_tvl_data["pool_id"], pool_id, json.dumps(pool_tvl_data, cls=Encoder))
+        add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_TVL_LIST_KEY"] + "_" + pool_tvl_data["pool_id"], pool_id, json.dumps(pool_tvl_data, cls=Encoder))
         redis_conn.end_pipe()
         redis_conn.close()
     except Exception as e:
@@ -783,6 +786,7 @@ def add_account_pool_assets_to_redis(network_id, key, values):
     redis_conn = RedisProvider()
     redis_conn.begin_pipe()
     redis_conn.add_account_pool_assets(network_id, key, values)
+    add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], key, values)
     redis_conn.end_pipe()
     redis_conn.close()
 
@@ -969,7 +973,9 @@ def handle_pool_point_data_to_redis(network_id, pool_id_list):
             cursor.execute(sql_24h)
             point_data_24h = cursor.fetchall()
             redis_conn.add_pool_point_24h_assets(network_id, pool_id, json.dumps(point_data_24h))
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id, json.dumps(point_data_24h))
             redis_conn.add_pool_point_24h_assets(network_id, pool_id + "timestamp", now)
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id + "timestamp", now)
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
     finally:
@@ -1366,23 +1372,18 @@ def add_user_wallet_info(network_id, account_id, wallet_address):
         cursor.close()
 
 
-def add_redis_data(network_id, key, values):
+def add_redis_data(network_id, key, redis_key, values):
     now_time = int(time.time())
-    db_conn = get_burrow_connect(network_id)
+    db_conn = get_db_connect(network_id)
 
-    sql = """
-        INSERT INTO t_indexer_redis_data (key, values, timestamp, created_time, updated_time)
-        VALUES (%s, %s, %s, now(), now())
-        ON DUPLICATE KEY UPDATE
-        key = VALUES(key),
-        timestamp = VALUES(timestamp),
-        created_time = VALUES(created_time),
-        updated_time = VALUES(updated_time)
-    """
+    sql = "INSERT INTO t_indexer_redis_data (`key`, redis_key, redis_values, `timestamp`, created_time, updated_time) " \
+          "VALUES ('%s', '%s', '%s', %s, now(), now()) ON DUPLICATE KEY UPDATE redis_values = VALUES(redis_values), " \
+          "`timestamp` = VALUES(`timestamp`), created_time = VALUES(created_time), " \
+          "updated_time = VALUES(updated_time)" % (key, redis_key, values, now_time)
 
-    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    cursor = db_conn.cursor()
     try:
-        cursor.execute(sql, (key, values, now_time))
+        cursor.execute(sql)
         db_conn.commit()
 
     except Exception as e:
@@ -1394,15 +1395,29 @@ def add_redis_data(network_id, key, values):
         cursor.close()
 
 
-def get_redis_data(network_id, key):
-    db_conn = get_burrow_connect(network_id)
-    sql = "select `key`, `values`, `timestamp`, `created_time`, `updated_time` from t_indexer_redis_data " \
-          "where `key` = '%s'" % key
+def get_redis_data(network_id, key, redis_key):
+    db_conn = get_db_connect(network_id)
+    sql = "select `redis_values` from t_indexer_redis_data where `key` = '%s' redis_key = '%s'" % (key, redis_key)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
         row = cursor.fetchone()
-        return row
+        return row["redis_values"]
+    except Exception as e:
+        db_conn.rollback()
+        print("query liquidation_result_info to db error:", e)
+    finally:
+        cursor.close()
+
+
+def batch_get_redis_data(network_id, key):
+    db_conn = get_db_connect(network_id)
+    sql = "select redis_key, redis_values from t_indexer_redis_data where `key` = '%s'" % key
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        return rows
     except Exception as e:
         db_conn.rollback()
         print("query liquidation_result_info to db error:", e)
@@ -1422,8 +1437,11 @@ if __name__ == '__main__':
     # }
     # handle_account_pool_assets_m_data("MAINNET", now_time, row)
 
-    ret_data = query_dcl_pool_log("MAINNET", "82253864", "82253911")
-    print(ret_data)
+    # ret_data = query_dcl_pool_log("MAINNET", "82253864", "82253911")
+    # print(ret_data)
+
     # hour_stamp = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
     # timestamp = hour_stamp - (1 * 24 * 60 * 60)
     # print(timestamp)
+
+    add_redis_data("MAINNET", "test", "test6", "6")

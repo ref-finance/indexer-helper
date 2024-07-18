@@ -5,7 +5,7 @@ import json
 from config import Cfg
 import time
 from redis_provider import RedisProvider, get_token_price_ratio_report
-from db_provider import get_token_price
+from db_provider import get_token_price, add_redis_data
 
 
 def handle_token_pair(network_id):
@@ -282,6 +282,7 @@ def add_token_price_ratio_to_redis(network_id, key, values):
     redis_conn = RedisProvider()
     redis_conn.begin_pipe()
     redis_conn.add_token_ratio_report(network_id, key, json.dumps(values))
+    add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key, json.dumps(values))
     redis_conn.end_pipe()
     redis_conn.close()
 
