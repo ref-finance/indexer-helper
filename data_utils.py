@@ -38,7 +38,7 @@ def add_redis_data(network_id, key, redis_key, values):
 
 def get_redis_data(network_id, key, redis_key):
     db_conn = get_db_connect(network_id)
-    sql = "select `redis_values` from t_indexer_redis_data where `key` = '%s' redis_key = '%s'" % (key, redis_key)
+    sql = "select `redis_values` from t_indexer_redis_data where `key` = '%s' and redis_key = '%s'" % (key, redis_key)
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
