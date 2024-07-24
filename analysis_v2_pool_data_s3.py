@@ -1,13 +1,13 @@
 import json
 import sys
 import time
-from db_info import BUCKET_NAME, AWS_S3_AKI, AWS_S3_SAK, AWS_REGION_NAME
+from db_info import BUCKET_NAME
 import boto3
 import os
 sys.path.append('/')
 from db_provider import add_v2_pool_data, add_dcl_user_liquidity_data, add_dcl_user_liquidity_fee_data
 
-s3 = boto3.client('s3', region_name=AWS_REGION_NAME, aws_access_key_id=AWS_S3_AKI, aws_secret_access_key=AWS_S3_SAK)
+s3 = boto3.client('s3')
 
 
 def add_data_to_db(file_name, network_id):

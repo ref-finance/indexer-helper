@@ -5,6 +5,7 @@ from datetime import datetime
 from config import Cfg
 import time
 from redis_provider import RedisProvider, list_history_token_price, list_token_price, get_account_pool_assets, get_pool_point_24h_by_pool_id
+from data_utils import add_redis_data
 
 
 class Encoder(json.JSONEncoder):
@@ -56,8 +57,8 @@ def get_crm_db_connect(network_id: str):
     conn = pymysql.connect(
         host=Cfg.NETWORK[network_id]["DB_HOST"],
         port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
-        user=Cfg.NETWORK[network_id]["DB_UID"],
-        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
+        user=Cfg.NETWORK[network_id]["CRM_DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["CRM_DB_PWD"],
         db="crm")
     return conn
 
@@ -66,8 +67,8 @@ def get_burrow_connect(network_id: str):
     conn = pymysql.connect(
         host=Cfg.NETWORK[network_id]["DB_HOST"],
         port=int(Cfg.NETWORK[network_id]["DB_PORT"]),
-        user=Cfg.NETWORK[network_id]["DB_UID"],
-        passwd=Cfg.NETWORK[network_id]["DB_PWD"],
+        user=Cfg.NETWORK[network_id]["BURROW_DB_UID"],
+        passwd=Cfg.NETWORK[network_id]["BURROW_DB_PWD"],
         db="burrow")
     return conn
 
@@ -92,7 +93,7 @@ def get_actions(network_id, account_id):
     json_ret = []
     db_conn = get_db_connect(network_id)
     sql = "select `timestamp`,tx_id,receiver_account_id,method_name,args,deposit,`status`,receipt_id " \
-          "from near_lake_latest_actions where predecessor_account_id = '%s' order by id desc limit 10" % account_id
+          "from near_lake_latest_actions where predecessor_account_id = '%s' order by `timestamp` desc limit 10" % account_id
     cursor = db_conn.cursor()
     try:
         cursor.execute(sql)
@@ -509,6 +510,7 @@ def add_24h_dcl_pools_to_redis(network_id, dcl_pools_data):
                 volume = volume_y
             redis_conn.begin_pipe()
             redis_conn.add_twenty_four_hour_pools_data(network_id, pool_data["pool_id"], str(volume))
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_data["pool_id"], str(volume))
             redis_conn.end_pipe()
 
         redis_conn.close()
@@ -542,6 +544,7 @@ def add_list_dcl_pools_to_redis(network_id, dcl_pools_data, zero_point):
             }
             redis_conn.begin_pipe()
             redis_conn.add_dcl_pools_data(network_id, pool_id, json.dumps(pool_volume_data, cls=Encoder), pool_data["pool_id"])
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + pool_data["pool_id"], pool_id, json.dumps(pool_volume_data))
             redis_conn.end_pipe()
 
         redis_conn.close()
@@ -552,10 +555,11 @@ def add_list_dcl_pools_to_redis(network_id, dcl_pools_data, zero_point):
 
 
 def add_dcl_pools_tvl_to_redis(network_id, pool_id, pool_tvl_data):
+    redis_conn = RedisProvider()
     try:
-        redis_conn = RedisProvider()
         redis_conn.begin_pipe()
         redis_conn.add_dcl_pools_tvl_data(network_id, pool_tvl_data["pool_id"], pool_id, json.dumps(pool_tvl_data, cls=Encoder))
+        add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_TVL_LIST_KEY"] + "_" + pool_tvl_data["pool_id"], pool_id, json.dumps(pool_tvl_data, cls=Encoder))
         redis_conn.end_pipe()
         redis_conn.close()
     except Exception as e:
@@ -783,6 +787,7 @@ def add_account_pool_assets_to_redis(network_id, key, values):
     redis_conn = RedisProvider()
     redis_conn.begin_pipe()
     redis_conn.add_account_pool_assets(network_id, key, values)
+    add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], key, values)
     redis_conn.end_pipe()
     redis_conn.close()
 
@@ -860,7 +865,7 @@ def get_history_token_price_by_token(ids, data_time):
 
 
 def query_dcl_pool_log(network_id, start_block_id, end_block_id):
-    db_conn = get_near_lake_dcl_connect(network_id)
+    db_conn = get_db_connect(network_id)
     sql = "select * from (select tla.event_method, tla.pool_id, '' as order_id, tla.lpt_id, '' as swapper, " \
           "'' as token_in, '' as token_out, '' as amount_in, '' as amount_out, '' as created_at, '' as cancel_at, " \
           "'' as completed_at, tla.owner_id, '' as `point`, '' as sell_token, '' as buy_token, " \
@@ -969,7 +974,9 @@ def handle_pool_point_data_to_redis(network_id, pool_id_list):
             cursor.execute(sql_24h)
             point_data_24h = cursor.fetchall()
             redis_conn.add_pool_point_24h_assets(network_id, pool_id, json.dumps(point_data_24h))
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id, json.dumps(point_data_24h))
             redis_conn.add_pool_point_24h_assets(network_id, pool_id + "timestamp", now)
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id + "timestamp", now)
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
     finally:
@@ -1029,7 +1036,7 @@ def add_dcl_user_liquidity_fee_data(data_list, network_id):
 def query_recent_transaction_swap(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select token_in, token_out, swap_in, swap_out,`timestamp`, '' as tx_id,block_hash as receipt_id from " \
-          "near_lake_swap_log where pool_id = '%s' order by id desc limit 50" % pool_id
+          "near_lake_swap_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -1044,7 +1051,7 @@ def query_recent_transaction_swap(network_id, pool_id):
 def query_recent_transaction_dcl_swap(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select token_in, token_out, amount_in, amount_out,`timestamp`, '' as tx_id,tx_id as receipt_id from " \
-          "t_swap where amount_in > '0' and pool_id like '%"+pool_id+"%' order by id desc limit 50"
+          "t_swap where amount_in > '0' and pool_id like '%"+pool_id+"%' order by `timestamp` desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -1059,7 +1066,7 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
 def query_recent_transaction_liquidity(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select method_name, pool_id, shares, `timestamp`, '' as tx_id, amounts,block_hash as receipt_id, " \
-          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by id desc limit 50" % pool_id
+          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql)
@@ -1378,8 +1385,11 @@ if __name__ == '__main__':
     # }
     # handle_account_pool_assets_m_data("MAINNET", now_time, row)
 
-    ret_data = query_dcl_pool_log("MAINNET", "82253864", "82253911")
-    print(ret_data)
+    # ret_data = query_dcl_pool_log("MAINNET", "82253864", "82253911")
+    # print(ret_data)
+
     # hour_stamp = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
     # timestamp = hour_stamp - (1 * 24 * 60 * 60)
     # print(timestamp)
+
+    add_redis_data("MAINNET", "test", "test6", "6")
