@@ -2,6 +2,7 @@ import json
 
 from config import Cfg
 import redis
+from data_utils import get_redis_data, batch_get_redis_data
 
 pool = redis.ConnectionPool(host=Cfg.REDIS["REDIS_HOST"], port=int(Cfg.REDIS["REDIS_PORT"]), decode_responses=True)
 
@@ -205,16 +206,23 @@ def get_24h_pool_volume(network_id, pool_id):
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hget(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_id)
     r.close()
+    if ret is None:
+        ret = get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"], pool_id)
     return json.loads(ret)
 
 
 def get_dcl_pools_volume_list(network_id, redis_key):
-
     import json
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
     r.close()
-    dcl_pools_volume_list = [json.loads(x) for x in ret.values()]
+    if ret is None:
+        dcl_pools_volume_list = []
+        ret = batch_get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
+        for d in ret:
+            dcl_pools_volume_list.append(d["redis_values"])
+    else:
+        dcl_pools_volume_list = [json.loads(x) for x in ret.values()]
     return dcl_pools_volume_list
 
 
@@ -223,12 +231,21 @@ def get_24h_pool_volume_list(network_id):
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"])
     r.close()
     dcl_pool_list = []
-    for key, value in ret.items():
-        dcl_pool = {
-            "pool_id": key,
-            "volume": value,
-        }
-        dcl_pool_list.append(dcl_pool)
+    if ret is None:
+        ret = batch_get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_24H_KEY"])
+        for d in ret:
+            dcl_pool = {
+                "pool_id": d["redis_key"],
+                "volume": d["redis_values"],
+            }
+            dcl_pool_list.append(dcl_pool)
+    else:
+        for key, value in ret.items():
+            dcl_pool = {
+                "pool_id": key,
+                "volume": value,
+            }
+            dcl_pool_list.append(dcl_pool)
     return dcl_pool_list
 
 
@@ -238,7 +255,13 @@ def get_dcl_pools_tvl_list(network_id, redis_key):
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_TVL_LIST_KEY"] + "_" + redis_key)
     r.close()
-    dcl_pools_tvl_list = [json.loads(x) for x in ret.values()]
+    if ret is None:
+        dcl_pools_tvl_list = []
+        ret = batch_get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
+        for d in ret:
+            dcl_pools_tvl_list.append(d["redis_values"])
+    else:
+        dcl_pools_tvl_list = [json.loads(x) for x in ret.values()]
     return dcl_pools_tvl_list
 
 
@@ -246,6 +269,8 @@ def get_account_pool_assets(network_id, key):
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hget(Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], key)
     r.close()
+    if ret is None:
+        ret = get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_ACCOUNT_POOL_ASSETS_KEY"], key)
     return ret
 
 
@@ -253,6 +278,8 @@ def get_token_price_ratio_report(network_id, key):
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key)
     r.close()
+    if ret is None:
+        ret = get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key)
     return ret
 
 
@@ -262,6 +289,24 @@ def get_pool_point_24h_by_pool_id(network_id, pool_id):
     r.close()
     if ret is not None:
         ret = json.loads(ret)
+    else:
+        ret = get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id)
+        if ret is not None:
+            ret = json.loads(ret)
+    return ret
+
+
+def get_history_token_price_report(network_id, key):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_HISTORY_TOKEN_PRICE_REPORT_KEY"], key)
+    r.close()
+    return ret
+
+
+def get_market_token_price():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get(Cfg.REDIS_TOKEN_MARKET_PRICE_KEY)
+    r.close()
     return ret
 
 

@@ -10,7 +10,7 @@ except ImportError:
     MAINNET_RPC_URL= ["https://rpc.mainnet.near.org", ]
 
 try:
-    from redis_info import REDIS_HOST, REDIS_PORT
+    from db_info import REDIS_HOST, REDIS_PORT
 except ImportError:
     REDIS_HOST = "127.0.0.1"
     REDIS_PORT = "6379"
@@ -25,13 +25,17 @@ except ImportError:
     INDEXER_PORT = "5432"
 
 try:
-    from db_info import DB_DSN, DB_UID, DB_PWD, DB_HOST, DB_PORT
+    from db_info import DB_DSN, DB_UID, DB_PWD, DB_HOST, DB_PORT, CRM_DB_UID, CRM_DB_PWD, BURROW_DB_UID, BURROW_DB_PWD
 except ImportError:
     DB_DSN = "ref"
     DB_UID = "root"
     DB_PWD = "root"
     DB_HOST = "127.0.0.1"
     DB_PORT = "3306"
+    CRM_DB_UID = "root"
+    CRM_DB_PWD = "root"
+    BURROW_DB_UID = "root"
+    BURROW_DB_PWD = "root"
 
 
 try:
@@ -46,10 +50,14 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL, REF_URL, REF_SDK_URL
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
+    AUTH_SWITCH = True
+    NOT_AUTH_LIST = ["/crm/orderly/trading-data"]
+    SIGN_EXPIRE = 300
+    CRYPTO_AES_KEY = "8309c61008a5f5ba6c51bbf977781c55"
     REF_URL = ""
     REF_SDK_URL = ""
 
@@ -60,6 +68,7 @@ except ImportError:
 class Cfg:
     NETWORK_ID = "MAINNET"
     REFSUBGRAPH_URL = "https://api.thegraph.com/subgraphs/name/coolsnake/refsubgraph"
+    REDIS_TOKEN_MARKET_PRICE_KEY = "TOKEN_MARKET_PRICE"
     REDIS = {
         "REDIS_HOST": REDIS_HOST,
         "REDIS_PORT": REDIS_PORT,
@@ -151,6 +160,7 @@ class Cfg:
             "REDIS_ACCOUNT_POOL_ASSETS_KEY": "ACCOUNT_POOL_ASSETS_MAINNET",
             "REDIS_TOKEN_PRICE_RATIO_REPORT_KEY": "TOKEN_PRICE_RATIO_REPORT_MAINNET",
             "REDIS_POOL_POINT_24H_DATA_KEY": "REDIS_POOL_POINT_24H_DATA_MAINNET",
+            "REDIS_HISTORY_TOKEN_PRICE_REPORT_KEY": "HISTORY_TOKEN_PRICE_REPORT_MAINNET",
             "INDEXER_DSN": INDEXER_DSN,
             "INDEXER_UID": INDEXER_UID,
             "INDEXER_PWD": INDEXER_PWD,
@@ -161,6 +171,10 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "CRM_DB_UID": CRM_DB_UID,
+            "CRM_DB_PWD": CRM_DB_PWD,
+            "BURROW_DB_UID": BURROW_DB_UID,
+            "BURROW_DB_PWD": BURROW_DB_PWD,
             "NEAR_LAKE_DB_DSN": NEAR_LAKE_DB_DSN,
             "NEAR_LAKE_DB_UID": NEAR_LAKE_DB_UID,
             "NEAR_LAKE_DB_PWD": NEAR_LAKE_DB_PWD,
@@ -168,6 +182,10 @@ class Cfg:
             "NEAR_LAKE_DB_PORT": NEAR_LAKE_DB_PORT,
             "NEAR_LAKE_DCL_DB_DSN": NEAR_LAKE_DCL_DB_DSN,
             "BLOCK_HEIGHT_FOLDER_PATH": "/data/web/indexer-helper/backends/",
+            "CRYPTO_AES_KEY": CRYPTO_AES_KEY,
+            "AUTH_SWITCH": AUTH_SWITCH,
+            "NOT_AUTH_LIST": NOT_AUTH_LIST,
+            "SIGN_EXPIRE": SIGN_EXPIRE
         }
     }
     TOKENS = {
