@@ -751,8 +751,10 @@ def get_lp_lock_info(network_id):
         pool_data = {}
         pool_ids = set()
         for account in accounts_paged:
+            account_id = account["account_id"]
             locked_tokens = account["locked_tokens"]
             for key, values in locked_tokens.items():
+                values["lock_id"] = key + account_id
                 pool_id = key.split("@:")[1]
                 pool_ids.add(pool_id)
                 if pool_id in pool_data:

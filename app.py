@@ -962,7 +962,7 @@ def handel_lp_lock_info():
                     "percent": '{:.12f}'.format((values["locked_balance"] / int(pool_info[key])) * 100),
                     "lock_amount": str(values["locked_balance"]),
                     "shares_total_supply": pool_info[key],
-                    "lock_id": key,
+                    "pool_id": key,
                     "locked_details": locked_details
                 }
                 ret_data_list.append(ret_data)
