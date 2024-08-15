@@ -38,10 +38,10 @@ def add_redis_data(network_id, key, redis_key, values):
 
 def get_redis_data(network_id, key, redis_key):
     db_conn = get_db_connect(network_id)
-    sql = "select `redis_values` from t_indexer_redis_data where `key` = '%s' and redis_key = '%s'" % (key, redis_key)
+    sql = "select `redis_values` from t_indexer_redis_data where `key` = %s and redis_key = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (key, redis_key))
         row = cursor.fetchone()
         return row["redis_values"]
     except Exception as e:
@@ -53,10 +53,10 @@ def get_redis_data(network_id, key, redis_key):
 
 def batch_get_redis_data(network_id, key):
     db_conn = get_db_connect(network_id)
-    sql = "select redis_key, redis_values from t_indexer_redis_data where `key` = '%s'" % key
+    sql = "select redis_key, redis_values from t_indexer_redis_data where `key` = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, key)
         rows = cursor.fetchall()
         return rows
     except Exception as e:

@@ -29,8 +29,9 @@ from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_po
 import datetime
 from auth.crypto_utl import decrypt
 import time
+import bleach
 
-service_version = "20240625.01"
+service_version = "20240812.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -64,11 +65,13 @@ def before_request():
             logger.error("decrypt error:", e)
             return 'Authentication error'
     data = request.args
+    allowed_tags = []
+    allowed_attributes = {}
     for v in data.values():
-        v = str(v).lower()
-        pattern = r"(<.*?>)"
-        r = re.search(pattern, v)
-        if r:
+        v = str(v)
+        cleaned_value = bleach.clean(v, tags=allowed_tags, attributes=allowed_attributes)
+
+        if v != cleaned_value:
             return 'Please enter the parameters of the specification!'
 
 
@@ -513,7 +516,7 @@ def handle_burrow_records():
     account_id = request.args.get("account_id")
     page_number = request.args.get("page_number", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
-    if account_id is None or account_id == '':
+    if account_id is None or account_id == '' or page_size == 0:
         return ""
     burrow_log_list, count_number = query_burrow_log(Cfg.NETWORK_ID, account_id, page_number, page_size)
     if count_number % page_size == 0:

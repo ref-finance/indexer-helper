@@ -76,10 +76,10 @@ def get_burrow_connect(network_id: str):
 def get_liquidity_pools(network_id, account_id):
     ret = []
     db_conn = get_db_connect(network_id)
-    sql = "select DISTINCT(pool_id) as pool_id from near_lake_liquidity_pools where account_id = '%s'" % account_id
+    sql = "select DISTINCT(pool_id) as pool_id from near_lake_liquidity_pools where account_id = %s"
     cursor = db_conn.cursor()
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, account_id)
         rows = cursor.fetchall()
         return [row[0] for row in rows if row[0]]
     except Exception as e:
@@ -93,10 +93,10 @@ def get_actions(network_id, account_id):
     json_ret = []
     db_conn = get_db_connect(network_id)
     sql = "select `timestamp`,tx_id,receiver_account_id,method_name,args,deposit,`status`,receipt_id " \
-          "from near_lake_latest_actions where predecessor_account_id = '%s' order by `timestamp` desc limit 10" % account_id
+          "from near_lake_latest_actions where predecessor_account_id = %s order by `timestamp` desc limit 10"
     cursor = db_conn.cursor()
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, account_id)
         rows = cursor.fetchall()
         json_ret = json.dumps(rows, cls=DecimalEncoder)
     except Exception as e:
@@ -131,10 +131,10 @@ def add_tx_receipt(data_list, network_id):
 
 def query_tx_by_receipt(receipt_id, network_id):
     db_conn = get_near_lake_connect(network_id)
-    sql = "SELECT tx_id FROM t_tx_receipt WHERE receipt_id = '%s'" % receipt_id
+    sql = "SELECT tx_id FROM t_tx_receipt WHERE receipt_id = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, receipt_id)
         tx_data = cursor.fetchone()
         if tx_data is None:
             return ""
@@ -583,10 +583,10 @@ def get_dcl_token_price(network_id):
 
 def query_limit_order_log(network_id, owner_id):
     db_conn = get_db_connect(network_id)
-    sql = "select order_id, tx_id, receipt_id from near_lake_limit_order where type = 'order_added' and owner_id = '%s'" % owner_id
+    sql = "select order_id, tx_id, receipt_id from near_lake_limit_order where type = 'order_added' and owner_id = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, owner_id)
         limit_order_data = cursor.fetchall()
         return limit_order_data
     except Exception as e:
@@ -600,10 +600,10 @@ def query_limit_order_log(network_id, owner_id):
 def query_limit_order_swap(network_id, owner_id):
     db_conn = get_db_connect(network_id)
     sql = "select tx_id, token_in,token_out,pool_id,point,amount_in,amount_out,timestamp, receipt_id from " \
-          "near_lake_limit_order where type = 'swap' and owner_id = '%s'" % owner_id
+          "near_lake_limit_order where type = 'swap' and owner_id = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, owner_id)
         limit_order_data = cursor.fetchall()
         return limit_order_data
     except Exception as e:
@@ -812,16 +812,16 @@ def query_burrow_log(network_id, account_id, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_db_connect(network_id)
     sql = "select `event`, amount, token_id, `timestamp`, '' as tx_id, receipt_id from burrow_event_log " \
-          "where account_id = '%s' and `event` in ('borrow','decrease_collateral','deposit'," \
+          "where account_id = %s and `event` in ('borrow','decrease_collateral','deposit'," \
           "'increase_collateral','repay','withdraw_succeeded')  order by `timestamp` desc " \
-          "limit %s, %s" % (account_id, start_number, page_size)
-    sql_count = "select count(*) as total_number from burrow_event_log where account_id = '%s' and `event` in " \
-                "('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded')" % account_id
+          "limit %s, %s"
+    sql_count = "select count(*) as total_number from burrow_event_log where account_id = %s and `event` in " \
+                "('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded')"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (account_id, start_number, page_size))
         burrow_log = cursor.fetchall()
-        cursor.execute(sql_count)
+        cursor.execute(sql_count, account_id)
         burrow_log_count = cursor.fetchone()
         return burrow_log, burrow_log_count["total_number"]
     except Exception as e:
@@ -845,8 +845,8 @@ def get_history_token_price_by_token(ids, data_time):
     try:
         for token_id in ids:
             sql = "select symbol, contract_address,price,`decimal`, `timestamp` from mk_history_token_price where " \
-                  "contract_address = '%s' and `timestamp` >= '%s' limit 1" % (token_id, data_time)
-            cursor.execute(sql)
+                  "contract_address = %s and `timestamp` >= %s limit 1"
+            cursor.execute(sql, (token_id, data_time))
             ret = cursor.fetchone()
             token_data = {
                 "symbol": ret["symbol"],
@@ -915,10 +915,10 @@ def query_dcl_pool_log(network_id, start_block_id, end_block_id):
           "'' as left_point, '' as right_point, '' as added_amount, '' as removed_amount, '' as cur_amount, " \
           "'' as paid_token_x, '' as paid_token_y, '' as refund_token_x, '' as refund_token_y, ts.tx_id, " \
           "ts.block_id, ts.`timestamp`, ts.args,ts.predecessor_id,ts.receiver_id, create_time from t_swap ts) as " \
-          "all_data where block_id >= '%s' and block_id <= '%s' order by `timestamp`" % (start_block_id, end_block_id)
+          "all_data where block_id >= %s and block_id <= %s order by `timestamp`"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (start_block_id, end_block_id))
         dcl_pool_log_data = cursor.fetchall()
         return dcl_pool_log_data
     except Exception as e:
@@ -1036,10 +1036,10 @@ def add_dcl_user_liquidity_fee_data(data_list, network_id):
 def query_recent_transaction_swap(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select token_in, token_out, swap_in, swap_out,`timestamp`, '' as tx_id,block_hash as receipt_id from " \
-          "near_lake_swap_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
+          "near_lake_swap_log where pool_id = %s order by `timestamp` desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, pool_id)
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
@@ -1066,10 +1066,10 @@ def query_recent_transaction_dcl_swap(network_id, pool_id):
 def query_recent_transaction_liquidity(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select method_name, pool_id, shares, `timestamp`, '' as tx_id, amounts,block_hash as receipt_id, " \
-          "amount_in, amount_out from near_lake_liquidity_log where pool_id = '%s' order by `timestamp` desc limit 50" % pool_id
+          "amount_in, amount_out from near_lake_liquidity_log where pool_id = %s order by `timestamp` desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, pool_id)
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
@@ -1083,15 +1083,15 @@ def query_recent_transaction_dcl_liquidity(network_id, pool_id):
     sql = "select all_data.method_name,all_data.amount_x,all_data.amount_y,all_data.`timestamp`,'' as tx_id," \
           "all_data.receipt_id from (select tla.event_method as method_name, sum(cast(tla.paid_token_x as " \
           "decimal(64, 0))) as amount_x, sum(cast(tla.paid_token_y as decimal(64, 0))) as amount_y, tla.`timestamp`, " \
-          "tla.tx_id as receipt_id from t_liquidity_added as tla where tla.pool_id = '%s' and " \
+          "tla.tx_id as receipt_id from t_liquidity_added as tla where tla.pool_id = %s and " \
           "tla.event_method != 'liquidity_merge' group by tx_id union all select tlr.event_method as method_name, " \
           "sum(cast(tlr.refund_token_x as decimal(64, 0))) as amount_x,sum(cast(tlr.refund_token_y as decimal(64, 0))) " \
           "as amount_y, tlr.`timestamp`, tlr.tx_id as receipt_id from t_liquidity_removed as tlr where " \
-          "tlr.pool_id = '%s' and tlr.removed_amount > 0 group by tx_id) as all_data" \
-          " order by `timestamp` desc limit 50" % (pool_id, pool_id)
+          "tlr.pool_id = %s and tlr.removed_amount > 0 group by tx_id) as all_data" \
+          " order by `timestamp` desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, pool_id))
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
@@ -1104,14 +1104,14 @@ def query_recent_transaction_limit_order(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select all_data.method_name,all_data.sell_token,all_data.amount,all_data.point,all_data.`timestamp`, " \
           "'' as tx_id,all_data.tx_id as receipt_id from (select 'order_cancelled' as method_name, sell_token,  " \
-          "actual_cancel_amount as amount, point,`timestamp`,tx_id from t_order_cancelled where pool_id = '%s' " \
+          "actual_cancel_amount as amount, point,`timestamp`,tx_id from t_order_cancelled where pool_id = %s " \
           "and actual_cancel_amount != '0' union all select 'order_added' as method_name, sell_token,  " \
-          "original_amount as amount, point,`timestamp`,tx_id from t_order_added where pool_id = '%s' and  " \
+          "original_amount as amount, point,`timestamp`,tx_id from t_order_added where pool_id = %s and  " \
           "(args like '%%%%LimitOrderWithSwap%%%%' or args like '%%%%LimitOrder%%%%')) as all_data order by " \
-          "all_data.`timestamp`  desc limit 50" % (pool_id, pool_id)
+          "all_data.`timestamp`  desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, pool_id))
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
@@ -1124,11 +1124,11 @@ def query_dcl_points(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
           "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,cp,`timestamp` " \
-          "from dcl_pool_analysis where pool_id = '%s' and `timestamp` >= (select `timestamp` from dcl_pool_analysis " \
-          "where pool_id = '%s' order by `timestamp` desc limit 1) order by point" % (pool_id, pool_id)
+          "from dcl_pool_analysis where pool_id = %s and `timestamp` >= (select `timestamp` from dcl_pool_analysis " \
+          "where pool_id = %s order by `timestamp` desc limit 1) order by point"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, pool_id))
         point_data = cursor.fetchall()
         pool_id_list = []
         point_data_timestamp = get_pool_point_24h_by_pool_id(network_id, pool_id + "timestamp")
@@ -1147,11 +1147,11 @@ def query_dcl_points(network_id, pool_id):
 def query_dcl_points_by_account(network_id, pool_id, account_id, start_point, end_point):
     db_conn = get_db_connect(network_id)
     sql = "select pool_id,account_id,point,l,tvl_x_l,tvl_y_l,p,`timestamp`,create_time from dcl_user_liquidity " \
-          "where pool_id = '%s' and account_id = '%s' and `timestamp` >= (select max(`timestamp`) " \
-          "from dcl_user_liquidity) and point >= %s and point <= %s order by point" % (pool_id, account_id, start_point, end_point)
+          "where pool_id = %s and account_id = %s and `timestamp` >= (select max(`timestamp`) " \
+          "from dcl_user_liquidity) and point >= %s and point <= %s order by point"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, account_id, start_point, end_point))
         point_data = cursor.fetchall()
         return point_data
     except Exception as e:
@@ -1162,12 +1162,12 @@ def query_dcl_points_by_account(network_id, pool_id, account_id, start_point, en
 
 def query_dcl_user_unclaimed_fee(network_id, pool_id, account_id):
     db_conn = get_db_connect(network_id)
-    sql = "select unclaimed_fee_x, unclaimed_fee_y from dcl_user_liquidity_fee where pool_id = '%s' and " \
-          "account_id = '%s' and `timestamp` >= (select max(`timestamp`) from dcl_user_liquidity_fee where " \
-          "pool_id = '%s' and account_id = '%s')" % (pool_id, account_id, pool_id, account_id)
+    sql = "select unclaimed_fee_x, unclaimed_fee_y from dcl_user_liquidity_fee where pool_id = %s and " \
+          "account_id = %s and `timestamp` >= (select max(`timestamp`) from dcl_user_liquidity_fee where " \
+          "pool_id = %s and account_id = %s)"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, account_id, pool_id, account_id))
         point_data = cursor.fetchall()
         return point_data
     except Exception as e:
@@ -1180,11 +1180,11 @@ def query_dcl_user_unclaimed_fee_24h(network_id, pool_id, account_id):
     now = int(time.time())
     timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
-    sql = "select * from dcl_user_liquidity_fee where pool_id = '%s' and account_id = '%s' and `timestamp` <= %s " \
-          "order by `timestamp` desc limit 1" % (pool_id, account_id, timestamp)
+    sql = "select * from dcl_user_liquidity_fee where pool_id = %s and account_id = %s and `timestamp` <= %s " \
+          "order by `timestamp` desc limit 1"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, account_id, timestamp))
         point_data = cursor.fetchall()
         return point_data
     except Exception as e:
@@ -1198,14 +1198,14 @@ def query_dcl_user_claimed_fee(network_id, pool_id, account_id):
     sql = "select sum(cast(total_fee_x as decimal(64, 0))) as claimed_fee_x, sum(cast(total_fee_y as " \
           "decimal(64, 0))) as claimed_fee_y from (select sum(cast(claim_fee_token_x as decimal(64, 0))) as " \
           "total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
-          "t_liquidity_added where pool_id = '%s' and owner_id = '%s' and event_method in( 'liquidity_append', " \
+          "t_liquidity_added where pool_id = %s and owner_id = %s and event_method in( 'liquidity_append', " \
           "'liquidity_merge') union all select sum(cast(claim_fee_token_x as decimal(64, 0))) as total_fee_x, " \
           "sum(cast(claim_fee_token_y as decimal(64, 0))) as " \
-          "total_fee_y from t_liquidity_removed where pool_id = '%s' and owner_id = '%s' and event_method = " \
-          "'liquidity_removed') as fee" % (pool_id, account_id, pool_id, account_id)
+          "total_fee_y from t_liquidity_removed where pool_id = %s and owner_id = %s and event_method = " \
+          "'liquidity_removed') as fee"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, account_id, pool_id, account_id))
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
@@ -1221,15 +1221,14 @@ def query_dcl_user_claimed_fee_24h(network_id, pool_id, account_id):
     sql = "select sum(cast(total_fee_x as decimal(64, 0))) as claimed_fee_x, sum(cast(total_fee_y as " \
           "decimal(64, 0))) as claimed_fee_y from (select sum(cast(claim_fee_token_x as decimal(64, 0))) as " \
           "total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
-          "t_liquidity_added where pool_id = '%s' and owner_id = '%s' and event_method in( 'liquidity_append', " \
-          "'liquidity_merge') and `timestamp` <= '%s' union all select sum(cast(claim_fee_token_x as " \
+          "t_liquidity_added where pool_id = %s and owner_id = %s and event_method in( 'liquidity_append', " \
+          "'liquidity_merge') and `timestamp` <= %s union all select sum(cast(claim_fee_token_x as " \
           "decimal(64, 0))) as total_fee_x, sum(cast(claim_fee_token_y as decimal(64, 0))) as total_fee_y from " \
-          "t_liquidity_removed where pool_id = '%s' and owner_id = '%s' " \
-          "and event_method = 'liquidity_removed' and `timestamp` <= '%s') " \
-          "as fee" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
+          "t_liquidity_removed where pool_id = %s and owner_id = %s " \
+          "and event_method = 'liquidity_removed' and `timestamp` <= %s) as fee"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, account_id, timestamp, pool_id, account_id, timestamp))
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
@@ -1241,11 +1240,11 @@ def query_dcl_user_claimed_fee_24h(network_id, pool_id, account_id):
 def query_dcl_user_tvl(network_id, pool_id, account_id):
     db_conn = get_db_connect(network_id)
     sql = "select sum(tvl_x_l) as tvl_x_l, sum(tvl_y_l) as tvl_y_l,`timestamp` from dcl_user_liquidity where " \
-          "pool_id = '%s' and account_id = '%s' and `timestamp` >= (select max(`timestamp`) from " \
-          "dcl_user_liquidity where pool_id = '%s' and account_id = '%s')" % (pool_id, account_id, pool_id, account_id)
+          "pool_id = %s and account_id = %s and `timestamp` >= (select max(`timestamp`) from " \
+          "dcl_user_liquidity where pool_id = %s and account_id = %s)"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, account_id, pool_id, account_id))
         point_data = cursor.fetchall()
         return point_data
     except Exception as e:
@@ -1258,16 +1257,16 @@ def query_dcl_user_change_log(network_id, pool_id, account_id, user_token_timest
     timestamp = user_token_timestamp - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
     sql = "select event_method,paid_token_x as token_x,paid_token_y as token_y,remove_token_x,remove_token_y," \
-          "merge_token_x,merge_token_y,`timestamp` from t_liquidity_added where pool_id = '%s' and owner_id = '%s' " \
-          "and event_method in('liquidity_append', 'liquidity_added') and `timestamp` >= '%s' " \
+          "merge_token_x,merge_token_y,`timestamp` from t_liquidity_added where pool_id = %s and owner_id = %s " \
+          "and event_method in('liquidity_append', 'liquidity_added') and `timestamp` >= %s " \
           "union all select event_method,refund_token_x as token_x, refund_token_y as token_y, null as remove_token_x," \
           "null as remove_token_y,null as merge_token_x,null as merge_token_y,`timestamp`  from t_liquidity_removed " \
-          "where pool_id = '%s' and owner_id = '%s' and event_method = 'liquidity_removed' and removed_amount > '0' " \
-          "and `timestamp` >= '%s' " \
-          "order by `timestamp` desc" % (pool_id, account_id, timestamp, pool_id, account_id, timestamp)
+          "where pool_id = %s and owner_id = %s and event_method = 'liquidity_removed' and removed_amount > '0' " \
+          "and `timestamp` >= %s " \
+          "order by `timestamp` desc"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, (pool_id, account_id, timestamp, pool_id, account_id, timestamp))
         recent_transaction_data = cursor.fetchall()
         return recent_transaction_data
     except Exception as e:
@@ -1340,10 +1339,10 @@ def update_liquidation_result(network_id, key, values):
 def get_liquidation_result(network_id, key):
     db_conn = get_burrow_connect(network_id)
     sql = "select `key`, `values`, `timestamp`, `created_time`, `updated_time` from liquidation_result_info " \
-          "where `key` = '%s'" % key
+          "where `key` = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql)
+        cursor.execute(sql, key)
         row = cursor.fetchone()
         return row
     except Exception as e:
