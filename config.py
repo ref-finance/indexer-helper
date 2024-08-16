@@ -643,6 +643,7 @@ class Cfg:
             {"SYMBOL": "inrETH", "MD_ID": "inception-restaked-reth"},
             {"SYMBOL": "ZERO", "MD_ID": "zerolend"},
             {"SYMBOL": "SEI", "MD_ID": "sei-network"},
+            {"SYMBOL": "FLR", "MD_ID": "flare-networks"},
         ],
     }
     MARKET_URL = MARKET_URL
