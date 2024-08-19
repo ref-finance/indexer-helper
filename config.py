@@ -644,6 +644,7 @@ class Cfg:
             {"SYMBOL": "ZERO", "MD_ID": "zerolend"},
             {"SYMBOL": "SEI", "MD_ID": "sei-network"},
             {"SYMBOL": "FLR", "MD_ID": "flare-networks"},
+            {"SYMBOL": "DODO", "MD_ID": "dodo"},
         ],
     }
     MARKET_URL = MARKET_URL
