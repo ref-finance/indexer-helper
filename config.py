@@ -344,6 +344,7 @@ class Cfg:
             {"SYMBOL": "USDC", "NEAR_ID": "16.contract.portalbridge.near", "MD_ID": "usd-coin", "DECIMAL": 6},
             {"SYMBOL": "DD", "NEAR_ID": "dd.tg", "MD_ID": "v2.ref-finance.near|5222|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "NEIRO", "NEAR_ID": "neiro.token0.near", "MD_ID": "v2.ref-finance.near|5255|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "CORGI", "NEAR_ID": "corgi.token0.near", "MD_ID": "v2.ref-finance.near|5383|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "USDC", "NEAR_ID": "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
              "MD_ID": "v2.ref-finance.near|NA|wrap.near", "DECIMAL": 6},
             {"SYMBOL": "nUSDC", "NEAR_ID": "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near",
