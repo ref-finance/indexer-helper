@@ -1009,38 +1009,60 @@ def handel_user_wallet():
 def handel_get_total_fee():
     total_fee = 0
     not_pool_id_list = ""
-    pool_volume_data = get_pools_volume_24h(Cfg.NETWORK_ID)
-    pool_list = list_pools(Cfg.NETWORK_ID)
-    pool_data = {}
-    for pool in pool_list:
-        pool_data[pool["id"]] = pool["total_fee"] / 10000
-    for pool_volume in pool_volume_data:
-        if pool_volume["pool_id"] in pool_data:
-            pool_fee = float(pool_volume["volume_24h"]) * pool_data[pool_volume["pool_id"]]
-            total_fee += pool_fee
-        else:
-            not_pool_id_list = not_pool_id_list + "," + pool_volume["pool_id"]
-    if not_pool_id_list != "":
-        url = "https://api.ref.finance/pool/search?pool_id_list=" + not_pool_id_list
-        search_pool_json = requests.get(url).text
-        search_pool_data = json.loads(search_pool_json)
-        search_pool_list = search_pool_data["data"]["list"]
-        for search_pool in search_pool_list:
-            pool_fee = float(search_pool["fee_volume_24h"])
-            total_fee += pool_fee
-    ret = {
-        "total_fee": str(total_fee),
-    }
-    return ret
+    try:
+        pool_volume_data = get_pools_volume_24h(Cfg.NETWORK_ID)
+        pool_list = list_pools(Cfg.NETWORK_ID)
+        pool_data = {}
+        for pool in pool_list:
+            pool_data[pool["id"]] = pool["total_fee"] / 10000
+        for pool_volume in pool_volume_data:
+            if pool_volume["pool_id"] in pool_data:
+                pool_fee = float(pool_volume["volume_24h"]) * pool_data[pool_volume["pool_id"]]
+                total_fee += pool_fee
+            else:
+                not_pool_id_list = not_pool_id_list + "," + pool_volume["pool_id"]
+        if not_pool_id_list != "":
+            url = "https://api.ref.finance/pool/search?pool_id_list=" + not_pool_id_list
+            search_pool_json = requests.get(url).text
+            search_pool_data = json.loads(search_pool_json)
+            search_pool_list = search_pool_data["data"]["list"]
+            for search_pool in search_pool_list:
+                pool_fee = float(search_pool["fee_volume_24h"])
+                total_fee += pool_fee
+        ret = {
+            "total_fee": str(total_fee),
+        }
+        ret_data = {
+            "code": 0,
+            "msg": "success",
+            "data": ret
+        }
+    except Exception as e:
+        logger.info("handel_get_total_fee error:{}", e.args)
+        ret_data = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return jsonify(ret_data)
 
 
 @app.route('/get-total-revenue', methods=['GET'])
 def handel_get_total_revenue():
-    ret = handel_get_total_fee()
-    ret = {
-        "total_revenue": str(float(ret["total_fee"]) * 0.2),
-    }
-    return ret
+    ret = json.loads(handel_get_total_fee().data)
+    if ret["code"] != 0:
+        ret_data = {
+            "code": -1,
+            "msg": "error",
+            "data": ret["data"]
+        }
+    else:
+        ret_data = {
+            "code": 0,
+            "msg": "success",
+            "data": {"total_revenue": str(float(ret["data"]["total_fee"]) * 0.2)}
+        }
+    return jsonify(ret_data)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
