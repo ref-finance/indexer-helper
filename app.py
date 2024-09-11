@@ -30,6 +30,7 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 import bleach
+import requests
 
 service_version = "20240812.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1007,6 +1008,7 @@ def handel_user_wallet():
 @app.route('/get-total-fee', methods=['GET'])
 def handel_get_total_fee():
     total_fee = 0
+    not_pool_id_list = ""
     pool_volume_data = get_pools_volume_24h(Cfg.NETWORK_ID)
     pool_list = list_pools(Cfg.NETWORK_ID)
     pool_data = {}
@@ -1015,6 +1017,16 @@ def handel_get_total_fee():
     for pool_volume in pool_volume_data:
         if pool_volume["pool_id"] in pool_data:
             pool_fee = float(pool_volume["volume_24h"]) * pool_data[pool_volume["pool_id"]]
+            total_fee += pool_fee
+        else:
+            not_pool_id_list = not_pool_id_list + "," + pool_volume["pool_id"]
+    if not_pool_id_list != "":
+        url = "https://api.ref.finance/pool/search?pool_id_list=" + not_pool_id_list
+        search_pool_json = requests.get(url).text
+        search_pool_data = json.loads(search_pool_json)
+        search_pool_list = search_pool_data["data"]["list"]
+        for search_pool in search_pool_list:
+            pool_fee = float(search_pool["fee_volume_24h"])
             total_fee += pool_fee
     ret = {
         "total_fee": str(total_fee),
