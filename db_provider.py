@@ -1372,6 +1372,24 @@ def add_user_wallet_info(network_id, account_id, wallet_address):
         cursor.close()
 
 
+def get_pools_volume_24h(network_id):
+    db_conn = get_db_connect(network_id)
+    max_time_sql = "select time from go_volume_24h_pool order by time desc limit 1"
+    sql = f"select pool_id, volume_24h from go_volume_24h_pool where time = %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(max_time_sql)
+        max_time_data = cursor.fetchone()
+        max_time = int(max_time_data["time"])
+        cursor.execute(sql, max_time)
+        results = cursor.fetchall()
+        return results
+    except Exception as e:
+        print("query multi_pools_volume_rolling_24h_sum to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
