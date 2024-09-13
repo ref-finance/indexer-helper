@@ -14,9 +14,9 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_metadata_v2
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report, get_history_token_price_report, get_market_token_price
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, get_tx_id, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
 from config import Cfg
-from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
@@ -1002,6 +1002,55 @@ def handel_user_wallet():
             "data": e.args
         }
     return ret
+
+
+@app.route('/get-burrow-liquidate-records', methods=['GET'])
+def handle_burrow_liquidate_records():
+    account_id = request.args.get("account_id")
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=10)
+    if account_id is None or account_id == '' or page_size == 0:
+        return ""
+    liquidate_log, count_number, not_read_count = query_burrow_liquidate_log(Cfg.NETWORK_ID, account_id, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": liquidate_log,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+        "unread": not_read_count
+    }
+    return jsonify(res)
+
+
+@app.route('/set_liquidation_info', methods=['POST', 'PUT'])
+def handle_liquidation_info():
+    try:
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": []
+        }
+        json_data = request.get_json()
+        if "receipt_ids" in json_data and len(json_data["receipt_ids"]) > 0:
+            receipt_ids = json_data["receipt_ids"]
+            for receipt_id in receipt_ids:
+                if not is_base64(receipt_id):
+                    ret = {
+                        "code": -1,
+                        "msg": "Id incorrect",
+                        "data": [receipt_id]
+                    }
+                    return jsonify(ret)
+            update_burrow_liquidate_log(Cfg.NETWORK_ID, receipt_ids)
+            ret["data"] = receipt_ids
+        return jsonify(ret)
+    except Exception as e:
+        logger.error("update liquidate data error:{}", e)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")

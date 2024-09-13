@@ -769,6 +769,21 @@ def get_lp_lock_info(network_id):
         print("Error: ", e)
 
 
+def is_base64(s):
+    import base64
+    import re
+    base64_pattern = re.compile(r'^[A-Za-z0-9+/=]+$')
+    if not base64_pattern.match(s):
+        return False
+    if len(s) % 4 != 0:
+        return False
+    try:
+        base64.b64decode(s, validate=True)
+        return True
+    except (base64.binascii.Error, ValueError):
+        return False
+
+
 if __name__ == '__main__':
     # from config import Cfg
     # from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata
