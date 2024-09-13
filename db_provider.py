@@ -1390,6 +1390,110 @@ def get_pools_volume_24h(network_id):
         cursor.close()
 
 
+def query_burrow_liquidate_log(network_id, account_id, page_number, page_size):
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_db_connect(network_id)
+    receipt_sql = "select receipt_id from burrow_event_log where liquidation_account_id = %s and " \
+                  "`event` = 'liquidate' order by `timestamp` desc limit %s, %s"
+    liquidate_sql = f"select `event`, amount, token_id, `timestamp`, receipt_id, is_read, update_time, position from " \
+                    f"burrow_event_log where receipt_id in ('%s')"
+    sql_count = "select count(*) as total_number from burrow_event_log where liquidation_account_id = %s " \
+                "and `event` = 'liquidate'"
+    not_read_sql_count = "select count(*) as total_number from burrow_event_log where liquidation_account_id = %s " \
+                         "and `event` = 'liquidate' and is_read = '0'"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(receipt_sql, (account_id, start_number, page_size))
+        receipt_log = cursor.fetchall()
+        receipt_ids = [entry['receipt_id'] for entry in receipt_log]
+        if receipt_ids:
+            receipt_ids_placeholder = "','".join(map(str, receipt_ids))
+            cursor.execute(liquidate_sql % receipt_ids_placeholder)
+            liquidate_log_list = cursor.fetchall()
+        else:
+            liquidate_log_list = []
+        cursor.execute(sql_count, account_id)
+        burrow_log_count = cursor.fetchone()
+        cursor.execute(not_read_sql_count, account_id)
+        not_read_count = cursor.fetchone()
+        ret_liquidate_log = handel_liquidate_log_data(liquidate_log_list, account_id)
+        return ret_liquidate_log, burrow_log_count["total_number"], not_read_count["total_number"]
+    except Exception as e:
+        print("query burrow_liquidate_log to db error:", e)
+    finally:
+        cursor.close()
+
+
+def handel_liquidate_log_data(liquidate_log_list, account_id):
+    liquidate_list = []
+    receipt_data = {}
+    for burrow_log in liquidate_log_list:
+        receipt_id = burrow_log["receipt_id"]
+        event = burrow_log["event"]
+        timestamp = burrow_log["timestamp"]
+        position = burrow_log["position"]
+        time_second = int(int(timestamp) / 1000000000)
+        updated_at = int(burrow_log["update_time"].timestamp())
+        is_read = False if burrow_log["is_read"] == "0" else True
+        if receipt_id in receipt_data:
+            repaid_assets = receipt_data[receipt_id]["RepaidAssets"]
+            liquidated_assets = receipt_data[receipt_id]["LiquidatedAssets"]
+        else:
+            repaid_assets = []
+            liquidated_assets = []
+            receipt_data[receipt_id] = {
+                "liquidation_account_id": account_id,
+                "createdAt": time_second,
+                "isRead": is_read,
+                "updatedAt": updated_at,
+                "RepaidAssets": repaid_assets,
+                "LiquidatedAssets": liquidated_assets,
+                "position": position
+            }
+        if event == "borrow":
+            repaid_assets_data = {"amount": burrow_log["amount"], "token_id": burrow_log["token_id"]}
+            repaid_assets.append(repaid_assets_data)
+        if event == "withdraw_started":
+            liquidated_assets_data = {"amount": burrow_log["amount"], "token_id": burrow_log["token_id"]}
+            liquidated_assets.append(liquidated_assets_data)
+        if repaid_assets:
+            receipt_data[receipt_id]["RepaidAssets"] = repaid_assets
+        if liquidated_assets:
+            receipt_data[receipt_id]["LiquidatedAssets"] = liquidated_assets
+
+    for k, v in receipt_data.items():
+        liquidate_data = {
+            "healthFactor_after": None,
+            "RepaidAssets": v["RepaidAssets"],
+            "isRead": v["isRead"],
+            "createdAt": v["createdAt"],
+            "position": position,
+            "liquidation_type": "liquidate",
+            "account_id": v["liquidation_account_id"],
+            "healthFactor_before": None,
+            "LiquidatedAssets": v["LiquidatedAssets"],
+            "isDeleted": False,
+            "updatedAt": v["updatedAt"],
+            "receipt_id": k,
+        }
+        liquidate_list.append(liquidate_data)
+    return liquidate_list
+
+
+def update_burrow_liquidate_log(network_id, receipt_ids):
+    placeholders = ','.join(['%s'] * len(receipt_ids))
+    sql = f"UPDATE burrow_event_log SET is_read = '1' WHERE receipt_id IN ({placeholders})"
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, receipt_ids)
+        db_conn.commit()
+    except Exception as e:
+        print("update burrow_liquidate_log to db error:", e)
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
