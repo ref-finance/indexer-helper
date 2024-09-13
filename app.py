@@ -21,7 +21,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
-    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info
+    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -30,6 +30,7 @@ import datetime
 from auth.crypto_utl import decrypt
 import time
 import bleach
+import requests
 
 service_version = "20240812.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1002,6 +1003,66 @@ def handel_user_wallet():
             "data": e.args
         }
     return ret
+
+
+@app.route('/get-total-fee', methods=['GET'])
+def handel_get_total_fee():
+    total_fee = 0
+    not_pool_id_list = ""
+    try:
+        pool_volume_data = get_pools_volume_24h(Cfg.NETWORK_ID)
+        pool_list = list_pools(Cfg.NETWORK_ID)
+        pool_data = {}
+        for pool in pool_list:
+            pool_data[pool["id"]] = pool["total_fee"] / 10000
+        for pool_volume in pool_volume_data:
+            if pool_volume["pool_id"] in pool_data:
+                pool_fee = float(pool_volume["volume_24h"]) * pool_data[pool_volume["pool_id"]]
+                total_fee += pool_fee
+            else:
+                not_pool_id_list = not_pool_id_list + "," + pool_volume["pool_id"]
+        if not_pool_id_list != "":
+            url = "https://api.ref.finance/pool/search?pool_id_list=" + not_pool_id_list
+            search_pool_json = requests.get(url).text
+            search_pool_data = json.loads(search_pool_json)
+            search_pool_list = search_pool_data["data"]["list"]
+            for search_pool in search_pool_list:
+                pool_fee = float(search_pool["fee_volume_24h"])
+                total_fee += pool_fee
+        ret = {
+            "total_fee": str(total_fee),
+        }
+        ret_data = {
+            "code": 0,
+            "msg": "success",
+            "data": ret
+        }
+    except Exception as e:
+        logger.info("handel_get_total_fee error:{}", e.args)
+        ret_data = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return jsonify(ret_data)
+
+
+@app.route('/get-total-revenue', methods=['GET'])
+def handel_get_total_revenue():
+    ret = json.loads(handel_get_total_fee().data)
+    if ret["code"] != 0:
+        ret_data = {
+            "code": -1,
+            "msg": "error",
+            "data": ret["data"]
+        }
+    else:
+        ret_data = {
+            "code": 0,
+            "msg": "success",
+            "data": {"total_revenue": str(float(ret["data"]["total_fee"]) * 0.2)}
+        }
+    return jsonify(ret_data)
 
 
 @app.route('/get-burrow-liquidate-records', methods=['GET'])

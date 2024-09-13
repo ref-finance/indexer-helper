@@ -1372,6 +1372,24 @@ def add_user_wallet_info(network_id, account_id, wallet_address):
         cursor.close()
 
 
+def get_pools_volume_24h(network_id):
+    db_conn = get_db_connect(network_id)
+    max_time_sql = "select time from go_volume_24h_pool order by time desc limit 1"
+    sql = f"select pool_id, volume_24h from go_volume_24h_pool where time = %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(max_time_sql)
+        max_time_data = cursor.fetchone()
+        max_time = int(max_time_data["time"])
+        cursor.execute(sql, max_time)
+        results = cursor.fetchall()
+        return results
+    except Exception as e:
+        print("query multi_pools_volume_rolling_24h_sum to db error:", e)
+    finally:
+        cursor.close()
+
+
 def query_burrow_liquidate_log(network_id, account_id, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_db_connect(network_id)
@@ -1495,10 +1513,4 @@ if __name__ == '__main__':
     # timestamp = hour_stamp - (1 * 24 * 60 * 60)
     # print(timestamp)
 
-    # add_redis_data("MAINNET", "test", "test6", "6")
-
-    aa = []
-    if aa:
-        print(111)
-    else:
-        print(222)
+    add_redis_data("MAINNET", "test", "test6", "6")
