@@ -1396,7 +1396,7 @@ def query_burrow_liquidate_log(network_id, account_id, page_number, page_size):
     receipt_sql = "select receipt_id from burrow_event_log where liquidation_account_id = %s and " \
                   "`event` = 'liquidate' order by `timestamp` desc limit %s, %s"
     liquidate_sql = f"select `event`, amount, token_id, `timestamp`, receipt_id, is_read, update_time, position from " \
-                    f"burrow_event_log where receipt_id in ('%s')"
+                    f"burrow_event_log where receipt_id in ('%s') order by `timestamp` desc"
     sql_count = "select count(*) as total_number from burrow_event_log where liquidation_account_id = %s " \
                 "and `event` = 'liquidate'"
     not_read_sql_count = "select count(*) as total_number from burrow_event_log where liquidation_account_id = %s " \
@@ -1467,7 +1467,7 @@ def handel_liquidate_log_data(liquidate_log_list, account_id):
             "RepaidAssets": v["RepaidAssets"],
             "isRead": v["isRead"],
             "createdAt": v["createdAt"],
-            "position": position,
+            "position": v["position"],
             "liquidation_type": "liquidate",
             "account_id": v["liquidation_account_id"],
             "healthFactor_before": None,

@@ -1065,55 +1065,6 @@ def handel_get_total_revenue():
     return jsonify(ret_data)
 
 
-@app.route('/get-burrow-liquidate-records', methods=['GET'])
-def handle_burrow_liquidate_records():
-    account_id = request.args.get("account_id")
-    page_number = request.args.get("page_number", type=int, default=1)
-    page_size = request.args.get("page_size", type=int, default=10)
-    if account_id is None or account_id == '' or page_size == 0:
-        return ""
-    liquidate_log, count_number, not_read_count = query_burrow_liquidate_log(Cfg.NETWORK_ID, account_id, page_number, page_size)
-    if count_number % page_size == 0:
-        total_page = int(count_number / page_size)
-    else:
-        total_page = int(count_number / page_size) + 1
-    res = {
-        "record_list": liquidate_log,
-        "page_number": page_number,
-        "page_size": page_size,
-        "total_page": total_page,
-        "total_size": count_number,
-        "unread": not_read_count
-    }
-    return jsonify(res)
-
-
-@app.route('/set_liquidation_info', methods=['POST', 'PUT'])
-def handle_liquidation_info():
-    try:
-        ret = {
-            "code": 0,
-            "msg": "success",
-            "data": []
-        }
-        json_data = request.get_json()
-        if "receipt_ids" in json_data and len(json_data["receipt_ids"]) > 0:
-            receipt_ids = json_data["receipt_ids"]
-            for receipt_id in receipt_ids:
-                if not is_base64(receipt_id):
-                    ret = {
-                        "code": -1,
-                        "msg": "Id incorrect",
-                        "data": [receipt_id]
-                    }
-                    return jsonify(ret)
-            update_burrow_liquidate_log(Cfg.NETWORK_ID, receipt_ids)
-            ret["data"] = receipt_ids
-        return jsonify(ret)
-    except Exception as e:
-        logger.error("update liquidate data error:{}", e)
-
-
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 log_file = "app-%s.log" % current_date
 logger.add(log_file)
