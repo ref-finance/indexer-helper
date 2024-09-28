@@ -32,7 +32,7 @@ import time
 import bleach
 import requests
 
-service_version = "20240913.01"
+service_version = "20240928.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -712,13 +712,13 @@ def handle_fee_by_account():
 
 @app.route('/batch-get-fee-by-account', methods=['GET'])
 def handle_batch_fee_by_account():
-    ret_data = []
+    ret_data = {}
     pool_ids = request.args.get("pool_ids")
     account_id = request.args.get("account_id")
     pool_id_list = pool_ids.split(",")
     for pool_id in pool_id_list:
-        ret = handel_account_fee(pool_id, account_id)
-        ret_data.append(ret)
+        pool_fee = handel_account_fee(pool_id, account_id)
+        ret_data[pool_id] = pool_fee
     return compress_response_content(ret_data)
 
 
