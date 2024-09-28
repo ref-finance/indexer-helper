@@ -704,9 +704,26 @@ def handle_dcl_points():
 
 @app.route('/get-fee-by-account', methods=['GET'])
 def handle_fee_by_account():
-    ret_data = {}
     pool_id = request.args.get("pool_id")
     account_id = request.args.get("account_id")
+    ret_data = handel_account_fee(pool_id, account_id)
+    return compress_response_content(ret_data)
+
+
+@app.route('/batch-get-fee-by-account', methods=['GET'])
+def handle_batch_fee_by_account():
+    ret_data = []
+    pool_ids = request.args.get("pool_ids")
+    account_id = request.args.get("account_id")
+    pool_id_list = pool_ids.split(",")
+    for pool_id in pool_id_list:
+        ret = handel_account_fee(pool_id, account_id)
+        ret_data.append(ret)
+    return compress_response_content(ret_data)
+
+
+def handel_account_fee(pool_id, account_id):
+    ret_data = {}
     if pool_id is None or account_id is None:
         return "null"
     # unclaimed_fee_data = query_dcl_user_unclaimed_fee(Cfg.NETWORK_ID, pool_id, account_id)
@@ -796,7 +813,7 @@ def handle_fee_by_account():
         "user_token": user_token,
         "change_log_data": ret_change_log_data
     }
-    return compress_response_content(ret_data)
+    return ret_data
 
 
 @app.route('/get-dcl-points-by-account', methods=['GET'])
