@@ -410,6 +410,7 @@ class Cfg:
              "MD_ID": "v2.ref-finance.near|NA|17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
              "DECIMAL": 6},
             {"SYMBOL": "KAT", "NEAR_ID": "kat.token0.near", "MD_ID": "v2.ref-finance.near|5391|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "GP", "NEAR_ID": "gp.token0.near", "MD_ID": "v2.ref-finance.near|5422|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
