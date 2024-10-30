@@ -415,6 +415,7 @@ class Cfg:
             {"SYMBOL": "zNEARnM-USDC", "NEAR_ID": "v1.guild-covenant.near", "MD_ID": "v2.ref-finance.near|5442|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "4illia", "NEAR_ID": "4illia-222.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5494|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "gnear", "NEAR_ID": "gnear-229.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5502|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "mpDAO", "NEAR_ID": "mpdao-token.near", "MD_ID": "v2.ref-finance.near|5438|meta-pool.near", "DECIMAL": 6},
         ],
         "BASE_MAINNET": [
         ],
