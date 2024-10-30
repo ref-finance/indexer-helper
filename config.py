@@ -413,6 +413,8 @@ class Cfg:
             {"SYMBOL": "GP", "NEAR_ID": "gp.token0.near", "MD_ID": "v2.ref-finance.near|5422|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "CHILL", "NEAR_ID": "chill-129.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5462|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "zNEARnM-USDC", "NEAR_ID": "v1.guild-covenant.near", "MD_ID": "v2.ref-finance.near|5442|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "4illia", "NEAR_ID": "4illia-222.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5494|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "gnear", "NEAR_ID": "gnear-229.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5502|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
