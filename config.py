@@ -421,6 +421,7 @@ class Cfg:
             {"SYMBOL": "BCC", "NEAR_ID": "bcc-242.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5508|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "LUCKY", "NEAR_ID": "lucky-273.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5527|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "SIN", "NEAR_ID": "sin-339.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5583|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "USDC", "NEAR_ID": "3.contract.portalbridge.near", "MD_ID": "usd-coin", "DECIMAL": 6},
         ],
         "BASE_MAINNET": [
         ],
