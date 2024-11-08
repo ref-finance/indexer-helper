@@ -422,6 +422,13 @@ class Cfg:
             {"SYMBOL": "LUCKY", "NEAR_ID": "lucky-273.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5527|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "SIN", "NEAR_ID": "sin-339.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5583|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "USDC", "NEAR_ID": "3.contract.portalbridge.near", "MD_ID": "usd-coin", "DECIMAL": 6},
+            {"SYMBOL": "CHICA", "NEAR_ID": "token.bocachica_mars.near", "MD_ID": "v2.ref-finance.near|3886|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "BST", "NEAR_ID": "509a38b7a1cc0dcd83aa9d06214663d9ec7c7f4a.factory.bridge.near", "MD_ID": "v2.ref-finance.near|3840|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "CZ", "NEAR_ID": "cz.token0.near", "MD_ID": "v2.ref-finance.near|5283|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "Darai", "NEAR_ID": "darai.tkn.near", "MD_ID": "v2.ref-finance.near|5123|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "Hijack", "NEAR_ID": "hijack-252.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5519|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "BULLA", "NEAR_ID": "bulla.tkn.near", "MD_ID": "v2.ref-finance.near|5517|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "6bowen", "NEAR_ID": "6bowen-227.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5496|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
