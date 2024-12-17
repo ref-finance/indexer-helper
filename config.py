@@ -433,6 +433,7 @@ class Cfg:
             {"SYMBOL": "ABG", "NEAR_ID": "abg-966.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5720|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "DUCT", "NEAR_ID": "duct-1078.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5741|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "Bullish", "NEAR_ID": "bullish-1254.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5787|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "TruNEAR", "NEAR_ID": "staker1.msig1.trufin.near", "MD_ID": "v2.ref-finance.near|5563|wrap.near", "DECIMAL": 24},
         ],
         "BASE_MAINNET": [
         ],
