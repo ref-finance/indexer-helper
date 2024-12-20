@@ -340,7 +340,7 @@ class Cfg:
             {"SYMBOL": "BABYBLACKDRAGON", "NEAR_ID": "babyblackdragon.tkn.near", "MD_ID": "v2.ref-finance.near|4840|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "FAST", "NEAR_ID": "edge-fast.near", "MD_ID": "v2.ref-finance.near|5167|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "HAT", "NEAR_ID": "hat.tkn.near", "MD_ID": "v2.ref-finance.near|5179|wrap.near", "DECIMAL": 18},
-            {"SYMBOL": "INTEL", "NEAR_ID": "intel.tkn.near", "MD_ID": "v2.ref-finance.near|4663|wrap.near", "DECIMAL": 18},
+            # {"SYMBOL": "INTEL", "NEAR_ID": "intel.tkn.near", "MD_ID": "v2.ref-finance.near|4663|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "USDC", "NEAR_ID": "16.contract.portalbridge.near", "MD_ID": "usd-coin", "DECIMAL": 6},
             {"SYMBOL": "DD", "NEAR_ID": "dd.tg", "MD_ID": "v2.ref-finance.near|5222|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "NEIRO", "NEAR_ID": "neiro.token0.near", "MD_ID": "v2.ref-finance.near|5255|wrap.near", "DECIMAL": 18},
