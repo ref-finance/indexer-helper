@@ -435,6 +435,7 @@ class Cfg:
             {"SYMBOL": "Bullish", "NEAR_ID": "bullish-1254.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5787|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "TruNEAR", "NEAR_ID": "staker1.msig1.trufin.near", "MD_ID": "v2.ref-finance.near|5563|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "NOEAR", "NEAR_ID": "noear-324.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5574|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "RIN", "NEAR_ID": "rin.tkn.near", "MD_ID": "v2.ref-finance.near|5814|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
