@@ -837,7 +837,7 @@ def query_meme_burrow_log(network_id, account_id, page_number, page_size):
           "where account_id = %s and `event` in ('borrow','decrease_collateral','deposit'," \
           "'increase_collateral','repay','withdraw_succeeded')  order by `timestamp` desc " \
           "limit %s, %s"
-    sql_count = "select count(*) as total_number from burrow_event_log where account_id = %s and `event` in " \
+    sql_count = "select count(*) as total_number from meme_burrow_event_log where account_id = %s and `event` in " \
                 "('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded')"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
