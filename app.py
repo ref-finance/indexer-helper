@@ -21,7 +21,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
-    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h
+    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, query_meme_burrow_log
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -32,7 +32,7 @@ import time
 import bleach
 import requests
 
-service_version = "20241230.01"
+service_version = "20250105.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -520,6 +520,44 @@ def handle_burrow_records():
     if account_id is None or account_id == '' or page_size == 0:
         return ""
     burrow_log_list, count_number = query_burrow_log(Cfg.NETWORK_ID, account_id, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    for burrow_log in burrow_log_list:
+        # if burrow_log["tx_id"] is None or burrow_log["tx_id"] == "":
+        #     burrow_log["tx_id"] = get_tx_id(burrow_log["receipt_id"], Cfg.NETWORK_ID)
+        burrow_log["change"] = ""
+        if burrow_log["event"] == "borrow":
+            burrow_log["event"] = "Borrow"
+        if burrow_log["event"] == "decrease_collateral":
+            burrow_log["event"] = "Adjust Collateral"
+            burrow_log["change"] = "decrease"
+        if burrow_log["event"] == "increase_collateral":
+            burrow_log["event"] = "Adjust Collateral"
+            burrow_log["change"] = "increase"
+        if burrow_log["event"] == "deposit":
+            burrow_log["event"] = "Supply"
+        if burrow_log["event"] == "withdraw_succeeded":
+            burrow_log["event"] = "Withdraw"
+    res = {
+        "record_list": burrow_log_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/get-meme-burrow-records', methods=['GET'])
+def handle_meme_burrow_records():
+    account_id = request.args.get("account_id")
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=10)
+    if account_id is None or account_id == '' or page_size == 0:
+        return ""
+    burrow_log_list, count_number = query_meme_burrow_log(Cfg.NETWORK_ID, account_id, page_number, page_size)
     if count_number % page_size == 0:
         total_page = int(count_number / page_size)
     else:

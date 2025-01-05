@@ -830,6 +830,28 @@ def query_burrow_log(network_id, account_id, page_number, page_size):
         cursor.close()
 
 
+def query_meme_burrow_log(network_id, account_id, page_number, page_size):
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_db_connect(network_id)
+    sql = "select `event`, amount, token_id, `timestamp`, '' as tx_id, receipt_id from meme_burrow_event_log " \
+          "where account_id = %s and `event` in ('borrow','decrease_collateral','deposit'," \
+          "'increase_collateral','repay','withdraw_succeeded')  order by `timestamp` desc " \
+          "limit %s, %s"
+    sql_count = "select count(*) as total_number from meme_burrow_event_log where account_id = %s and `event` in " \
+                "('borrow','decrease_collateral','deposit','increase_collateral','repay','withdraw_succeeded')"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (account_id, start_number, page_size))
+        burrow_log = cursor.fetchall()
+        cursor.execute(sql_count, account_id)
+        burrow_log_count = cursor.fetchone()
+        return burrow_log, burrow_log_count["total_number"]
+    except Exception as e:
+        print("query burrow_event_log to db error:", e)
+    finally:
+        cursor.close()
+
+
 def handel_page_number(page_number, size):
     if page_number <= 1:
         start_number = 0
