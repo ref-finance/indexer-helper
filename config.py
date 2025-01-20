@@ -436,6 +436,10 @@ class Cfg:
             {"SYMBOL": "TruNEAR", "NEAR_ID": "staker1.msig1.trufin.near", "MD_ID": "v2.ref-finance.near|5563|wrap.near", "DECIMAL": 24},
             {"SYMBOL": "NOEAR", "NEAR_ID": "noear-324.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5574|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "RIN", "NEAR_ID": "rin.tkn.near", "MD_ID": "v2.ref-finance.near|5814|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "GOTI", "NEAR_ID": "goti.token0.near", "MD_ID": "v2.ref-finance.near|5853|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "MACHO", "NEAR_ID": "macho.token0.near", "MD_ID": "v2.ref-finance.near|5857|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "ILPEPE", "NEAR_ID": "ilpepe.token0.near", "MD_ID": "v2.ref-finance.near|5836|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "ASI", "NEAR_ID": "token.sendertge.near", "MD_ID": "v2.ref-finance.near|5876|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
