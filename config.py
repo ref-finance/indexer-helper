@@ -440,6 +440,7 @@ class Cfg:
             {"SYMBOL": "MACHO", "NEAR_ID": "macho.token0.near", "MD_ID": "v2.ref-finance.near|5857|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "ILPEPE", "NEAR_ID": "ilpepe.token0.near", "MD_ID": "v2.ref-finance.near|5836|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "ASI", "NEAR_ID": "token.sendertge.near", "MD_ID": "v2.ref-finance.near|5876|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "JLU", "NEAR_ID": "jlu-1018.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5728|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
