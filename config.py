@@ -441,6 +441,9 @@ class Cfg:
             {"SYMBOL": "ILPEPE", "NEAR_ID": "ilpepe.token0.near", "MD_ID": "v2.ref-finance.near|5836|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "ASI", "NEAR_ID": "token.sendertge.near", "MD_ID": "v2.ref-finance.near|5876|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "JLU", "NEAR_ID": "jlu-1018.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5728|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "DOM", "NEAR_ID": "dom-1568.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5941|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "SPEAR", "NEAR_ID": "spear-1565.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5936|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "PLB", "NEAR_ID": "plb-1567.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5940|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
