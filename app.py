@@ -32,7 +32,7 @@ import time
 import bleach
 import requests
 
-service_version = "20250131.01"
+service_version = "20250210.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1118,6 +1118,48 @@ def handel_get_total_revenue():
             "data": {"total_revenue": str(float(ret["data"]["total_fee"]) * 0.2)}
         }
     return jsonify(ret_data)
+
+
+@app.route('/get-lp-lock-by-token', methods=['GET'])
+def handel_lp_lock_by_token():
+    try:
+        token = request.args.get("token")
+        ret_data_list = []
+        account_paged, pool_ids = get_lp_lock_info(Cfg.NETWORK_ID)
+        pools = list_pools_by_id_list(Cfg.NETWORK_ID, pool_ids)
+        pool_info = {}
+        for pool in pools:
+            token_pair = pool["token_account_ids"]
+            if token in token_pair:
+                pool_info[pool["id"]] = pool
+        for key, values in account_paged.items():
+            if key in pool_info:
+                locked_details = values["locked_details"]
+                shares_total_supply = pool_info[key]["shares_total_supply"]
+                for locked_detail in locked_details:
+                    locked_detail["percent"] = '{:.12f}'.format((int(locked_detail["locked_balance"]) / int(shares_total_supply)) * 100)
+                ret_data = {
+                    "tokens": pool_info[key]["token_account_ids"],
+                    "percentLocked": '{:.12f}'.format((values["locked_balance"] / int(shares_total_supply)) * 100),
+                    "totalLocked": str(values["locked_balance"]),
+                    "totalSupply": shares_total_supply,
+                    "pool_id": key,
+                    "locks": locked_details
+                }
+                ret_data_list.append(ret_data)
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": ret_data_list
+        }
+    except Exception as e:
+        logger.error("handel_lp_lock_info error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return jsonify(ret)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
