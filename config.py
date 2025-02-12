@@ -444,6 +444,7 @@ class Cfg:
             {"SYMBOL": "DOM", "NEAR_ID": "dom-1568.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5941|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "SPEAR", "NEAR_ID": "spear-1565.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5936|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "PLB", "NEAR_ID": "plb-1567.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5940|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "NBTC", "NEAR_ID": "nbtc.bridge.near", "MD_ID": "v2.ref-finance.near|5949|wrap.near", "DECIMAL": 8},
         ],
         "BASE_MAINNET": [
         ],
