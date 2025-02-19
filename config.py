@@ -446,6 +446,8 @@ class Cfg:
             {"SYMBOL": "PLB", "NEAR_ID": "plb-1567.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5940|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "NBTC", "NEAR_ID": "nbtc.bridge.near", "MD_ID": "v2.ref-finance.near|5949|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "IMG_8327", "NEAR_ID": "img_8327-1591.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5982|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "aBTC", "NEAR_ID": "31761a152f1e96f966c041291644129144233b0b.factory.bridge.near", "MD_ID": "v2.ref-finance.near|5991|nbtc.bridge.near", "DECIMAL": 18},
+            {"SYMBOL": "DONOR", "NEAR_ID": "donor-1517.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5903|wrap.near", "DECIMAL": 2},
         ],
         "BASE_MAINNET": [
         ],
