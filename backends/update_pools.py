@@ -57,7 +57,7 @@ def update_farms(network_id):
         print("Error occurred when update to Redis, cancel pipe. Error is: ", e)
 
 
-def internal_get_token_metadata(conn, contract_id):
+def internal_get_token_metadata(network_id, conn, contract_id):
     metadata_obj = {
         "spec": "",
         "name": contract_id,
@@ -149,7 +149,7 @@ def internal_get_pools(network_id: str, number: int) -> list:
                     # pool["token_symbols"].append(token_metadata[x]["symbol"])
                 else:
                     time.sleep(0.1)
-                    metadata_obj = internal_get_token_metadata(conn, x)
+                    metadata_obj = internal_get_token_metadata(network_id, conn, x)
                     pool["token_symbols"].append(metadata_obj["symbol"])
                     token_metadata[x] = metadata_obj
 
@@ -162,7 +162,7 @@ def internal_get_pools(network_id: str, number: int) -> list:
     return pools
 
 
-def internal_add_volume_info(top_pools: dict):
+def internal_add_volume_info(network_id: str, top_pools: dict):
     contract = Cfg.NETWORK[network_id]["REF_CONTRACT"]
     try:
         conn = MultiNodeJsonProvider(network_id)
@@ -227,7 +227,7 @@ def internal_pools_to_redis(network_id: str, pools: list, number: int):
             print("Import Pools to Redis OK.")
 
             # add vol info into top-pools
-            # internal_add_volume_info(tops)
+            # internal_add_volume_info(network_id, tops)
             # pour top-pools data to redis
             # conn.begin_pipe()
             # for key, top_pool in tops.items():
