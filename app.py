@@ -32,7 +32,7 @@ import time
 import bleach
 import requests
 
-service_version = "20250414.01"
+service_version = "20250428.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -927,7 +927,11 @@ def handel_add_liquidation_result():
     }
     try:
         liquidation_result_data_list = request.json
-        key = liquidation_result_data_list["key"]
+        contract_id = "contract.main.burrow.near"
+        if "contract_id" in liquidation_result_data_list and liquidation_result_data_list["contract_id"] != "" \
+                and liquidation_result_data_list["contract_id"] is not None:
+            contract_id = liquidation_result_data_list["contract_id"]
+        key = liquidation_result_data_list["key"] + "_" + contract_id
         values = json.dumps(liquidation_result_data_list["values"])
         ret_data = get_liquidation_result(Cfg.NETWORK_ID, key)
         if ret_data is None:
@@ -942,6 +946,10 @@ def handel_add_liquidation_result():
 @app.route('/get-liquidation-result', methods=['GET'])
 def handel_get_liquidation_result():
     key = request.args.get("key")
+    contract_id = request.args.get("contract_id")
+    if contract_id is None or contract_id == "":
+        contract_id = "contract.main.burrow.near"
+    key = key + "_" + contract_id
     ret_data = get_liquidation_result(Cfg.NETWORK_ID, key)
     ret = {
         "code": 0,
