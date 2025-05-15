@@ -13,7 +13,8 @@ from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price, list_base_token_price
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_metadata_v2
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
-from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, get_token_price_ratio_report, get_history_token_price_report, get_market_token_price
+from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
+    get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, get_burrow_total_revenue
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -32,7 +33,7 @@ import time
 import bleach
 import requests
 
-service_version = "20250428.01"
+service_version = "20250515.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1125,6 +1126,39 @@ def handel_get_total_revenue():
             "msg": "success",
             "data": {"total_revenue": str(float(ret["data"]["total_fee"]) * 0.2)}
         }
+    return jsonify(ret_data)
+
+
+@app.route('/get--burrow-total-fee', methods=['GET'])
+def handel_get_burrow_total_fee():
+    try:
+        total_fee = get_burrow_total_fee()
+        ret = {
+            "total_fee": total_fee,
+        }
+        ret_data = {
+            "code": 0,
+            "msg": "success",
+            "data": ret
+        }
+    except Exception as e:
+        logger.info("handel_get_burrow_total_fee error:{}", e.args)
+        ret_data = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return jsonify(ret_data)
+
+
+@app.route('/get-burrow-total-revenue', methods=['GET'])
+def handel_get_burrow_total_revenue():
+    total_revenue = get_burrow_total_revenue()
+    ret_data = {
+        "code": 0,
+        "msg": "success",
+        "data": {"total_revenue": total_revenue}
+    }
     return jsonify(ret_data)
 
 
