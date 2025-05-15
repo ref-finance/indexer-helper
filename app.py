@@ -1129,7 +1129,7 @@ def handel_get_total_revenue():
     return jsonify(ret_data)
 
 
-@app.route('/get--burrow-total-fee', methods=['GET'])
+@app.route('/get-burrow-total-fee', methods=['GET'])
 def handel_get_burrow_total_fee():
     try:
         total_fee = get_burrow_total_fee()
