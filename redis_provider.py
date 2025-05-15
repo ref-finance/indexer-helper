@@ -310,6 +310,20 @@ def get_market_token_price():
     return ret
 
 
+def get_burrow_total_fee():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("BURROW_TOTAL_FEE")
+    r.close()
+    return ret
+
+
+def get_burrow_total_revenue():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("BURROW_TOTAL_REVENUE")
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
