@@ -22,7 +22,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
-    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, query_meme_burrow_log
+    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, query_meme_burrow_log, \
+    query_conversion_token_record
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -1160,6 +1161,28 @@ def handel_get_burrow_total_revenue():
         "data": {"total_revenue": total_revenue}
     }
     return jsonify(ret_data)
+
+
+@app.route('/conversion-token-record', methods=['GET'])
+def handel_conversion_token_record():
+    account_id = request.args.get("account_id", type=str, default='')
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=10)
+    if page_size == 0:
+        return ""
+    conversion_token_log_list, count_number = query_conversion_token_record(Cfg.NETWORK_ID, account_id, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": conversion_token_log_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
