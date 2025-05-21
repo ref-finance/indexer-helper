@@ -14,7 +14,8 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_metadata_v2
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
-    get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, get_burrow_total_revenue
+    get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
+    get_burrow_total_revenue, get_nbtc_total_supply
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -32,8 +33,10 @@ from auth.crypto_utl import decrypt
 import time
 import bleach
 import requests
+from near_multinode_rpc_provider import MultiNodeJsonProvider
+from redis_provider import RedisProvider
 
-service_version = "20250515.01"
+service_version = "20250521.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1160,6 +1163,41 @@ def handel_get_burrow_total_revenue():
         "data": {"total_revenue": total_revenue}
     }
     return jsonify(ret_data)
+
+
+@app.route('/nbtc_total_supply', methods=['GET'])
+def handle_nbtc_total_supple():
+    ret = get_nbtc_total_supply()
+    if ret is None:
+        try:
+            network_id = Cfg.NETWORK_ID
+            contract_id = Cfg.NETWORK[network_id]["NBTC_CONTRACT"]
+            conn = MultiNodeJsonProvider(network_id)
+            ft_total_supply_ret = conn.view_call(contract_id, "ft_total_supply", b'')
+            if "result" in ft_total_supply_ret:
+                json_str = "".join([chr(x) for x in ft_total_supply_ret["result"]])
+                ft_total_supply = json.loads(json_str)
+                logger.info("ft_total_supply:{}", ft_total_supply)
+                for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
+                    if token["NEAR_ID"] == contract_id:
+                        token_decimal = token["DECIMAL"]
+                        token_price = get_token_price(network_id, contract_id)
+                        ret = int(ft_total_supply) / int("1" + "0" * token_decimal) * float(token_price)
+                        redis_conn = RedisProvider()
+                        redis_conn.add_nbtc_total_supply(ret)
+                        redis_conn.close()
+            else:
+                logger.info("ft_total_supply result:{}", ft_total_supply_ret)
+        except Exception as e:
+            logger.error("RPC Error{}: ", e)
+            return "0.0"
+    return str(ret)
+
+
+@app.route('/nbtc_circulating_supply', methods=['GET'])
+def handle_nbtc_circulating_supply():
+    ret = handle_nbtc_total_supple()
+    return ret
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
