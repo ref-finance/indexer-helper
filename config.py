@@ -185,7 +185,8 @@ class Cfg:
             "CRYPTO_AES_KEY": CRYPTO_AES_KEY,
             "AUTH_SWITCH": AUTH_SWITCH,
             "NOT_AUTH_LIST": NOT_AUTH_LIST,
-            "SIGN_EXPIRE": SIGN_EXPIRE
+            "SIGN_EXPIRE": SIGN_EXPIRE,
+            "NBTC_CONTRACT": "nbtc.bridge.near"
         }
     }
     TOKENS = {
