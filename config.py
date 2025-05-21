@@ -99,6 +99,7 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "NBTC_CONTRACT": "nbtc.bridge.testnet"
         },
         "TESTNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
@@ -131,6 +132,7 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "NBTC_CONTRACT": "nbtc.bridge.testnet"
         },
         "MAINNET": {
             "NEAR_RPC_URL": MAINNET_RPC_URL,
