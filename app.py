@@ -1019,7 +1019,7 @@ def handle_list_top_pools_v2():
 def handel_lp_lock_info():
     try:
         ret_data_list = []
-        account_paged, pool_ids = get_lp_lock_info(Cfg.NETWORK_ID)
+        account_paged, pool_ids, pool_lock_data = get_lp_lock_info(Cfg.NETWORK_ID)
         pools = list_pools_by_id_list(Cfg.NETWORK_ID, pool_ids)
         pool_info = {}
         for pool in pools:
@@ -1198,6 +1198,86 @@ def handle_nbtc_total_supple():
 def handle_nbtc_circulating_supply():
     ret = handle_nbtc_total_supple()
     return ret
+
+
+@app.route('/get-lp-lock-by-token', methods=['GET'])
+def handel_lp_lock_by_token():
+    ret = {
+        "status": 1,
+        "message": "OK",
+        "result": None
+    }
+    try:
+        token = request.args.get("token")
+        if token is None or token == "":
+            ret = {
+                "status": -1,
+                "message": "error",
+                "result": "Token not found!"
+            }
+            return ret
+        ret_data_map = {"address": token, "tokenUrl": ""}
+        pairs = []
+        logger.info("ret_data_map:{}", ret_data_map)
+        account_paged, pool_ids, pool_lock_data = get_lp_lock_info(Cfg.NETWORK_ID)
+        logger.info("account_paged:{}", account_paged)
+        logger.info("pool_ids:{}", pool_ids)
+        logger.info("pool_lock_data:{}", pool_lock_data)
+        if len(pool_ids) < 1:
+            return ret
+        pools = list_pools_by_id_list(Cfg.NETWORK_ID, pool_ids)
+        prices = list_token_price(Cfg.NETWORK_ID)
+        metadata = list_token_metadata(Cfg.NETWORK_ID)
+        combine_pools_info(pools, prices, metadata)
+        pool_max_tvl = 0
+        top_pool_id = ""
+        pool_info = {}
+        for pool in pools:
+            token_pair = pool["token_account_ids"]
+            if token in token_pair:
+                pool_info[pool["id"]] = pool
+                if float(pool["tvl"]) > pool_max_tvl:
+                    pool_max_tvl = float(pool["tvl"])
+                    top_pool_id = pool["id"]
+        ret_data_map["tokenUrl"] = "https://dex.rhea.finance/pool/"+top_pool_id
+        for key, values in account_paged.items():
+            if key in pool_info:
+                pool_lock_data_list = pool_lock_data[key]
+                shares_total_supply = int(pool_info[key]["shares_total_supply"])
+                total_locked = values["locked_balance"]
+                locks = []
+                for pool_lock in pool_lock_data_list:
+                    locked_details = {
+                        "id": pool_lock["lock_id"],
+                        "lockId": "0",
+                        "amount": pool_lock["locked_balance"],
+                        "unlockDate": str(pool_lock["unlock_time_sec"]),
+                        "initialAmount": pool_lock["locked_balance"],
+                        "lockDate": "0",
+                        "lockUrl": "https://dex.rhea.finance/pool/" + key
+                    }
+                    locks.append(locked_details)
+                pairs_data = {
+                    "chain": "90000000",
+                    "tokens": pool_info[key]["token_account_ids"],
+                    "address": key,
+                    "percentLocked": '{:.12f}'.format((total_locked / shares_total_supply) * 100),
+                    "totalSupply": str(shares_total_supply),
+                    "totalLocked": str(total_locked),
+                    "locks": locks,
+                    "poolUrl": "https://dex.rhea.finance/pool/"+key
+                }
+                pairs.append(pairs_data)
+        ret_data_map["pairs"] = pairs
+        ret["result"] = ret_data_map
+    except Exception as e:
+        logger.error("handel_lp_lock_info error:{}", e)
+        ret = {
+            "status": -1,
+            "message": "error",
+            "result": e.args
+        }
+    return jsonify(ret)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
