@@ -743,13 +743,14 @@ def get_circulating_supply():
 
 
 def get_lp_lock_info(network_id):
+    pool_data = {}
+    pool_ids = set()
+    pool_lock_ret_data = {}
     try:
         conn = MultiNodeJsonProvider(network_id)
         ret = conn.view_call(Cfg.NETWORK[network_id]["TOKEN_LOCKER_CONTRACT"], "get_accounts_paged", b'{}')
         json_str = "".join([chr(x) for x in ret["result"]])
         accounts_paged = json.loads(json_str)
-        pool_data = {}
-        pool_ids = set()
         for account in accounts_paged:
             account_id = account["account_id"]
             locked_tokens = account["locked_tokens"]
@@ -762,11 +763,18 @@ def get_lp_lock_info(network_id):
                     pool_data[pool_id]["locked_balance"] = pool_data[pool_id]["locked_balance"] + int(values["locked_balance"])
                 else:
                     pool_data[pool_id] = {"locked_balance": int(values["locked_balance"]), "locked_details": [values]}
-        return pool_data, list(pool_ids)
+                if pool_id in pool_lock_ret_data:
+                    pool_lock_ret_data[pool_id].append(values)
+                else:
+                    pool_lock_ret_data[pool_id] = [values]
+        print("pool_data:", pool_data)
+        print("list(pool_ids):", list(pool_ids))
+        print("pool_lock_ret_data:", pool_lock_ret_data)
     except MultiNodeJsonProviderError as e:
         print("RPC Error: ", e)
     except Exception as e:
         print("Error: ", e)
+    return pool_data, list(pool_ids), pool_lock_ret_data
 
 
 def is_base64(s):
