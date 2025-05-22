@@ -99,6 +99,7 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "NBTC_CONTRACT": "nbtc.bridge.testnet"
         },
         "TESTNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
@@ -131,6 +132,7 @@ class Cfg:
             "DB_PWD": DB_PWD,
             "DB_HOST": DB_HOST,
             "DB_PORT": DB_PORT,
+            "NBTC_CONTRACT": "nbtc.bridge.testnet"
         },
         "MAINNET": {
             "NEAR_RPC_URL": MAINNET_RPC_URL,
@@ -185,7 +187,8 @@ class Cfg:
             "CRYPTO_AES_KEY": CRYPTO_AES_KEY,
             "AUTH_SWITCH": AUTH_SWITCH,
             "NOT_AUTH_LIST": NOT_AUTH_LIST,
-            "SIGN_EXPIRE": SIGN_EXPIRE
+            "SIGN_EXPIRE": SIGN_EXPIRE,
+            "NBTC_CONTRACT": "nbtc.bridge.near"
         }
     }
     TOKENS = {
@@ -444,6 +447,12 @@ class Cfg:
             {"SYMBOL": "DOM", "NEAR_ID": "dom-1568.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5941|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "SPEAR", "NEAR_ID": "spear-1565.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5936|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "PLB", "NEAR_ID": "plb-1567.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5940|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "NBTC", "NEAR_ID": "nbtc.bridge.near", "MD_ID": "v2.ref-finance.near|5949|wrap.near", "DECIMAL": 8},
+            {"SYMBOL": "IMG_8327", "NEAR_ID": "img_8327-1591.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5982|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "aBTC", "NEAR_ID": "31761a152f1e96f966c041291644129144233b0b.factory.bridge.near", "MD_ID": "v2.ref-finance.near|5991|nbtc.bridge.near", "DECIMAL": 18},
+            {"SYMBOL": "DONOR", "NEAR_ID": "donor-1517.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5903|wrap.near", "DECIMAL": 2},
+            {"SYMBOL": "ZEC", "NEAR_ID": "zec.omft.near", "MD_ID": "v2.ref-finance.near|6065|wrap.near", "DECIMAL": 8},
+            {"SYMBOL": "ETH", "NEAR_ID": "eth.bridge.near", "MD_ID": "v2.ref-finance.near|6354|wrap.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],

@@ -71,7 +71,23 @@ def near_block_tx(receipt_id, network_id):
     return tx_id
 
 
+def get_go_token_price():
+    go_token_price_data = ""
+    try:
+        go_token_price_url = "https://api.ref.finance/list-token-price"
+        requests.packages.urllib3.disable_warnings()
+        go_token_price_res_data = requests.get(url=go_token_price_url, verify=False)
+        go_token_price_data = json.loads(go_token_price_res_data.text)
+    except Exception as e:
+        print("list-token-price error:", e)
+    return go_token_price_data
+
+
 def combine_pools_info(pools, prices, metadata):
+    go_token_price_data = get_go_token_price()
+    if go_token_price_data != "":
+        for token_id, token_price_data in go_token_price_data.items():
+            prices[token_id] = token_price_data["price"]
     ret_pools = []
     for pool in pools:
         tokens = pool['token_account_ids']
@@ -82,7 +98,7 @@ def combine_pools_info(pools, prices, metadata):
         valid_token_price = 0
         token_metadata_flag = True
         for i in range(len(tokens)):
-            if metadata[tokens[i]] != "":
+            if tokens[i] in metadata and metadata[tokens[i]] != "":
                 token_decimals = metadata[tokens[i]]["decimals"]
                 token_symbol = metadata[tokens[i]]["symbol"]
                 if token_decimals is None or token_symbol is None or token_decimals == "" or token_symbol == "":
