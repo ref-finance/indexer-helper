@@ -1519,18 +1519,30 @@ def update_burrow_liquidate_log(network_id, receipt_ids):
 def query_conversion_token_record(network_id, account_id, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_db_connect(network_id)
-    sql = "select `event`, conversion_id, conversion_type, account_id, source_token_id, target_token_id, " \
-          "source_amount, target_amount, start_time_ms, end_time_ms, block_id, timestamp, receipt_id, 0 as `status` " \
-          "from conversion_token_log where account_id = %s and `event` = 'create_conversion' " \
-          "order by `timestamp` desc limit %s, %s"
+    sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
+          "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
+          "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, 0) " \
+          "AS claim_target_amount FROM conversion_token_log ctl LEFT JOIN (SELECT conversion_id, account_id, " \
+          "SUM(target_amount) AS total_claimed FROM conversion_token_log WHERE `event` = 'claim_succeeded' " \
+          "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
+          "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
+          "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
     sql_count = "select count(*) as total_number from conversion_token_log " \
                 "where account_id = %s and `event` = 'create_conversion'"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
+        now_time = int(time.time()) * 1000
         cursor.execute(sql, (account_id, start_number, page_size))
         conversion_token_log = cursor.fetchall()
         cursor.execute(sql_count, account_id)
         conversion_token_log_count = cursor.fetchone()
+        for conversion_token_data in conversion_token_log:
+            # status(0:锁定状态，1:可领取，2：已领取)
+            if int(conversion_token_data["end_time_ms"]) <= now_time:
+                if int(conversion_token_data["claim_target_amount"]) >= int(conversion_token_data["target_amount"]):
+                    conversion_token_data["status"] = "2"
+                else:
+                    conversion_token_data["status"] = "1"
         return conversion_token_log, conversion_token_log_count["total_number"]
     except Exception as e:
         print("query query_conversion_token_record to db error:", e)
