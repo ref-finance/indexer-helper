@@ -36,7 +36,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250521.01"
+service_version = "20250603.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1278,6 +1278,12 @@ def handel_lp_lock_by_token():
             "result": e.args
         }
     return jsonify(ret)
+
+
+@app.route('/whitelisted-tokens', methods=['GET'])
+def handle_whitelisted_tokens():
+    ret = list_whitelist(Cfg.NETWORK_ID)
+    return compress_response_content(ret)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
