@@ -14,7 +14,8 @@ from redis_provider import list_farms, list_top_pools, list_pools, list_token_pr
 from redis_provider import list_pools_by_id_list, list_token_metadata, list_pools_by_tokens, get_pool, list_token_metadata_v2
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
-    get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, get_burrow_total_revenue
+    get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
+    get_burrow_total_revenue, get_nbtc_total_supply
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -33,8 +34,10 @@ from auth.crypto_utl import decrypt
 import time
 import bleach
 import requests
+from near_multinode_rpc_provider import MultiNodeJsonProvider
+from redis_provider import RedisProvider
 
-service_version = "20250515.01"
+service_version = "20250603.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1017,7 +1020,7 @@ def handle_list_top_pools_v2():
 def handel_lp_lock_info():
     try:
         ret_data_list = []
-        account_paged, pool_ids = get_lp_lock_info(Cfg.NETWORK_ID)
+        account_paged, pool_ids, pool_lock_data = get_lp_lock_info(Cfg.NETWORK_ID)
         pools = list_pools_by_id_list(Cfg.NETWORK_ID, pool_ids)
         pool_info = {}
         for pool in pools:
@@ -1161,6 +1164,127 @@ def handel_get_burrow_total_revenue():
         "data": {"total_revenue": total_revenue}
     }
     return jsonify(ret_data)
+
+
+@app.route('/nbtc_total_supply', methods=['GET'])
+def handle_nbtc_total_supple():
+    ret = get_nbtc_total_supply()
+    if ret is None:
+        try:
+            network_id = Cfg.NETWORK_ID
+            contract_id = Cfg.NETWORK[network_id]["NBTC_CONTRACT"]
+            conn = MultiNodeJsonProvider(network_id)
+            ft_total_supply_ret = conn.view_call(contract_id, "ft_total_supply", b'')
+            if "result" in ft_total_supply_ret:
+                json_str = "".join([chr(x) for x in ft_total_supply_ret["result"]])
+                ft_total_supply = json.loads(json_str)
+                logger.info("ft_total_supply:{}", ft_total_supply)
+                for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
+                    if token["NEAR_ID"] == contract_id:
+                        token_decimal = token["DECIMAL"]
+                        token_price = get_token_price(network_id, contract_id)
+                        ret = int(ft_total_supply) / int("1" + "0" * token_decimal) * float(token_price)
+                        redis_conn = RedisProvider()
+                        redis_conn.add_nbtc_total_supply(ret)
+                        redis_conn.close()
+            else:
+                logger.info("ft_total_supply result:{}", ft_total_supply_ret)
+        except Exception as e:
+            logger.error("RPC Error{}: ", e)
+            return "0.0"
+    return str(ret)
+
+
+@app.route('/nbtc_circulating_supply', methods=['GET'])
+def handle_nbtc_circulating_supply():
+    ret = handle_nbtc_total_supple()
+    return ret
+
+
+@app.route('/get-lp-lock-by-token', methods=['GET'])
+def handel_lp_lock_by_token():
+    ret = {
+        "status": 1,
+        "message": "OK",
+        "result": None
+    }
+    try:
+        token = request.args.get("token")
+        if token is None or token == "":
+            ret = {
+                "status": -1,
+                "message": "error",
+                "result": "Token not found!"
+            }
+            return ret
+        ret_data_map = {"address": token, "tokenUrl": ""}
+        pairs = []
+        logger.info("ret_data_map:{}", ret_data_map)
+        account_paged, pool_ids, pool_lock_data = get_lp_lock_info(Cfg.NETWORK_ID)
+        logger.info("account_paged:{}", account_paged)
+        logger.info("pool_ids:{}", pool_ids)
+        logger.info("pool_lock_data:{}", pool_lock_data)
+        if len(pool_ids) < 1:
+            return ret
+        pools = list_pools_by_id_list(Cfg.NETWORK_ID, pool_ids)
+        prices = list_token_price(Cfg.NETWORK_ID)
+        metadata = list_token_metadata(Cfg.NETWORK_ID)
+        combine_pools_info(pools, prices, metadata)
+        pool_max_tvl = 0
+        top_pool_id = ""
+        pool_info = {}
+        for pool in pools:
+            token_pair = pool["token_account_ids"]
+            if token in token_pair:
+                pool_info[pool["id"]] = pool
+                if float(pool["tvl"]) > pool_max_tvl:
+                    pool_max_tvl = float(pool["tvl"])
+                    top_pool_id = pool["id"]
+        ret_data_map["tokenUrl"] = "https://dex.rhea.finance/pool/"+top_pool_id
+        for key, values in account_paged.items():
+            if key in pool_info:
+                pool_lock_data_list = pool_lock_data[key]
+                shares_total_supply = int(pool_info[key]["shares_total_supply"])
+                total_locked = values["locked_balance"]
+                locks = []
+                for pool_lock in pool_lock_data_list:
+                    locked_details = {
+                        "id": pool_lock["lock_id"],
+                        "lockId": "0",
+                        "amount": pool_lock["locked_balance"],
+                        "unlockDate": str(pool_lock["unlock_time_sec"]),
+                        "initialAmount": pool_lock["locked_balance"],
+                        "lockDate": "0",
+                        "lockUrl": "https://dex.rhea.finance/pool/" + key
+                    }
+                    locks.append(locked_details)
+                pairs_data = {
+                    "chain": "90000000",
+                    "tokens": pool_info[key]["token_account_ids"],
+                    "address": key,
+                    "percentLocked": '{:.12f}'.format((total_locked / shares_total_supply) * 100),
+                    "totalSupply": str(shares_total_supply),
+                    "totalLocked": str(total_locked),
+                    "locks": locks,
+                    "poolUrl": "https://dex.rhea.finance/pool/"+key
+                }
+                pairs.append(pairs_data)
+        ret_data_map["pairs"] = pairs
+        ret["result"] = ret_data_map
+    except Exception as e:
+        logger.error("handel_lp_lock_info error:{}", e)
+        ret = {
+            "status": -1,
+            "message": "error",
+            "result": e.args
+        }
+    return jsonify(ret)
+
+
+@app.route('/whitelisted-tokens', methods=['GET'])
+def handle_whitelisted_tokens():
+    ret = list_whitelist(Cfg.NETWORK_ID)
+    return compress_response_content(ret)
 
 
 @app.route('/conversion-token-record', methods=['GET'])
