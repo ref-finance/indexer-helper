@@ -150,6 +150,17 @@ def list_token_metadata(network_id):
     return metadata_obj
 
 
+def list_burrow_asset_token_metadata(network_id):
+    import json
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_BURROW_TOKEN_METADATA_KEY"])
+    r.close()
+    metadata_obj = {}
+    for key, value in ret.items():
+        metadata_obj[key] = json.loads(value)
+    return metadata_obj
+
+
 def list_token_metadata_v2(network_id):
     import json
     r = redis.StrictRedis(connection_pool=pool)

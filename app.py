@@ -15,7 +15,7 @@ from redis_provider import list_pools_by_id_list, list_token_metadata, list_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
-    get_burrow_total_revenue, get_nbtc_total_supply
+    get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -1283,6 +1283,15 @@ def handel_lp_lock_by_token():
 @app.route('/whitelisted-tokens', methods=['GET'])
 def handle_whitelisted_tokens():
     ret = list_whitelist(Cfg.NETWORK_ID)
+    return compress_response_content(ret)
+
+
+@app.route('/list-burrow-asset-token', methods=['GET'])
+def handle_list_burrow_asset_token():
+    """
+    list_token
+    """
+    ret = list_burrow_asset_token_metadata(Cfg.NETWORK_ID)
     return compress_response_content(ret)
 
 
