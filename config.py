@@ -50,7 +50,7 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL, REF_GO_API
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
@@ -60,6 +60,7 @@ except ImportError:
     CRYPTO_AES_KEY = "8309c61008a5f5ba6c51bbf977781c55"
     REF_URL = ""
     REF_SDK_URL = ""
+    REF_GO_API = ""
 
 """
 
@@ -461,6 +462,7 @@ class Cfg:
     MARKET_KEY = MARKET_KEY
     REF_URL = REF_URL
     REF_SDK_URL = REF_SDK_URL
+    REF_GO_API = REF_GO_API
 
 
 if __name__ == '__main__':
