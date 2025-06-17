@@ -1089,7 +1089,7 @@ def handel_get_total_fee():
             else:
                 not_pool_id_list = not_pool_id_list + "," + pool_volume["pool_id"]
         if not_pool_id_list != "":
-            url = "https://api.ref.finance/pool/search?pool_id_list=" + not_pool_id_list
+            url = Cfg.REF_GO_API + "/pool/search?pool_id_list=" + not_pool_id_list
             search_pool_json = requests.get(url).text
             search_pool_data = json.loads(search_pool_json)
             search_pool_list = search_pool_data["data"]["list"]
