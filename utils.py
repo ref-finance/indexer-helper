@@ -74,7 +74,7 @@ def near_block_tx(receipt_id, network_id):
 def get_go_token_price():
     go_token_price_data = ""
     try:
-        go_token_price_url = "https://api.ref.finance/list-token-price"
+        go_token_price_url = Cfg.REF_GO_API + "/list-token-price"
         requests.packages.urllib3.disable_warnings()
         go_token_price_res_data = requests.get(url=go_token_price_url, verify=False)
         go_token_price_data = json.loads(go_token_price_res_data.text)
