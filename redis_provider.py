@@ -342,6 +342,15 @@ def get_nbtc_total_supply():
     return ret
 
 
+def get_whitelist_tokens():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("WHITELIST_TOKEN_LIST")
+    r.close()
+    if ret is not None:
+        ret = json.loads(ret)
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
@@ -425,6 +434,9 @@ class RedisProvider(object):
 
     def add_nbtc_total_supply(self, metadata_str):
         self.r.set("NBTC_TOTAL_SUPPLY", metadata_str, ex=300)
+
+    def add_whitelist_tokens(self, token_list_str):
+        self.r.set("WHITELIST_TOKEN_LIST", token_list_str, ex=300)
 
     def close(self):
         self.r.close()
