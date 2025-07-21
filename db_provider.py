@@ -1516,6 +1516,23 @@ def update_burrow_liquidate_log(network_id, receipt_ids):
         cursor.close()
 
 
+def get_whitelisted_tokens_to_db(network_id):
+    token_list = []
+    db_conn = get_db_connect(network_id)
+    sql = f"select token_address from whitelisted_tokens"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        for result in results:
+            token_list.append(result["token_address"])
+        return token_list
+    except Exception as e:
+        print("query whitelisted_tokens to db error:", e)
+    finally:
+        cursor.close()
+
+
 def query_conversion_token_record(network_id, account_id, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_db_connect(network_id)

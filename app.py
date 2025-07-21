@@ -15,7 +15,7 @@ from redis_provider import list_pools_by_id_list, list_token_metadata, list_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
-    get_burrow_total_revenue, get_nbtc_total_supply
+    get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -23,8 +23,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
-    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, query_meme_burrow_log, \
-    query_conversion_token_record
+    add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
+    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -1090,7 +1090,7 @@ def handel_get_total_fee():
             else:
                 not_pool_id_list = not_pool_id_list + "," + pool_volume["pool_id"]
         if not_pool_id_list != "":
-            url = "https://api.ref.finance/pool/search?pool_id_list=" + not_pool_id_list
+            url = Cfg.REF_GO_API + "/pool/search?pool_id_list=" + not_pool_id_list
             search_pool_json = requests.get(url).text
             search_pool_data = json.loads(search_pool_json)
             search_pool_list = search_pool_data["data"]["list"]
@@ -1285,6 +1285,27 @@ def handel_lp_lock_by_token():
 def handle_whitelisted_tokens():
     ret = list_whitelist(Cfg.NETWORK_ID)
     return compress_response_content(ret)
+
+
+@app.route('/list-burrow-asset-token', methods=['GET'])
+def handle_list_burrow_asset_token():
+    """
+    list_token
+    """
+    ret = list_burrow_asset_token_metadata(Cfg.NETWORK_ID)
+    return compress_response_content(ret)
+
+
+@app.route('/whitelisted-token-list', methods=['GET'])
+def handle_whitelisted_token_list():
+    whitelist_tokens = get_whitelist_tokens()
+    if whitelist_tokens is None:
+        whitelist_tokens = get_whitelisted_tokens_to_db(Cfg.NETWORK_ID)
+        token_list_str = json.dumps(whitelist_tokens)
+        redis_conn = RedisProvider()
+        redis_conn.add_whitelist_tokens(token_list_str)
+        redis_conn.close()
+    return compress_response_content(whitelist_tokens)
 
 
 @app.route('/conversion-token-record', methods=['GET'])
