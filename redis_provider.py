@@ -351,6 +351,19 @@ def get_whitelist_tokens():
     return ret
 
 
+def get_rnear_apy():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("REDIS_KEY_RNEAR_APY")
+    r.close()
+    return ret
+
+
+def add_rnear_apy(value):
+    r = redis.StrictRedis(connection_pool=pool)
+    r.set("REDIS_KEY_RNEAR_APY", value, 600)
+    r.close()
+
+
 class RedisProvider(object):
 
     def __init__(self):
