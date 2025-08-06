@@ -808,6 +808,86 @@ def is_base64(s):
         return False
 
 
+def get_near_block_height():
+    url = Cfg.LST_RPC
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "block",
+        "params": {"finality": "final"}
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return data['result']['header']['height']
+    except requests.exceptions.RequestException as e:
+        print(f"reqest: {e}")
+        return None
+    except KeyError:
+        print("error data")
+        return None
+
+
+def get_block_one_day_ago():
+    current_block = get_near_block_height()
+    if current_block is None:
+        return None
+    day_ago_block = current_block - (Cfg.LST_AGO_DAY * 144000)
+    print("current_block:", current_block)
+    return day_ago_block
+
+
+def get_rnear_price():
+    day_ago_block_h = get_block_one_day_ago()
+    url = Cfg.LST_RPC
+    new_price = {
+        "method": "query",
+        "params": {
+            "request_type": "call_function",
+            "account_id": Cfg.LST_CONTRACT_ID,
+            "method_name": "ft_price",
+            "args_base64": "e30=",
+            "finality": "optimistic"
+        },
+        "id": 0,
+        "jsonrpc": "2.0"
+    }
+
+    old_price = {
+        "method": "query",
+        "params": {
+            "request_type": "call_function",
+            "account_id": Cfg.LST_CONTRACT_ID,
+            "method_name": "ft_price",
+            "args_base64": "e30=",
+            "block_id": day_ago_block_h
+          },
+        "id": 0,
+        "jsonrpc": "2.0"
+    }
+    print("day_ago_block_h:", day_ago_block_h)
+    try:
+        response_n = requests.post(url, json=new_price)
+        response_n.raise_for_status()
+        new_data = response_n.json()
+        response_o = requests.post(url, json=old_price)
+        response_o.raise_for_status()
+        old_data = response_o.json()
+        new_data_r = new_data["result"]["result"]
+        old_data_r = old_data["result"]["result"]
+        new_price = json.loads("".join([chr(x) for x in new_data_r]))
+        old_price = json.loads("".join([chr(x) for x in old_data_r]))
+        return new_price, old_price
+    except requests.exceptions.RequestException as e:
+        print(f"request error: {e}")
+        return None
+    except Exception as ee:
+        print(f"data error:{ee}")
+        return None
+
+
 if __name__ == '__main__':
     # from config import Cfg
     # from redis_provider import list_token_price, list_pools_by_id_list, list_token_metadata
@@ -818,8 +898,12 @@ if __name__ == '__main__':
     # for pool in pools:
     #     print(pool)
     # pass
-    liquidity_ = compute_liquidity(5160, 5240, 7404115124903830000000000000, 10555983177592727000000000000, 5214)
-    print("liquidity_:", liquidity_)
+    # liquidity_ = compute_liquidity(5160, 5240, 7404115124903830000000000000, 10555983177592727000000000000, 5214)
+    # print("liquidity_:", liquidity_)
     # a_x, a_y = compute_deposit_x_y_buckup(182847144196469251612398703, 5000, 5040, 5035)
     # print("x:", a_x)
     # print("y", a_y)
+
+    a, b = get_rnear_price()
+    print(a)
+    print(b)

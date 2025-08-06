@@ -15,8 +15,8 @@ from redis_provider import list_pools_by_id_list, list_token_metadata, list_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
-    get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens
-from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info
+    get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, get_rnear_apy, add_rnear_apy
+from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
@@ -24,7 +24,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
-    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record
+    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, get_conversion_token_day_data_list
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -37,7 +37,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250603.01"
+service_version = "20250806.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1322,6 +1322,66 @@ def handel_conversion_token_record():
         total_page = int(count_number / page_size) + 1
     res = {
         "record_list": conversion_token_log_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/get-rnear-apy', methods=['GET'])
+def handel_rnear_apy():
+    apy = get_rnear_apy()
+    if apy is None:
+        new_p, old_p = get_rnear_price()
+        apy = (int(new_p) - int(old_p)) / (10 ** 24) / Cfg.LST_AGO_DAY * 365 * 100
+        apy = '{:.6f}'.format(apy)
+        add_rnear_apy(apy)
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": apy
+    }
+    return ret
+
+
+@app.route('/token_holders', methods=['GET'])
+def handel_token_holders():
+    number = request.args.get("number", type=int, default=1)
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=100)
+    if page_size == 0:
+        return ""
+    token_holders_data, count_number = get_token_day_data_list(Cfg.NETWORK_ID, number, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": token_holders_data,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/conversion_token_data', methods=['GET'])
+def handel_conversion_token_data():
+    number = request.args.get("number", type=int, default=1)
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=100)
+    if page_size == 0:
+        return ""
+    token_holders_data, count_number = get_conversion_token_day_data_list(Cfg.NETWORK_ID, number, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": token_holders_data,
         "page_number": page_number,
         "page_size": page_size,
         "total_page": total_page,

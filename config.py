@@ -50,7 +50,7 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL, REF_GO_API
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL, REF_GO_API, LST_CONTRACT_ID, LST_RPC, LST_AGO_DAY
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
@@ -61,6 +61,9 @@ except ImportError:
     REF_URL = ""
     REF_SDK_URL = ""
     REF_GO_API = ""
+    LST_CONTRACT_ID = ""
+    LST_RPC = ""
+    LST_AGO_DAY = 1
 
 """
 
@@ -455,6 +458,8 @@ class Cfg:
             {"SYMBOL": "DONOR", "NEAR_ID": "donor-1517.meme-cooking.near", "MD_ID": "v2.ref-finance.near|5903|wrap.near", "DECIMAL": 2},
             {"SYMBOL": "ZEC", "NEAR_ID": "zec.omft.near", "MD_ID": "v2.ref-finance.near|6065|wrap.near", "DECIMAL": 8},
             {"SYMBOL": "ETH", "NEAR_ID": "eth.bridge.near", "MD_ID": "v2.ref-finance.near|6354|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "RHEA", "NEAR_ID": "token.rhealab.near", "MD_ID": "v2.ref-finance.near|6458|wrap.near", "DECIMAL": 18},
+            {"SYMBOL": "XRHEA", "NEAR_ID": "xtoken.rhealab.near", "MD_ID": "xtoken.rhealab.near|NA|token.rhealab.near", "DECIMAL": 18},
         ],
         "BASE_MAINNET": [
         ],
@@ -464,6 +469,9 @@ class Cfg:
     REF_URL = REF_URL
     REF_SDK_URL = REF_SDK_URL
     REF_GO_API = REF_GO_API
+    LST_CONTRACT_ID = LST_CONTRACT_ID
+    LST_RPC = LST_RPC
+    LST_AGO_DAY = LST_AGO_DAY
 
 
 if __name__ == '__main__':

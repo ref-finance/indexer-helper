@@ -280,7 +280,7 @@ def batch_add_history_token_price(data_list, network_id):
     db_conn = get_db_connect(network_id)
     sql = "insert into mk_history_token_price(contract_address, symbol, price, `decimal`, create_time, update_time, " \
           "`status`, `timestamp`) values(%s,%s,%s,%s, now(), now(), 1, %s)"
-    sql2 = "SELECT contract_address, price FROM mk_history_token_price where contract_address in (%s) " \
+    sql2 = "SELECT contract_address, AVG(price) FROM mk_history_token_price where contract_address in (%s) " \
            "and `timestamp` > '%s' group by contract_address"
     insert_data = []
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -1565,6 +1565,86 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
         print("query query_conversion_token_record to db error:", e)
     finally:
         cursor.close()
+
+
+def get_token_day_data_index_number(network_id):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select index_number from token_day_data order by index_number desc limit 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql)
+        index_number_data = cursor.fetchone()
+        if index_number_data is None:
+            index_number = 0
+        else:
+            index_number = index_number_data["index_number"]
+        return index_number
+    except Exception as e:
+        print("get_token_day_data_index_number to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
+def get_token_day_data_list(network_id, number, page_number, page_size):
+    max_index_number = get_token_day_data_index_number(network_id)
+    index_number = max_index_number - number
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_db_connect(network_id)
+    query_sql = "select token_id, account_id, balance, index_number, rank, timestamp from token_day_data where index_number > %s ORDER BY id DESC LIMIT %s, %s"
+    sql_count = "select count(*) as total_number from token_day_data where index_number > %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (index_number, start_number, page_size))
+        token_holders_data = cursor.fetchall()
+        cursor.execute(sql_count, index_number)
+        total_number_data = cursor.fetchone()
+        return token_holders_data, total_number_data["total_number"]
+    except Exception as e:
+        print("get_token_day_data_list to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
+def get_conversion_token_day_data_index_number(network_id):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select index_number from conversion_token_day_data order by index_number desc limit 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql)
+        index_number_data = cursor.fetchone()
+        if index_number_data is None:
+            index_number = 0
+        else:
+            index_number = index_number_data["index_number"]
+        return index_number
+    except Exception as e:
+        print("get_token_day_data_index_number to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
+def get_conversion_token_day_data_list(network_id, number, page_number, page_size):
+    max_index_number = get_conversion_token_day_data_index_number(network_id)
+    index_number = max_index_number - number
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_db_connect(network_id)
+    query_sql = "select token_id, account_id, balance, index_number, rank, target_amount, locking_duration, `type`, timestamp from conversion_token_day_data where index_number > %s ORDER BY id DESC LIMIT %s, %s"
+    sql_count = "select count(*) as total_number from conversion_token_day_data where index_number > %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (index_number, start_number, page_size))
+        token_holders_data = cursor.fetchall()
+        cursor.execute(sql_count, index_number)
+        total_number_data = cursor.fetchone()
+        return token_holders_data, total_number_data["total_number"]
+    except Exception as e:
+        print("get_token_day_data_list to db error:", e)
+    finally:
+        cursor.close()
+    return
 
 
 if __name__ == '__main__':
