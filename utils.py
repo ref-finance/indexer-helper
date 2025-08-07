@@ -834,7 +834,7 @@ def get_block_one_day_ago():
     current_block = get_near_block_height()
     if current_block is None:
         return None
-    day_ago_block = current_block - (Cfg.LST_AGO_DAY * 144000)
+    day_ago_block = current_block - Cfg.LST_AGO_DAY
     print("current_block:", current_block)
     return day_ago_block
 
@@ -904,6 +904,7 @@ if __name__ == '__main__':
     # print("x:", a_x)
     # print("y", a_y)
 
-    a, b = get_rnear_price()
-    print(a)
-    print(b)
+    new_p, old_p = get_rnear_price()
+    apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / (Cfg.LST_AGO_DAY / 6000) * 24 * 365 * 100
+    apy = '{:.6f}'.format(apy)
+    print(apy)

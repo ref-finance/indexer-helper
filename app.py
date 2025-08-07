@@ -1335,7 +1335,7 @@ def handel_rnear_apy():
     apy = get_rnear_apy()
     if apy is None:
         new_p, old_p = get_rnear_price()
-        apy = (int(new_p) - int(old_p)) / (10 ** 24) / Cfg.LST_AGO_DAY * 365 * 100
+        apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / (Cfg.LST_AGO_DAY / 6000) * 24 * 365 * 100
         apy = '{:.6f}'.format(apy)
         add_rnear_apy(apy)
     ret = {
