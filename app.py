@@ -24,7 +24,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
-    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, get_conversion_token_day_data_list
+    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, get_conversion_token_day_data_list, get_rhea_token_day_data_list
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -37,7 +37,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250806.01"
+service_version = "20250813.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1382,6 +1382,28 @@ def handel_conversion_token_data():
         total_page = int(count_number / page_size) + 1
     res = {
         "record_list": token_holders_data,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/rhea_token_data', methods=['GET'])
+def handel_rhea_token_data():
+    number = request.args.get("number", type=int, default=1)
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=100)
+    if page_size == 0:
+        return ""
+    rhea_token_data, count_number = get_rhea_token_day_data_list(Cfg.NETWORK_ID, number, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": rhea_token_data,
         "page_number": page_number,
         "page_size": page_size,
         "total_page": total_page,
