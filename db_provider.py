@@ -1533,19 +1533,31 @@ def get_whitelisted_tokens_to_db(network_id):
         cursor.close()
 
 
-def query_conversion_token_record(network_id, account_id, page_number, page_size):
+def query_conversion_token_record(network_id, account_id, page_number, page_size, contract_id):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_db_connect(network_id)
-    sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
-          "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
-          "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, 0) " \
-          "AS claim_target_amount FROM conversion_token_log ctl LEFT JOIN (SELECT conversion_id, account_id, " \
-          "SUM(target_amount) AS total_claimed FROM conversion_token_log WHERE `event` = 'claim_succeeded' " \
-          "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
-          "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
-          "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
-    sql_count = "select count(*) as total_number from conversion_token_log " \
-                "where account_id = %s and `event` = 'create_conversion'"
+    if contract_id == "orhea-token-conversion.stg.ref-dev-team.near":
+        sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
+              "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
+              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, 0) " \
+              "AS claim_target_amount FROM conversion_token_log_stg ctl LEFT JOIN (SELECT conversion_id, account_id, " \
+              "SUM(target_amount) AS total_claimed FROM conversion_token_log_stg WHERE `event` = 'claim_succeeded' " \
+              "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
+              "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
+              "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
+        sql_count = "select count(*) as total_number from conversion_token_log_stg " \
+                    "where account_id = %s and `event` = 'create_conversion'"
+    else:
+        sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
+              "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
+              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, 0) " \
+              "AS claim_target_amount FROM conversion_token_log ctl LEFT JOIN (SELECT conversion_id, account_id, " \
+              "SUM(target_amount) AS total_claimed FROM conversion_token_log WHERE `event` = 'claim_succeeded' " \
+              "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
+              "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
+              "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
+        sql_count = "select count(*) as total_number from conversion_token_log " \
+                    "where account_id = %s and `event` = 'create_conversion'"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         now_time = int(time.time()) * 1000
