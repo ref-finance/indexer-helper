@@ -830,17 +830,17 @@ def get_near_block_height():
         return None
 
 
-def get_block_one_day_ago():
+def get_old_block():
     current_block = get_near_block_height()
     if current_block is None:
         return None
-    day_ago_block = current_block - Cfg.LST_AGO_DAY
+    ago_block = current_block - Cfg.LST_AGO_DAY
     print("current_block:", current_block)
-    return day_ago_block
+    return ago_block
 
 
 def get_rnear_price():
-    day_ago_block_h = get_block_one_day_ago()
+    old_block_h = get_old_block()
     url = Cfg.LST_RPC
     new_price = {
         "method": "query",
@@ -862,12 +862,12 @@ def get_rnear_price():
             "account_id": Cfg.LST_CONTRACT_ID,
             "method_name": "ft_price",
             "args_base64": "e30=",
-            "block_id": day_ago_block_h
+            "block_id": old_block_h
           },
         "id": 0,
         "jsonrpc": "2.0"
     }
-    print("day_ago_block_h:", day_ago_block_h)
+    print("day_ago_block_h:", old_block_h)
     try:
         response_n = requests.post(url, json=new_price)
         response_n.raise_for_status()
@@ -905,6 +905,6 @@ if __name__ == '__main__':
     # print("y", a_y)
 
     new_p, old_p = get_rnear_price()
-    apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / (Cfg.LST_AGO_DAY / 6000) * 24 * 365 * 100
+    apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / 30 * 365 * 100
     apy = '{:.6f}'.format(apy)
     print(apy)
