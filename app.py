@@ -752,7 +752,7 @@ def handle_dcl_points():
         add_dcl_point_data(pool_id, json.dumps(ret_data))
     else:
         ret_data = json.loads(dcl_point_data["value"])
-    return jsonify(ret_data)
+    return compress_response_content(ret_data)
 
 
 @app.route('/get-fee-by-account', methods=['GET'])
