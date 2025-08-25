@@ -364,6 +364,37 @@ def add_rnear_apy(value):
     r.close()
 
 
+def get_dcl_point_data(key):
+    r = redis.StrictRedis(connection_pool=pool)
+    actual_key = "DCL_POINT_" + key
+    pipe = r.pipeline()
+    pipe.get(actual_key)
+    pipe.ttl(actual_key)
+    result = pipe.execute()
+    r.close()
+    value, ttl = result
+    if value is None:
+        return None
+    return {
+        'value': value,
+        'ttl': ttl
+    }
+
+
+def add_dcl_point_data(key, value):
+    r = redis.StrictRedis(connection_pool=pool)
+    r.set("DCL_POINT_" + key, value, 3600)
+    r.close()
+
+
+def set_dcl_point_ttl(key):
+    r = redis.StrictRedis(connection_pool=pool)
+    actual_key = "DCL_POINT_" + key
+    result = r.expire(actual_key, 3600)
+    r.close()
+    return result
+
+
 class RedisProvider(object):
 
     def __init__(self):
