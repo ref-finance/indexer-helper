@@ -1687,6 +1687,22 @@ def get_rhea_token_day_data_list(network_id, number, page_number, page_size):
     return
 
 
+def add_user_swap_record(network_id, account_id, is_accept_price_impact, router_path, tx_hash):
+    db_conn = get_db_connect(network_id)
+    sql = "insert into swap_record_reporting(account_id, is_accept_price_impact, router_path, tx_hash, " \
+          "`created_at`, `updated_at`) values(%s, %s, %s, %s, now(), now())"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (account_id, is_accept_price_impact, router_path, tx_hash))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert swap_record_reporting to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
