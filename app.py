@@ -24,7 +24,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
-    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, get_conversion_token_day_data_list, get_rhea_token_day_data_list
+    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
+    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -1431,6 +1432,26 @@ def handle_rhea_total_supple():
 @app.route('/total_supply/rhea', methods=['GET'])
 def handle_rhea_token_total_supple():
     ret = {"result": "205020000"}
+    return ret
+
+
+@app.route('/add-swap-record', methods=['POST', 'PUT'])
+def handel_user_swap_record():
+    try:
+        user_swap_data = request.json
+        add_user_swap_record(Cfg.NETWORK_ID, user_swap_data["account_id"], user_swap_data["is_accept_price_impact"], user_swap_data["router_path"], user_swap_data["tx_hash"])
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": None
+        }
+    except Exception as e:
+        logger.error("handel_user_swap_record error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
     return ret
 
 
