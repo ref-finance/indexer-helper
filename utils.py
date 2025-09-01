@@ -103,7 +103,7 @@ def combine_pools_info(pools, prices, metadata):
         for i in range(len(tokens)):
             if tokens[i] in metadata and metadata[tokens[i]] != "":
                 token_decimals = metadata[tokens[i]]["decimals"]
-                if token_decimals == 0:
+                if token_decimals == 0 and tokens[i] in decimals:
                     token_decimals = decimals[tokens[i]]
                 token_symbol = metadata[tokens[i]]["symbol"]
                 if token_decimals is None or token_symbol is None or token_decimals == "" or token_symbol == "":
