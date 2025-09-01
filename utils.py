@@ -84,6 +84,9 @@ def get_go_token_price():
 
 
 def combine_pools_info(pools, prices, metadata):
+    decimals = {}
+    for token in Cfg.TOKENS[Cfg.NETWORK_ID]:
+        decimals[token["NEAR_ID"]] = token["DECIMAL"]
     go_token_price_data = get_go_token_price()
     if go_token_price_data != "":
         for token_id, token_price_data in go_token_price_data.items():
@@ -100,6 +103,8 @@ def combine_pools_info(pools, prices, metadata):
         for i in range(len(tokens)):
             if tokens[i] in metadata and metadata[tokens[i]] != "":
                 token_decimals = metadata[tokens[i]]["decimals"]
+                if token_decimals == 0:
+                    token_decimals = decimals[tokens[i]]
                 token_symbol = metadata[tokens[i]]["symbol"]
                 if token_decimals is None or token_symbol is None or token_decimals == "" or token_symbol == "":
                     token_metadata_flag = False
