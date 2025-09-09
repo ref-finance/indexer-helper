@@ -1687,13 +1687,14 @@ def get_rhea_token_day_data_list(network_id, number, page_number, page_size):
     return
 
 
-def add_user_swap_record(network_id, account_id, is_accept_price_impact, router_path, tx_hash):
+def add_user_swap_record(network_id, account_id, is_accept_price_impact, router_path, router_type, token_in, token_out, amount_in, amount_out, slippage, tx_hash):
     db_conn = get_db_connect(network_id)
-    sql = "insert into swap_record_reporting(account_id, is_accept_price_impact, router_path, tx_hash, " \
-          "`created_at`, `updated_at`) values(%s, %s, %s, %s, now(), now())"
+    sql = "insert into swap_record_reporting(account_id, is_accept_price_impact, router_path, router_type, " \
+          "token_in, token_out, amount_in, amount_out, slippage, tx_hash, " \
+          "`created_at`, `updated_at`) values(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now(), now())"
     cursor = db_conn.cursor()
     try:
-        cursor.execute(sql, (account_id, is_accept_price_impact, router_path, tx_hash))
+        cursor.execute(sql, (account_id, is_accept_price_impact, router_path, router_type, token_in, token_out, amount_in, amount_out, slippage, tx_hash))
         db_conn.commit()
     except Exception as e:
         db_conn.rollback()
