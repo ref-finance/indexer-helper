@@ -298,10 +298,18 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
     point_data_24h_object = {}
     for point_24h in point_data_24h:
         point_number = point_24h["point"]
-        fee_x = float(point_24h["fee_x"]) * token_price[0]
-        fee_y = float(point_24h["fee_y"]) * token_price[1]
-        tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / 24
-        tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / 24
+        if token_price[0] is None:
+            token_price_0 = 0
+        else:
+            token_price_0 = token_price[0]
+        if token_price[1] is None:
+            token_price_1 = 0
+        else:
+            token_price_1 = token_price[1]
+        fee_x = float(point_24h["fee_x"]) * token_price_0
+        fee_y = float(point_24h["fee_y"]) * token_price_1
+        tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price_0 / 24
+        tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price_1 / 24
         point_24h_object = {
             "fee": fee_x + fee_y,
             "total_liquidity": tvl_x_l_24h + tvl_y_l_24h,
@@ -370,16 +378,22 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
                     ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + point_24h_object["total_liquidity"]
         if end_slot_point_number >= RIGHT_MOST_POINT:
             end_slot_point_number = RIGHT_MOST_POINT - 1
-        liquidity_amount_x = ret_point_data["token_x"] * int("1" + "0" * token_decimal_data[token_x])
-        liquidity_amount_y = ret_point_data["token_y"] * int("1" + "0" * token_decimal_data[token_y])
+        liquidity_amount_x = 0
+        liquidity_amount_y = 0
+        order_amount_x = 0
+        order_amount_y = 0
+        if token_x in token_decimal_data:
+            liquidity_amount_x = ret_point_data["token_x"] * int("1" + "0" * token_decimal_data[token_x])
+            order_amount_x = ret_point_data["order_x"] * int("1" + "0" * token_decimal_data[token_x])
+        if token_y in token_decimal_data:
+            liquidity_amount_y = ret_point_data["token_y"] * int("1" + "0" * token_decimal_data[token_y])
+            order_amount_y = ret_point_data["order_y"] * int("1" + "0" * token_decimal_data[token_y])
         if liquidity_amount_x > 0 and liquidity_amount_y == 0:
             ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point - bin_point_number)
         if liquidity_amount_x == 0 and liquidity_amount_y > 0:
             ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point + bin_point_number)
         if liquidity_amount_x > 0 and liquidity_amount_y > 0:
             ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point)
-        order_amount_x = ret_point_data["order_x"] * int("1" + "0" * token_decimal_data[token_x])
-        order_amount_y = ret_point_data["order_y"] * int("1" + "0" * token_decimal_data[token_y])
         if order_amount_x > 0 and order_amount_y == 0:
             ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point - bin_point_number)
         if order_amount_x == 0 and order_amount_y > 0:

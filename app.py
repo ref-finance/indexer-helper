@@ -38,7 +38,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250813.01"
+service_version = "20250909.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -633,9 +633,14 @@ def analysis_v2_pool_data():
 
 @app.route('/analysis-v2-pool-account-data', methods=['GET'])
 def analysis_v2_pool_account_data():
+    import threading
     file_name = request.args.get("file_name")
     logger.info("account file_name:{}", file_name)
-    analysis_v2_pool_account_data_to_s3(file_name, Cfg.NETWORK_ID)
+    thread = threading.Thread(
+        target=analysis_v2_pool_account_data_to_s3,
+        args=(file_name, Cfg.NETWORK_ID)
+    )
+    thread.start()
     return file_name
 
 
@@ -1439,7 +1444,37 @@ def handle_rhea_token_total_supple():
 def handel_user_swap_record():
     try:
         user_swap_data = request.json
-        add_user_swap_record(Cfg.NETWORK_ID, user_swap_data["account_id"], user_swap_data["is_accept_price_impact"], user_swap_data["router_path"], user_swap_data["tx_hash"])
+        account_id = ""
+        is_accept_price_impact = ""
+        router_path = ""
+        router_type = ""
+        token_in = ""
+        token_out = ""
+        amount_in = ""
+        amount_out = ""
+        slippage = ""
+        tx_hash = ""
+        if "account_id" in user_swap_data:
+            account_id = user_swap_data["account_id"]
+        if "is_accept_price_impact" in user_swap_data:
+            is_accept_price_impact = user_swap_data["is_accept_price_impact"]
+        if "router_path" in user_swap_data:
+            router_path = user_swap_data["router_path"]
+        if "router_type" in user_swap_data:
+            router_type = user_swap_data["router_type"]
+        if "token_in" in user_swap_data:
+            token_in = user_swap_data["token_in"]
+        if "token_out" in user_swap_data:
+            token_out = user_swap_data["token_out"]
+        if "amount_in" in user_swap_data:
+            amount_in = user_swap_data["amount_in"]
+        if "amount_out" in user_swap_data:
+            amount_out = user_swap_data["amount_out"]
+        if "slippage" in user_swap_data:
+            slippage = user_swap_data["slippage"]
+        if "tx_hash" in user_swap_data:
+            tx_hash = user_swap_data["tx_hash"]
+        add_user_swap_record(Cfg.NETWORK_ID, account_id, is_accept_price_impact, router_path, router_type, token_in, token_out, amount_in, amount_out, slippage, tx_hash)
         ret = {
             "code": 0,
             "msg": "success",
