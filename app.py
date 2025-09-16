@@ -742,6 +742,7 @@ def handle_dcl_points():
         else:
             ret_data = json.loads(dcl_point_data["value"])
 
+        add_dcl_point_data(pool_id, json.dumps(ret_data))
         import threading
         thread = threading.Thread(
             target=handle_dcl_points_data,
