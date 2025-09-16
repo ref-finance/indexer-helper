@@ -38,7 +38,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250909.01"
+service_version = "20250916.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -737,28 +737,42 @@ def handle_dcl_points():
 
     dcl_point_data = get_dcl_point_data(pool_id)
     if dcl_point_data is None or dcl_point_data["ttl"] < 600:
-        set_dcl_point_ttl(pool_id)
-        slot_number = 50
-        start_point = -800000
-        end_point = 800000
-        pool_id_s = pool_id.split("|")
-        token_x = pool_id_s[0]
-        token_y = pool_id_s[1]
-        token_list = [token_x, token_y]
-        token_price = list_token_price_by_id_list(Cfg.NETWORK_ID, token_list)
-        all_point_data, all_point_data_24h = query_dcl_points(Cfg.NETWORK_ID, pool_id)
-        point_data = handle_point_data(all_point_data, int(start_point), int(end_point))
-        point_data_24h = handle_point_data(all_point_data_24h, int(start_point), int(end_point))
-        ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point),
-                                              point_data_24h, token_price)
-        ret_data = {}
-        top_bin_fee_data = handle_top_bin_fee(ret_point_data)
-        ret_data["point_data"] = []
-        ret_data["top_bin_fee_data"] = top_bin_fee_data
-        add_dcl_point_data(pool_id, json.dumps(ret_data))
+        if dcl_point_data is None:
+            ret_data = {"point_data": [], "top_bin_fee_data": {"total_fee": 0, "total_liquidity": 0}}
+        else:
+            ret_data = json.loads(dcl_point_data["value"])
+
+        import threading
+        thread = threading.Thread(
+            target=handle_dcl_points_data,
+            args=(pool_id,)
+        )
+        thread.start()
     else:
         ret_data = json.loads(dcl_point_data["value"])
     return compress_response_content(ret_data)
+
+
+def handle_dcl_points_data(pool_id):
+    set_dcl_point_ttl(pool_id)
+    slot_number = 50
+    start_point = -800000
+    end_point = 800000
+    pool_id_s = pool_id.split("|")
+    token_x = pool_id_s[0]
+    token_y = pool_id_s[1]
+    token_list = [token_x, token_y]
+    token_price = list_token_price_by_id_list(Cfg.NETWORK_ID, token_list)
+    all_point_data, all_point_data_24h = query_dcl_points(Cfg.NETWORK_ID, pool_id)
+    point_data = handle_point_data(all_point_data, int(start_point), int(end_point))
+    point_data_24h = handle_point_data(all_point_data_24h, int(start_point), int(end_point))
+    ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point),
+                                          point_data_24h, token_price)
+    ret_data = {}
+    top_bin_fee_data = handle_top_bin_fee(ret_point_data)
+    ret_data["point_data"] = []
+    ret_data["top_bin_fee_data"] = top_bin_fee_data
+    add_dcl_point_data(pool_id, json.dumps(ret_data))
 
 
 @app.route('/get-fee-by-account', methods=['GET'])
