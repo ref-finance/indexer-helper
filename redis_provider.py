@@ -449,6 +449,12 @@ def get_dcl_point_data(key):
 
 
 def add_dcl_point_data(key, value):
+    cache_key = 'get_dcl_point_data_' + key
+    cache_value = {
+        'value': value,
+        'ttl': 4200
+    }
+    cache[cache_key] = cache_value
     r = redis.StrictRedis(connection_pool=pool)
     r.set("DCL_POINT_" + key, value, 4200)
     r.close()
