@@ -3,13 +3,15 @@ import json
 from config import Cfg
 import redis
 from data_utils import get_redis_data, batch_get_redis_data
+from cachetools import TTLCache
 
 pool = redis.ConnectionPool(host=Cfg.REDIS["REDIS_HOST"], port=int(Cfg.REDIS["REDIS_PORT"]), decode_responses=True)
+cache = TTLCache(maxsize=10000, ttl=20)
 
-def list_pools_by_id_list(network_id: str, id_list: list) ->list:
-    import json
+
+def list_pools_by_id_list(network_id: str, id_list: list) -> list:
     pool_list = []
-    r=redis.StrictRedis(connection_pool=pool)
+    r = redis.StrictRedis(connection_pool=pool)
     ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], id_list)
     r.close()
     try:
@@ -18,85 +20,110 @@ def list_pools_by_id_list(network_id: str, id_list: list) ->list:
         print(e)
     return pool_list
 
-def list_pools_by_tokens(network_id: str, token1: str, token2: str) ->list:
-    import json
-    list_pools = []
-    id_list = []
-    id_list.append(token1)
-    id_list.append(token2)
+
+def list_pools_by_tokens(network_id: str, token1: str, token2: str) -> list:
+    list_pools_data = []
+    id_list = [token1, token2]
     sorted_tp = sorted(id_list)
     key = "{%s}-{%s}" % (sorted_tp[0], sorted_tp[1])
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], key)
     r.close()
     try:
-        list_pools = json.loads(ret)
+        list_pools_data = json.loads(ret)
     except Exception as e:
         print(e)
-    return list_pools
+    return list_pools_data
+
 
 def list_farms(network_id):
-    import json
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])
-    r.close()
-    list_farms = [json.loads(x) for x in ret.values()]
-    print(len(list_farms))
-    return list_farms
+    cache_key = 'list_farms'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_KEY"])
+        r.close()
+        farm_data = [json.loads(x) for x in ret.values()]
+        cache_value = farm_data
+        cache[cache_key] = farm_data
+    return cache_value
 
 
 def list_pools(network_id):
-    import json
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"])
-    r.close()
-    pools = []
-    for id, value in ret.items():
-        single_pool = json.loads(value)
-        single_pool["id"] = id
-        pools.append(single_pool)
-    return pools
+    cache_key = 'list_pools'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"])
+        r.close()
+        pools = []
+        for id, value in ret.items():
+            single_pool = json.loads(value)
+            single_pool["id"] = id
+            pools.append(single_pool)
+        cache_value = pools
+        cache[cache_key] = pools
+    return cache_value
+
 
 def get_pool(network_id, pool_id):
-    import json
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], pool_id)
-    r.close()
-    single_pool = {}
-    if ret:
-        single_pool = json.loads(ret)
-        single_pool["id"] = pool_id
-    return single_pool
+    cache_key = 'get_pool_' + str(pool_id)
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hget(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], pool_id)
+        r.close()
+        single_pool = {}
+        if ret:
+            single_pool = json.loads(ret)
+            single_pool["id"] = pool_id
+        cache_value = single_pool
+        cache[cache_key] = single_pool
+    return cache_value
+
 
 def list_top_pools(network_id):
-    import json
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOP_POOL_KEY"])
-    r.close()
-    pools = []
-    for key, value in ret.items():
-        pools.append(json.loads(value))
-    return pools
+    cache_key = 'list_top_pools'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOP_POOL_KEY"])
+        r.close()
+        pools = []
+        for key, value in ret.items():
+            pools.append(json.loads(value))
+        cache_value = pools
+        cache[cache_key] = pools
+    return cache_value
+
 
 def list_token_price(network_id):
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"])
-    r.close()
-    # if "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near" in ret:
-    #     ret["usn"] = ret["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
-    #     ret["usdt.tether-token.near"] = ret["dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near"]
-    return ret
+    cache_key = 'list_token_price'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"])
+        r.close()
+        cache_value = ret
+        cache[cache_key] = ret
+    return cache_value
+
 
 def list_base_token_price(network_id):
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_BASE_TOKEN_PRICE_KEY"])
-    r.close()
-    return ret
+    cache_key = 'list_base_token_price'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_BASE_TOKEN_PRICE_KEY"])
+        r.close()
+        cache_value = ret
+        cache[cache_key] = ret
+    return cache_value
 
-def list_token_price_by_id_list(network_id: str, id_list: list) ->list:
-    import json
+
+def list_token_price_by_id_list(network_id: str, id_list: list) -> list:
     token_list = []
-    r=redis.StrictRedis(connection_pool=pool)
+    r = redis.StrictRedis(connection_pool=pool)
     ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], id_list)
     r.close()
     try:
@@ -105,16 +132,22 @@ def list_token_price_by_id_list(network_id: str, id_list: list) ->list:
         print(e)
     return token_list
 
-def get_token_price(network_id, token_contract_id):
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], token_contract_id)
-    r.close()
-    return ret
 
-def list_history_token_price(network_id: str, id_list: list) ->list:
-    import json
+def get_token_price(network_id, token_contract_id):
+    cache_key = 'get_token_price_' + token_contract_id
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], token_contract_id)
+        r.close()
+        cache_value = ret
+        cache[cache_key] = ret
+    return cache_value
+
+
+def list_history_token_price(network_id: str, id_list: list) -> list:
     token_list = []
-    r=redis.StrictRedis(connection_pool=pool)
+    r = redis.StrictRedis(connection_pool=pool)
     ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_HISTORY_TOKEN_PRICE_KEY"], id_list)
     r.close()
     try:
@@ -123,60 +156,72 @@ def list_history_token_price(network_id: str, id_list: list) ->list:
         print(e)
     return token_list
 
+
 def list_token_metadata(network_id):
-    '''
+    """
     return:
     {
         'nusdc.ft-fin.testnet': {
-            'spec': 'ft-1.0.0', 
-            'name': 'NEAR Wrapped USDC', 
-            'symbol': 'nUSDC', 
-            'icon': 'https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png', 
-            'reference': None, 
-            'reference_hash': None, 
+            'spec': 'ft-1.0.0',
+            'name': 'NEAR Wrapped USDC',
+            'symbol': 'nUSDC',
+            'icon': 'https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png',
+            'reference': None,
+            'reference_hash': None,
             'decimals': 2
         },
         ...
     }
-    
-    '''
-    import json
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"])
-    r.close()
-    metadata_obj = {}
-    for key, value in ret.items():
-        metadata_obj[key] = json.loads(value)
-    return metadata_obj
+    """
+    cache_key = 'list_token_metadata'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"])
+        r.close()
+        metadata_obj = {}
+        for key, value in ret.items():
+            metadata_obj[key] = json.loads(value)
+        cache_value = metadata_obj
+        cache[cache_key] = metadata_obj
+    return cache_value
 
 
 def list_burrow_asset_token_metadata(network_id):
-    import json
-    r = redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_BURROW_TOKEN_METADATA_KEY"])
-    r.close()
-    metadata_obj = {}
-    for key, value in ret.items():
-        metadata_obj[key] = json.loads(value)
-    return metadata_obj
+    cache_key = 'list_burrow_asset_token_metadata'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_BURROW_TOKEN_METADATA_KEY"])
+        r.close()
+        metadata_obj = {}
+        for key, value in ret.items():
+            metadata_obj[key] = json.loads(value)
+        cache_value = metadata_obj
+        cache[cache_key] = metadata_obj
+    return cache_value
 
 
 def list_token_metadata_v2(network_id):
-    import json
-    r = redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"])
-    r.close()
-    metadata_obj = {}
-    for key, value in ret.items():
-        token_data = json.loads(value)
-        token_data.pop("icon")
-        metadata_obj[key] = token_data
-    return metadata_obj
+    cache_key = 'list_token_metadata_v2'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"])
+        r.close()
+        metadata_obj = {}
+        for key, value in ret.items():
+            token_data = json.loads(value)
+            token_data.pop("icon")
+            metadata_obj[key] = token_data
+        cache_value = metadata_obj
+        cache[cache_key] = metadata_obj
+    return cache_value
 
 
 def get_proposal_hash_by_id(network_id: str, id_list: list) -> list:
     proposal_list = []
-    r=redis.StrictRedis(connection_pool=pool)
+    r = redis.StrictRedis(connection_pool=pool)
     ret = r.hmget(Cfg.NETWORK[network_id]["REDIS_PROPOSAL_ID_HASH_KEY"], id_list)
     r.close()
     try:
@@ -187,30 +232,33 @@ def get_proposal_hash_by_id(network_id: str, id_list: list) -> list:
 
 
 def list_whitelist(network_id):
-    '''
+    """
     return:
     {
         'nusdc.ft-fin.testnet': {
-            'spec': 'ft-1.0.0', 
-            'name': 'NEAR Wrapped USDC', 
-            'symbol': 'nUSDC', 
-            'icon': 'https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png', 
-            'reference': None, 
-            'reference_hash': None, 
+            'spec': 'ft-1.0.0',
+            'name': 'NEAR Wrapped USDC',
+            'symbol': 'nUSDC',
+            'icon': 'https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png',
+            'reference': None,
+            'reference_hash': None,
             'decimals': 2
         },
         ...
     }
-    
-    '''
-    import json
-    r=redis.StrictRedis(connection_pool=pool)
-    ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_WHITELIST_KEY"])
-    r.close()
-    whitelist_obj = {}
-    for key, value in ret.items():
-        whitelist_obj[key] = json.loads(value)
-    return whitelist_obj
+    """
+    cache_key = 'list_whitelist'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_WHITELIST_KEY"])
+        r.close()
+        whitelist_obj = {}
+        for key, value in ret.items():
+            whitelist_obj[key] = json.loads(value)
+        cache_value = whitelist_obj
+        cache[cache_key] = whitelist_obj
+    return cache_value
 
 
 def get_24h_pool_volume(network_id, pool_id):
@@ -223,13 +271,13 @@ def get_24h_pool_volume(network_id, pool_id):
 
 
 def get_dcl_pools_volume_list(network_id, redis_key):
-    import json
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
     r.close()
     if ret is None:
         dcl_pools_volume_list = []
-        ret = batch_get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
+        ret = batch_get_redis_data(network_id,
+                                   Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
         for d in ret:
             dcl_pools_volume_list.append(d["redis_values"])
     else:
@@ -261,14 +309,13 @@ def get_24h_pool_volume_list(network_id):
 
 
 def get_dcl_pools_tvl_list(network_id, redis_key):
-
-    import json
     r = redis.StrictRedis(connection_pool=pool)
     ret = r.hgetall(Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_TVL_LIST_KEY"] + "_" + redis_key)
     r.close()
     if ret is None:
         dcl_pools_tvl_list = []
-        ret = batch_get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
+        ret = batch_get_redis_data(network_id,
+                                   Cfg.NETWORK[network_id]["REDIS_DCL_POOLS_VOLUME_LIST_KEY"] + "_" + redis_key)
         for d in ret:
             dcl_pools_tvl_list.append(d["redis_values"])
     else:
@@ -286,12 +333,17 @@ def get_account_pool_assets(network_id, key):
 
 
 def get_token_price_ratio_report(network_id, key):
-    r = redis.StrictRedis(connection_pool=pool)
-    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key)
-    r.close()
-    if ret is None:
-        ret = get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key)
-    return ret
+    cache_key = 'get_token_price_ratio_report_' + key
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hget(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key)
+        r.close()
+        if ret is None:
+            ret = get_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_RATIO_REPORT_KEY"], key)
+        cache_value = ret
+        cache[cache_key] = ret
+    return cache_value
 
 
 def get_pool_point_24h_by_pool_id(network_id, pool_id):
@@ -308,17 +360,27 @@ def get_pool_point_24h_by_pool_id(network_id, pool_id):
 
 
 def get_history_token_price_report(network_id, key):
-    r = redis.StrictRedis(connection_pool=pool)
-    ret = r.hget(Cfg.NETWORK[network_id]["REDIS_HISTORY_TOKEN_PRICE_REPORT_KEY"], key)
-    r.close()
-    return ret
+    cache_key = 'get_history_token_price_report_' + key
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.hget(Cfg.NETWORK[network_id]["REDIS_HISTORY_TOKEN_PRICE_REPORT_KEY"], key)
+        r.close()
+        cache_value = ret
+        cache[cache_key] = ret
+    return cache_value
 
 
 def get_market_token_price():
-    r = redis.StrictRedis(connection_pool=pool)
-    ret = r.get(Cfg.REDIS_TOKEN_MARKET_PRICE_KEY)
-    r.close()
-    return ret
+    cache_key = 'get_market_token_price'
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        ret = r.get(Cfg.REDIS_TOKEN_MARKET_PRICE_KEY)
+        r.close()
+        cache_value = ret
+        cache[cache_key] = ret
+    return cache_value
 
 
 def get_burrow_total_fee():
@@ -364,12 +426,54 @@ def add_rnear_apy(value):
     r.close()
 
 
+def get_dcl_point_data(key):
+    cache_key = 'get_dcl_point_data_' + key
+    cache_value = cache.get(cache_key, None)
+    if cache_value is None:
+        r = redis.StrictRedis(connection_pool=pool)
+        actual_key = "DCL_POINT_" + key
+        pipe = r.pipeline()
+        pipe.get(actual_key)
+        pipe.ttl(actual_key)
+        result = pipe.execute()
+        r.close()
+        value, ttl = result
+        if value is None:
+            return None
+        cache_value = {
+            'value': value,
+            'ttl': ttl
+        }
+        cache[cache_key] = cache_value
+    return cache_value
+
+
+def add_dcl_point_data(key, value):
+    cache_key = 'get_dcl_point_data_' + key
+    cache_value = {
+        'value': value,
+        'ttl': 4200
+    }
+    cache[cache_key] = cache_value
+    r = redis.StrictRedis(connection_pool=pool)
+    r.set("DCL_POINT_" + key, value, 4200)
+    r.close()
+
+
+def set_dcl_point_ttl(key):
+    r = redis.StrictRedis(connection_pool=pool)
+    actual_key = "DCL_POINT_" + key
+    result = r.expire(actual_key, 4200)
+    r.close()
+    return result
+
+
 class RedisProvider(object):
 
     def __init__(self):
-        self.r=redis.StrictRedis(connection_pool=pool)
+        self.r = redis.StrictRedis(connection_pool=pool)
         self.pipe = None
-    
+
     def begin_pipe(self) -> bool:
         if self.pipe is None:
             self.pipe = self.r.pipeline(transaction=True)
@@ -377,7 +481,7 @@ class RedisProvider(object):
             return True
         else:
             return False
-    
+
     def end_pipe(self) -> bool:
         if self.pipe is not None:
             self.pipe.execute()
@@ -385,7 +489,7 @@ class RedisProvider(object):
             return True
         else:
             return False
-    
+
     # remove farms that not existed in contract
     def review_farmid(self, network_id):
         old = set(self.r.hkeys(Cfg.NETWORK[network_id]["REDIS_KEY"]))
@@ -396,16 +500,16 @@ class RedisProvider(object):
     def add_farm(self, network_id, farm_id, farm_str):
         self.farmids.add(farm_id)
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_KEY"], farm_id, farm_str)
-    
+
     def add_whitelist(self, network_id, whitelist_id, whitelist_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_WHITELIST_KEY"], whitelist_id, whitelist_str)
-    
+
     def add_pool(self, network_id, pool_id, pool_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_POOL_KEY"], pool_id, pool_str)
-    
+
     def add_top_pool(self, network_id, pool_id, pool_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOP_POOL_KEY"], pool_id, pool_str)
-    
+
     def add_token_price(self, network_id, contract_id, price_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_PRICE_KEY"], contract_id, price_str)
 
@@ -417,7 +521,7 @@ class RedisProvider(object):
 
     def add_token_metadata(self, network_id, contract_id, metadata_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_TOKEN_METADATA_KEY"], contract_id, metadata_str)
-    
+
     def add_pools_by_tokens(self, network_id, tokens_str, pool_list_str):
         self.r.hset(Cfg.NETWORK[network_id]["REDIS_POOL_BY_TOKEN_KEY"], tokens_str, pool_list_str)
 
@@ -472,11 +576,9 @@ if __name__ == '__main__':
     # b = get_pool("TESTNET", "1000")
     # print(b)
 
-    a = list_pools_by_id_list("DEVNET", ['79',])
+    a = list_pools_by_id_list("DEVNET", ['79', ])
     print(a)
     # print(get_token_price("MAINNET", "token.v2.ref-finance.near"))
-
-
 
     # r=redis.StrictRedis(connection_pool=pool)
     # r.hset(KEY, "aaa", "AAA")

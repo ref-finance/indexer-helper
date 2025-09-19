@@ -15,7 +15,7 @@ from redis_provider import list_pools_by_id_list, list_token_metadata, list_pool
 from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id, get_24h_pool_volume, get_account_pool_assets
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
-    get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, get_rnear_apy, add_rnear_apy
+    get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -24,7 +24,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
-    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, get_conversion_token_day_data_list, get_rhea_token_day_data_list
+    query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
+    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -37,7 +38,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250813.01"
+service_version = "20250916.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -619,17 +620,27 @@ def handle_dcl_pool_log():
 
 @app.route('/analysis-v2-pool-data', methods=['GET'])
 def analysis_v2_pool_data():
+    import threading
     file_name = request.args.get("file_name")
     logger.info("pool file_name:{}", file_name)
-    analysis_v2_pool_data_to_s3(file_name, Cfg.NETWORK_ID)
+    thread = threading.Thread(
+        target=analysis_v2_pool_data_to_s3,
+        args=(file_name, Cfg.NETWORK_ID)
+    )
+    thread.start()
     return file_name
 
 
 @app.route('/analysis-v2-pool-account-data', methods=['GET'])
 def analysis_v2_pool_account_data():
+    import threading
     file_name = request.args.get("file_name")
     logger.info("account file_name:{}", file_name)
-    analysis_v2_pool_account_data_to_s3(file_name, Cfg.NETWORK_ID)
+    thread = threading.Thread(
+        target=analysis_v2_pool_account_data_to_s3,
+        args=(file_name, Cfg.NETWORK_ID)
+    )
+    thread.start()
     return file_name
 
 
@@ -723,11 +734,31 @@ def handle_recent_transaction_limit_order():
 @app.route('/get-dcl-points', methods=['GET'])
 def handle_dcl_points():
     pool_id = request.args.get("pool_id")
-    slot_number = request.args.get("slot_number", type=int, default=50)
-    start_point = request.args.get("start_point", type=int, default=-800000)
-    end_point = request.args.get("end_point", type=int, default=800000)
-    if pool_id is None:
-        return "null"
+
+    dcl_point_data = get_dcl_point_data(pool_id)
+    if dcl_point_data is None or dcl_point_data["ttl"] < 600:
+        if dcl_point_data is None:
+            ret_data = {"point_data": [], "top_bin_fee_data": {"total_fee": 0, "total_liquidity": 0}}
+        else:
+            ret_data = json.loads(dcl_point_data["value"])
+
+        add_dcl_point_data(pool_id, json.dumps(ret_data))
+        import threading
+        thread = threading.Thread(
+            target=handle_dcl_points_data,
+            args=(pool_id,)
+        )
+        thread.start()
+    else:
+        ret_data = json.loads(dcl_point_data["value"])
+    return compress_response_content(ret_data)
+
+
+def handle_dcl_points_data(pool_id):
+    set_dcl_point_ttl(pool_id)
+    slot_number = 50
+    start_point = -800000
+    end_point = 800000
     pool_id_s = pool_id.split("|")
     token_x = pool_id_s[0]
     token_y = pool_id_s[1]
@@ -740,9 +771,9 @@ def handle_dcl_points():
                                           point_data_24h, token_price)
     ret_data = {}
     top_bin_fee_data = handle_top_bin_fee(ret_point_data)
-    ret_data["point_data"] = ret_point_data
+    ret_data["point_data"] = []
     ret_data["top_bin_fee_data"] = top_bin_fee_data
-    return compress_response_content(ret_data)
+    add_dcl_point_data(pool_id, json.dumps(ret_data))
 
 
 @app.route('/get-fee-by-account', methods=['GET'])
@@ -1336,7 +1367,7 @@ def handel_rnear_apy():
     apy = get_rnear_apy()
     if apy is None:
         new_p, old_p = get_rnear_price()
-        apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / (Cfg.LST_AGO_DAY / 6000) * 24 * 365 * 100
+        apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / 30 * 365 * 100 + 1
         apy = '{:.6f}'.format(apy)
         add_rnear_apy(apy)
     ret = {
@@ -1411,6 +1442,68 @@ def handel_rhea_token_data():
         "total_size": count_number,
     }
     return compress_response_content(res)
+
+
+@app.route('/totalSupply/rhea', methods=['GET'])
+def handle_rhea_total_supple():
+    ret = "205020000"
+    return ret
+
+
+@app.route('/total_supply/rhea', methods=['GET'])
+def handle_rhea_token_total_supple():
+    ret = {"result": "205020000"}
+    return ret
+
+
+@app.route('/add-swap-record', methods=['POST', 'PUT'])
+def handel_user_swap_record():
+    try:
+        user_swap_data = request.json
+        account_id = ""
+        is_accept_price_impact = ""
+        router_path = ""
+        router_type = ""
+        token_in = ""
+        token_out = ""
+        amount_in = ""
+        amount_out = ""
+        slippage = ""
+        tx_hash = ""
+        if "account_id" in user_swap_data:
+            account_id = user_swap_data["account_id"]
+        if "is_accept_price_impact" in user_swap_data:
+            is_accept_price_impact = user_swap_data["is_accept_price_impact"]
+        if "router_path" in user_swap_data:
+            router_path = user_swap_data["router_path"]
+        if "router_type" in user_swap_data:
+            router_type = user_swap_data["router_type"]
+        if "token_in" in user_swap_data:
+            token_in = user_swap_data["token_in"]
+        if "token_out" in user_swap_data:
+            token_out = user_swap_data["token_out"]
+        if "amount_in" in user_swap_data:
+            amount_in = user_swap_data["amount_in"]
+        if "amount_out" in user_swap_data:
+            amount_out = user_swap_data["amount_out"]
+        if "slippage" in user_swap_data:
+            slippage = user_swap_data["slippage"]
+        if "tx_hash" in user_swap_data:
+            tx_hash = user_swap_data["tx_hash"]
+        add_user_swap_record(Cfg.NETWORK_ID, account_id, is_accept_price_impact, router_path, router_type, token_in, token_out, amount_in, amount_out, slippage, tx_hash)
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": None
+        }
+    except Exception as e:
+        logger.error("handel_user_swap_record error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return ret
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
