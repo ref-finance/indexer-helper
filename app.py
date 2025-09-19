@@ -1342,11 +1342,12 @@ def handle_whitelisted_token_list():
 @app.route('/conversion-token-record', methods=['GET'])
 def handel_conversion_token_record():
     account_id = request.args.get("account_id", type=str, default='')
+    contract_id = request.args.get("contract_id", type=str, default='')
     page_number = request.args.get("page_number", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
     if page_size == 0:
         return ""
-    conversion_token_log_list, count_number = query_conversion_token_record(Cfg.NETWORK_ID, account_id, page_number, page_size)
+    conversion_token_log_list, count_number = query_conversion_token_record(Cfg.NETWORK_ID, account_id, page_number, page_size, contract_id)
     if count_number % page_size == 0:
         total_page = int(count_number / page_size)
     else:
