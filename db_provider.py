@@ -1539,9 +1539,10 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
     if contract_id == "orhea-token-conversion.stg.ref-dev-team.near":
         sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
               "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
-              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, 0) " \
+              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,claims.total_claimed " \
               "AS claim_target_amount FROM conversion_token_log_stg ctl LEFT JOIN (SELECT conversion_id, account_id, " \
-              "SUM(target_amount) AS total_claimed FROM conversion_token_log_stg WHERE `event` = 'claim_succeeded' " \
+              "CAST(SUM(CAST(target_amount AS DECIMAL(65,0))) AS CHAR) AS total_claimed FROM " \
+              "conversion_token_log_stg WHERE `event` = 'claim_succeeded' " \
               "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
               "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
               "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
@@ -1550,9 +1551,10 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
     else:
         sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
               "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
-              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, 0) " \
+              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,claims.total_claimed " \
               "AS claim_target_amount FROM conversion_token_log ctl LEFT JOIN (SELECT conversion_id, account_id, " \
-              "SUM(target_amount) AS total_claimed FROM conversion_token_log WHERE `event` = 'claim_succeeded' " \
+              "CAST(SUM(CAST(target_amount AS DECIMAL(65,0))) AS CHAR) AS total_claimed FROM " \
+              "conversion_token_log WHERE `event` = 'claim_succeeded' " \
               "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
               "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
               "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
