@@ -38,7 +38,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250916.01"
+service_version = "20250924.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1367,7 +1367,7 @@ def handel_rnear_apy():
     apy = get_rnear_apy()
     if apy is None:
         new_p, old_p = get_rnear_price()
-        apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / 30 * 365 * 100 + 1
+        apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / 30 * 365 * 100
         apy = '{:.6f}'.format(apy)
         add_rnear_apy(apy)
     ret = {
@@ -1444,15 +1444,21 @@ def handel_rhea_token_data():
     return compress_response_content(res)
 
 
-@app.route('/totalSupply/rhea', methods=['GET'])
-def handle_rhea_total_supple():
+@app.route('/circulatingSupply/rhea', methods=['GET'])
+def handle_rhea_circulating_supple():
     ret = "205020000"
+    return ret
+
+
+@app.route('/circulating_supply/rhea', methods=['GET'])
+def handle_rhea_token_circulating_supple():
+    ret = {"result": "205020000"}
     return ret
 
 
 @app.route('/total_supply/rhea', methods=['GET'])
 def handle_rhea_token_total_supple():
-    ret = {"result": "205020000"}
+    ret = "1000000000"
     return ret
 
 
