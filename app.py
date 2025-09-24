@@ -1463,7 +1463,7 @@ def handle_rhea_total_supple():
 
 
 @app.route('/total_supply/rhea', methods=['GET'])
-def handle_rhea_token_circulating_supple():
+def handle_rhea_token_total_supple():
     ret = {"result": "1000000000"}
     return ret
 
