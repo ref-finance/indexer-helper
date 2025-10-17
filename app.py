@@ -844,13 +844,14 @@ def handel_account_fee(pool_id, account_id):
     token_x = 0
     token_y = 0
     user_token_timestamp = 0
-    for user_tvl in user_tvl_data:
-        if not user_tvl["timestamp"] is None:
-            user_token_timestamp = user_tvl["timestamp"]
-            if not user_tvl["tvl_x_l"] is None:
-                token_x = token_x + float(user_tvl["tvl_x_l"])
-            if not user_tvl["tvl_y_l"] is None:
-                token_y = token_y + float(user_tvl["tvl_y_l"])
+    if user_tvl_data is not None:
+        for user_tvl in user_tvl_data:
+            if not user_tvl["timestamp"] is None:
+                user_token_timestamp = user_tvl["timestamp"]
+                if not user_tvl["tvl_x_l"] is None:
+                    token_x = token_x + float(user_tvl["tvl_x_l"])
+                if not user_tvl["tvl_y_l"] is None:
+                    token_y = token_y + float(user_tvl["tvl_y_l"])
     user_token = {
         "token_x": token_x,
         "token_y": token_y,
