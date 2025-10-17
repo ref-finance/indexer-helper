@@ -1106,18 +1106,19 @@ def query_recent_transaction_dcl_liquidity(network_id, pool_id):
           "all_data.receipt_id from (select tla.event_method as method_name, sum(cast(tla.paid_token_x as " \
           "decimal(64, 0))) as amount_x, sum(cast(tla.paid_token_y as decimal(64, 0))) as amount_y, tla.`timestamp`, " \
           "tla.tx_id as receipt_id from t_liquidity_added as tla where tla.pool_id = %s and " \
-          "tla.event_method != 'liquidity_merge' group by tx_id union all select tlr.event_method as method_name, " \
+          "tla.event_method != 'liquidity_merge' group by tla.tx_id, tla.event_method, tla.`timestamp` union all select tlr.event_method as method_name, " \
           "sum(cast(tlr.refund_token_x as decimal(64, 0))) as amount_x,sum(cast(tlr.refund_token_y as decimal(64, 0))) " \
           "as amount_y, tlr.`timestamp`, tlr.tx_id as receipt_id from t_liquidity_removed as tlr where " \
-          "tlr.pool_id = %s and tlr.removed_amount > 0 group by tx_id) as all_data" \
+          "tlr.pool_id = %s and tlr.removed_amount > 0 group by tlr.tx_id, tlr.event_method, tlr.`timestamp`) as all_data" \
           " order by `timestamp` desc limit 50"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql, (pool_id, pool_id))
         recent_transaction_data = cursor.fetchall()
-        return recent_transaction_data
+        return recent_transaction_data if recent_transaction_data is not None else []
     except Exception as e:
         print("query t_liquidity_added to db error:", e)
+        return []
     finally:
         cursor.close()
 
