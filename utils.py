@@ -849,17 +849,17 @@ def get_near_block_height():
         return None
 
 
-def get_old_block():
+def get_old_block(day_number):
     current_block = get_near_block_height()
     if current_block is None:
         return None
-    ago_block = current_block - Cfg.LST_AGO_DAY
+    ago_block = current_block - (Cfg.LST_AGO_DAY * day_number)
     print("current_block:", current_block)
     return ago_block
 
 
-def get_rnear_price():
-    old_block_h = get_old_block()
+def get_rnear_price(day_number):
+    old_block_h = get_old_block(day_number)
     url = Cfg.LST_RPC
     new_price = {
         "method": "query",
@@ -923,7 +923,8 @@ if __name__ == '__main__':
     # print("x:", a_x)
     # print("y", a_y)
 
-    new_p, old_p = get_rnear_price()
-    apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / 30 * 365 * 100
+    day_number = 3
+    new_p, old_p = get_rnear_price(day_number)
+    apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / day_number * 365 * 100
     apy = '{:.6f}'.format(apy)
     print(apy)
