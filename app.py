@@ -1365,12 +1365,13 @@ def handel_conversion_token_record():
 
 @app.route('/get-rnear-apy', methods=['GET'])
 def handel_rnear_apy():
-    apy = get_rnear_apy()
+    day_number = request.args.get("day_number", type=int, default=1)
+    apy = get_rnear_apy(day_number)
     if apy is None:
-        new_p, old_p = get_rnear_price()
-        apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / 30 * 365 * 100
+        new_p, old_p = get_rnear_price(day_number)
+        apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / day_number * 365 * 100
         apy = '{:.6f}'.format(apy)
-        add_rnear_apy(apy)
+        add_rnear_apy(apy, day_number)
     ret = {
         "code": 0,
         "msg": "success",
