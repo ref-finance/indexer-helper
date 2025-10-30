@@ -1365,7 +1365,7 @@ def handel_conversion_token_record():
 
 @app.route('/get-rnear-apy', methods=['GET'])
 def handel_rnear_apy():
-    day_number = request.args.get("day_number", type=int, default=1)
+    day_number = request.args.get("day_number", type=int, default=2)
     apy = get_rnear_apy(day_number)
     if apy is None:
         new_p, old_p = get_rnear_price(day_number)
