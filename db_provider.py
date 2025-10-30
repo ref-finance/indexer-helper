@@ -1719,6 +1719,82 @@ def add_user_swap_record(network_id, account_id, is_accept_price_impact, router_
         cursor.close()
 
 
+def add_multichain_lending_requests(network_id, mca_id, wallet, data_list):
+    import uuid
+    batch_id = uuid.uuid4()
+    db_conn = get_db_connect(network_id)
+    sql = "insert into multichain_lending_requests(mca_id, `wallet`, `request`, batch_id, `sequence`, " \
+          "`created_at`, `updated_at`) values(%s,%s,%s,%s,%s,now(), now())"
+    insert_data = []
+    cursor = db_conn.cursor()
+    try:
+        i = 0
+        for data in data_list:
+            insert_data.append((mca_id, wallet, json.dumps(data), batch_id, i))
+            i += 1
+        cursor.executemany(sql, insert_data)
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert multichain_lending_requests to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+    return batch_id
+
+
+def query_multichain_lending_config(network_id):
+    db_conn = get_db_connect(network_id)
+    sql = "select `key`,`value` from multichain_lending_config"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        point_data = cursor.fetchall()
+        return point_data
+    except Exception as e:
+        print("query multichain_lending_config to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_multichain_lending_history(network_id, mca_id, page_number, page_size):
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from (select * from multichain_lending_requests where `mca_id` = %s " \
+                "union all select * from multichain_lending_requests_history where `mca_id` = %s) as all_data " \
+                "ORDER BY id DESC LIMIT %s, %s"
+    sql_count = "select count(*) as total_number from (select * from multichain_lending_requests where `mca_id` = %s " \
+                "union all select * from multichain_lending_requests_history where `mca_id` = %s) as all_data"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (mca_id, mca_id, start_number, page_size))
+        data_list = cursor.fetchall()
+        cursor.execute(sql_count, (mca_id, mca_id))
+        total_number_data = cursor.fetchone()
+        return data_list, total_number_data["total_number"]
+    except Exception as e:
+        print("query_multichain_lending_data to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
+def query_multichain_lending_data(network_id, batch_id):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from (select * from multichain_lending_requests where `batch_id` = %s " \
+                "union all select * from multichain_lending_requests_history where `batch_id` = %s) as all_data "
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (batch_id, batch_id))
+        data_list = cursor.fetchall()
+        return data_list
+    except Exception as e:
+        print("query_multichain_lending_data to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()

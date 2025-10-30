@@ -25,7 +25,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
-    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record
+    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, query_multichain_lending_history
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -38,7 +38,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250924.01"
+service_version = "20251030.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1517,6 +1517,65 @@ def handel_user_swap_record():
             "data": e.args
         }
     return ret
+
+
+@app.route('/multichain_lending_requests', methods=['POST', 'PUT'])
+def handel_multichain_lending_requests():
+    try:
+        multichain_lending_data = request.json
+        batch_id = add_multichain_lending_requests(Cfg.NETWORK_ID, multichain_lending_data["mca_id"], multichain_lending_data["wallet"], multichain_lending_data["request"])
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": batch_id
+        }
+    except Exception as e:
+        logger.error("handel_user_wallet error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return ret
+
+
+@app.route('/get_multichain_lending_config', methods=['GET'])
+def handle_multichain_lending_config():
+    ret_data = []
+    try:
+        ret_data = query_multichain_lending_config(Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when get_multichain_lending_config: ", e)
+    return compress_response_content(ret_data)
+
+
+@app.route('/get_multichain_lending_history', methods=['GET'])
+def handel_multichain_lending_history():
+    mca_id = request.args.get("mca_id", type=str, default='')
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=100)
+    if page_size == 0:
+        return ""
+    data_list, count_number = query_multichain_lending_history(Cfg.NETWORK_ID, mca_id, page_number, page_size)
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": data_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/get_multichain_lending_data', methods=['GET'])
+def handel_multichain_lending_data():
+    batch_id = request.args.get("batch_id", type=str, default='')
+    data_list = query_multichain_lending_data(Cfg.NETWORK_ID, batch_id)
+    return compress_response_content(data_list)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
