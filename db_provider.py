@@ -1730,7 +1730,7 @@ def add_multichain_lending_requests(network_id, mca_id, wallet, data_list):
     try:
         i = 0
         for data in data_list:
-            insert_data.append((mca_id, wallet, json.dumps(data), batch_id, i))
+            insert_data.append((mca_id, wallet, data, batch_id, i))
             i += 1
         cursor.executemany(sql, insert_data)
         db_conn.commit()
