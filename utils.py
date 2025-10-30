@@ -923,7 +923,7 @@ if __name__ == '__main__':
     # print("x:", a_x)
     # print("y", a_y)
 
-    day_number = 3
+    day_number = 2
     new_p, old_p = get_rnear_price(day_number)
     apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / day_number * 365 * 100
     apy = '{:.6f}'.format(apy)
