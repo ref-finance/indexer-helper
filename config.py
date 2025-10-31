@@ -460,6 +460,7 @@ class Cfg:
             {"SYMBOL": "ETH", "NEAR_ID": "eth.bridge.near", "MD_ID": "v2.ref-finance.near|6354|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "RHEA", "NEAR_ID": "token.rhealab.near", "MD_ID": "v2.ref-finance.near|6458|wrap.near", "DECIMAL": 18},
             {"SYMBOL": "XRHEA", "NEAR_ID": "xtoken.rhealab.near", "MD_ID": "xtoken.rhealab.near|NA|token.rhealab.near", "DECIMAL": 18},
+            {"SYMBOL": "rNEAR", "NEAR_ID": "lst.rhealab.near", "MD_ID": "lst.rhealab.near|NA|wrap.near", "DECIMAL": 24},
         ],
         "BASE_MAINNET": [
         ],
