@@ -25,7 +25,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
-    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, query_multichain_lending_history
+    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, query_multichain_lending_history, add_multichain_lending_report
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -1524,7 +1524,27 @@ def handel_user_swap_record():
 def handel_multichain_lending_requests():
     try:
         multichain_lending_data = request.json
-        batch_id = add_multichain_lending_requests(Cfg.NETWORK_ID, multichain_lending_data["mca_id"], multichain_lending_data["wallet"], multichain_lending_data["request"])
+        batch_id = add_multichain_lending_requests(Cfg.NETWORK_ID, multichain_lending_data["mca_id"], multichain_lending_data["wallet"], multichain_lending_data["request"], multichain_lending_data["page_display_data"])
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": batch_id
+        }
+    except Exception as e:
+        logger.error("handel_user_wallet error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return ret
+
+
+@app.route('/multichain_lending_report', methods=['POST', 'PUT'])
+def handel_multichain_lending_report():
+    try:
+        multichain_lending_data = request.json
+        batch_id = add_multichain_lending_report(Cfg.NETWORK_ID, multichain_lending_data["mca_id"], multichain_lending_data["wallet"], multichain_lending_data["request_hash"], multichain_lending_data["page_display_data"])
         ret = {
             "code": 0,
             "msg": "success",

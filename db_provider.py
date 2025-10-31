@@ -1719,7 +1719,35 @@ def add_user_swap_record(network_id, account_id, is_accept_price_impact, router_
         cursor.close()
 
 
-def add_multichain_lending_requests(network_id, mca_id, wallet, data_list):
+def add_multichain_lending_requests(network_id, mca_id, wallet, data_list, page_display_data):
+    import uuid
+    batch_id = uuid.uuid4()
+    db_conn = get_db_connect(network_id)
+    sql = "insert into multichain_lending_requests(mca_id, `wallet`, `request`, batch_id, `sequence`, " \
+          "`created_at`, `updated_at`) values(%s,%s,%s,%s,%s,now(), now())"
+    insert_sql = "insert into multichain_lending_report_data(`type`, mca_id, `wallet`, batch_id, `sequence`, " \
+                 "`created_at`, `updated_at`) values(%s,%s,%s,%s,%s,now(), now())"
+    insert_data = []
+    cursor = db_conn.cursor()
+    try:
+        i = 0
+        for data in data_list:
+            insert_data.append((mca_id, wallet, data, batch_id, i))
+            i += 1
+        if len(insert_data) > 0:
+            cursor.execute(insert_sql, (1, mca_id, wallet, batch_id, page_display_data))
+            cursor.executemany(sql, insert_data)
+            db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert multichain_lending_requests to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+    return batch_id
+
+
+def add_multichain_lending_report(network_id, mca_id, wallet, data_list, page_display_data):
     import uuid
     batch_id = uuid.uuid4()
     db_conn = get_db_connect(network_id)
