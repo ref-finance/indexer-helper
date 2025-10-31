@@ -1262,7 +1262,7 @@ def query_dcl_user_claimed_fee_24h(network_id, pool_id, account_id):
 
 def query_dcl_user_tvl(network_id, pool_id, account_id):
     db_conn = get_db_connect(network_id)
-    sql = "select sum(tvl_x_l) as tvl_x_l, sum(tvl_y_l) as tvl_y_l,`timestamp` from dcl_user_liquidity where " \
+    sql = "select sum(tvl_x_l) as tvl_x_l, sum(tvl_y_l) as tvl_y_l, MAX(`timestamp`) as `timestamp` from dcl_user_liquidity where " \
           "pool_id = %s and account_id = %s and `timestamp` >= (select max(`timestamp`) from " \
           "dcl_user_liquidity where pool_id = %s and account_id = %s)"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
@@ -1272,6 +1272,7 @@ def query_dcl_user_tvl(network_id, pool_id, account_id):
         return point_data
     except Exception as e:
         print("query dcl_user_liquidity to db error:", e)
+        return []
     finally:
         cursor.close()
 
@@ -1540,7 +1541,7 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
     if contract_id == "orhea-token-conversion.stg.ref-dev-team.near":
         sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
               "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
-              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,claims.total_claimed " \
+              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, '0') " \
               "AS claim_target_amount FROM conversion_token_log_stg ctl LEFT JOIN (SELECT conversion_id, account_id, " \
               "CAST(SUM(CAST(target_amount AS DECIMAL(65,0))) AS CHAR) AS total_claimed FROM " \
               "conversion_token_log_stg WHERE `event` = 'claim_succeeded' " \
@@ -1552,7 +1553,7 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
     else:
         sql = "SELECT ctl.`event`, ctl.conversion_id, ctl.conversion_type, ctl.account_id, ctl.source_token_id, " \
               "ctl.target_token_id, ctl.source_amount, ctl.target_amount, ctl.start_time_ms, ctl.end_time_ms, " \
-              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,claims.total_claimed " \
+              "ctl.block_id, ctl.`timestamp`, ctl.receipt_id, 0 AS `status`,COALESCE(claims.total_claimed, '0') " \
               "AS claim_target_amount FROM conversion_token_log ctl LEFT JOIN (SELECT conversion_id, account_id, " \
               "CAST(SUM(CAST(target_amount AS DECIMAL(65,0))) AS CHAR) AS total_claimed FROM " \
               "conversion_token_log WHERE `event` = 'claim_succeeded' " \
@@ -1570,14 +1571,18 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
         conversion_token_log_count = cursor.fetchone()
         for conversion_token_data in conversion_token_log:
             # status(0:锁定状态，1:可领取，2：已领取)
-            if int(conversion_token_data["end_time_ms"]) <= now_time:
-                if int(conversion_token_data["claim_target_amount"]) >= int(conversion_token_data["target_amount"]):
+            end_time_ms = conversion_token_data.get("end_time_ms")
+            claim_target_amount = conversion_token_data.get("claim_target_amount") or "0"
+            target_amount = conversion_token_data.get("target_amount") or "0"
+            if end_time_ms is not None and int(end_time_ms) <= now_time:
+                if int(claim_target_amount) >= int(target_amount):
                     conversion_token_data["status"] = "2"
                 else:
                     conversion_token_data["status"] = "1"
         return conversion_token_log, conversion_token_log_count["total_number"]
     except Exception as e:
         print("query query_conversion_token_record to db error:", e)
+        return [], 0
     finally:
         cursor.close()
 
