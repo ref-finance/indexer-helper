@@ -1145,10 +1145,14 @@ def query_recent_transaction_limit_order(network_id, pool_id):
 
 def query_dcl_points(network_id, pool_id):
     db_conn = get_db_connect(network_id)
-    sql = "select pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o,vol_x_in_l,vol_x_in_o,vol_x_out_l," \
-          "vol_x_out_o,vol_y_in_l,vol_y_in_o,vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,cp,`timestamp` " \
-          "from dcl_pool_analysis where pool_id = %s and `timestamp` >= (select `timestamp` from dcl_pool_analysis " \
-          "where pool_id = %s order by `timestamp` desc limit 1) order by point"
+    # 优化：使用 JOIN 替代子查询，性能更好
+    sql = "SELECT t1.pool_id,t1.point,t1.fee_x,t1.fee_y,t1.l,t1.tvl_x_l,t1.tvl_x_o,t1.tvl_y_l,t1.tvl_y_o," \
+          "t1.vol_x_in_l,t1.vol_x_in_o,t1.vol_x_out_l,t1.vol_x_out_o,t1.vol_y_in_l,t1.vol_y_in_o," \
+          "t1.vol_y_out_l,t1.vol_y_out_o,t1.p_fee_x,t1.p_fee_y,t1.p,t1.cp,t1.`timestamp` " \
+          "FROM dcl_pool_analysis t1 " \
+          "INNER JOIN (SELECT pool_id, MAX(`timestamp`) as max_timestamp FROM dcl_pool_analysis WHERE pool_id = %s GROUP BY pool_id) t2 " \
+          "ON t1.pool_id = t2.pool_id AND t1.`timestamp` = t2.max_timestamp " \
+          "WHERE t1.pool_id = %s ORDER BY t1.point"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(sql, (pool_id, pool_id))
@@ -1163,6 +1167,7 @@ def query_dcl_points(network_id, pool_id):
         return point_data, point_data_24h
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
+        return [], None
     finally:
         cursor.close()
 
@@ -1372,6 +1377,7 @@ def get_liquidation_result(network_id, key):
     except Exception as e:
         db_conn.rollback()
         print("query liquidation_result_info to db error:", e)
+        return None
     finally:
         cursor.close()
 

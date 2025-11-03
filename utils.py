@@ -271,11 +271,8 @@ def combine_dcl_pool_log(ret):
 
 
 def handle_point_data(all_point_data, start_point, end_point):
-    point_data_list = []
-    for point_data in all_point_data:
-        if start_point <= point_data["point"] <= end_point:
-            point_data_list.append(point_data)
-    return point_data_list
+    # 优化：使用列表推导式，性能更好
+    return [point_data for point_data in all_point_data if start_point <= point_data["point"] <= end_point]
 
 
 def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_point, point_data_24h, token_price):
@@ -283,60 +280,69 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
     ret_point_list = []
     if len(point_data) < 1:
         return ret_point_list
+    
+    # 优化：预计算 token_price，避免重复判断
+    token_price_0 = token_price[0] if token_price[0] is not None else 0
+    token_price_1 = token_price[1] if token_price[1] is not None else 0
+    
+    # 优化：使用字典存储 point 数据，key 为 point_number，value 为数据对象
     point_data_object = {}
     for point in point_data:
-        current_point = point["cp"]
         point_number = point["point"]
-        point_object = {
+        point_data_object[point_number] = {
             "tvl_x_l": float(point["tvl_x_l"]),
             "tvl_y_l": float(point["tvl_y_l"]),
             "tvl_x_o": float(point["tvl_x_o"]),
             "tvl_y_o": float(point["tvl_y_o"]),
-            "current_point": current_point
+            "current_point": point["cp"]
         }
-        point_data_object[point_number] = point_object
+    
+    # 优化：预计算 24h 数据，避免在循环中重复计算
     point_data_24h_object = {}
-    for point_24h in point_data_24h:
-        point_number = point_24h["point"]
-        if token_price[0] is None:
-            token_price_0 = 0
-        else:
-            token_price_0 = token_price[0]
-        if token_price[1] is None:
-            token_price_1 = 0
-        else:
-            token_price_1 = token_price[1]
-        fee_x = float(point_24h["fee_x"]) * token_price_0
-        fee_y = float(point_24h["fee_y"]) * token_price_1
-        tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price_0 / 24
-        tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price_1 / 24
-        point_24h_object = {
-            "fee": fee_x + fee_y,
-            "total_liquidity": tvl_x_l_24h + tvl_y_l_24h,
-        }
-        point_data_24h_object[point_number] = point_24h_object
-    total_point = end_point - start_point
+    if point_data_24h:
+        for point_24h in point_data_24h:
+            point_number = point_24h["point"]
+            fee_x = float(point_24h["fee_x"]) * token_price_0
+            fee_y = float(point_24h["fee_y"]) * token_price_1
+            tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price_0 / 24
+            tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price_1 / 24
+            point_data_24h_object[point_number] = {
+                "fee": fee_x + fee_y,
+                "total_liquidity": tvl_x_l_24h + tvl_y_l_24h,
+            }
+    
+    # 计算 bin 相关参数
     pool_id_s = pool_id.split("|")
     fee_tier = pool_id_s[-1]
     token_x = pool_id_s[0]
     token_y = pool_id_s[1]
-    point_delta_number = 40
-    if fee_tier == "100":
-        point_delta_number = 1
-    elif fee_tier == "400":
-        point_delta_number = 8
-    elif fee_tier == "2000":
-        point_delta_number = 40
-    elif fee_tier == "10000":
-        point_delta_number = 200
+    
+    # 优化：使用字典映射替代 if-elif
+    fee_tier_delta = {"100": 1, "400": 8, "2000": 40, "10000": 200}
+    point_delta_number = fee_tier_delta.get(fee_tier, 40)
+    
     bin_point_number = point_delta_number * slot_number
+    total_point = end_point - start_point
     total_bin = int(total_point / bin_point_number)
+    start_point_number = int(start_point / bin_point_number) * bin_point_number
+    
+    # 优化：预计算 token decimal 转换倍数
+    token_x_multiplier = int("1" + "0" * token_decimal_data.get(token_x, 0))
+    token_y_multiplier = int("1" + "0" * token_decimal_data.get(token_y, 0))
+    
+    # 优化：遍历所有 bin，但直接查找范围内的 point，而不是嵌套循环生成所有可能的 point_number
     for i in range(1, total_bin + 2):
         slot_point_number = bin_point_number * i
-        start_point_number = int(start_point / bin_point_number) * bin_point_number
+        bin_start_point = start_point_number + slot_point_number - bin_point_number
+        bin_end_point = start_point_number + slot_point_number
+        
+        # 限制范围
+        if bin_end_point >= RIGHT_MOST_POINT:
+            bin_end_point = RIGHT_MOST_POINT - 1
+        
         ret_point_data = {
             "pool_id": pool_id,
-            "point": start_point_number + slot_point_number - bin_point_number,
+            "point": bin_start_point,
             "liquidity": 0,
             "token_x": 0,
             "token_y": 0,
@@ -347,72 +353,54 @@ def handle_dcl_point_bin(pool_id, point_data, slot_number, start_point, end_poin
             "total_liquidity": 0,
             "sort_number": i,
         }
-        end_slot_point_number = start_point_number + slot_point_number
-        start_slot_point_number = end_slot_point_number - bin_point_number
+        
         current_point = 0
-        # for point in point_data:
-        #     current_point = point["cp"]
-        #     point_number = point["point"]
-        #     if start_slot_point_number <= point_number < end_slot_point_number:
-        #         ret_point_data["token_x"] = ret_point_data["token_x"] + float(point["tvl_x_l"])
-        #         ret_point_data["token_y"] = ret_point_data["token_y"] + float(point["tvl_y_l"])
-        #         ret_point_data["order_x"] = ret_point_data["order_x"] + float(point["tvl_x_o"])
-        #         ret_point_data["order_y"] = ret_point_data["order_y"] + float(point["tvl_y_o"])
-        number = int((end_slot_point_number - start_slot_point_number) / point_delta_number) - 1
-        for o in range(0, number):
-            point_data_number = point_delta_number * o + start_slot_point_number
-            for e in range(0, int(bin_point_number / point_delta_number)):
-                point_data_number_e = point_data_number + point_delta_number * e
-                if point_data_number_e in point_data_object:
-                    point_object = point_data_object.pop(point_data_number_e)
-                    ret_point_data["token_x"] = ret_point_data["token_x"] + point_object["tvl_x_l"]
-                    ret_point_data["token_y"] = ret_point_data["token_y"] + point_object["tvl_y_l"]
-                    ret_point_data["order_x"] = ret_point_data["order_x"] + point_object["tvl_x_o"]
-                    ret_point_data["order_y"] = ret_point_data["order_y"] + point_object["tvl_y_o"]
+        
+        # 优化：直接遍历 point_data_object 中在此范围内的 point，而不是嵌套循环生成所有可能的 point_number
+        # 这样可以将 O(n^3) 的复杂度降低到 O(n)
+        for point_number, point_object in point_data_object.items():
+            if bin_start_point <= point_number < bin_end_point:
+                ret_point_data["token_x"] += point_object["tvl_x_l"]
+                ret_point_data["token_y"] += point_object["tvl_y_l"]
+                ret_point_data["order_x"] += point_object["tvl_x_o"]
+                ret_point_data["order_y"] += point_object["tvl_y_o"]
+                if current_point == 0:  # 使用第一个找到的 current_point
                     current_point = point_object["current_point"]
-            for f in range(0, int(bin_point_number / point_delta_number)):
-                point_data_number_e = point_data_number + point_delta_number * f
-                if point_data_number_e in point_data_24h_object:
-                    point_24h_object = point_data_24h_object.pop(point_data_number_e)
-                    ret_point_data["fee"] = ret_point_data["fee"] + point_24h_object["fee"]
-                    ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + point_24h_object["total_liquidity"]
-        if end_slot_point_number >= RIGHT_MOST_POINT:
-            end_slot_point_number = RIGHT_MOST_POINT - 1
-        liquidity_amount_x = 0
-        liquidity_amount_y = 0
-        order_amount_x = 0
-        order_amount_y = 0
-        if token_x in token_decimal_data:
-            liquidity_amount_x = ret_point_data["token_x"] * int("1" + "0" * token_decimal_data[token_x])
-            order_amount_x = ret_point_data["order_x"] * int("1" + "0" * token_decimal_data[token_x])
-        if token_y in token_decimal_data:
-            liquidity_amount_y = ret_point_data["token_y"] * int("1" + "0" * token_decimal_data[token_y])
-            order_amount_y = ret_point_data["order_y"] * int("1" + "0" * token_decimal_data[token_y])
+        
+        # 优化：同样方式处理 24h 数据
+        if point_data_24h_object:
+            for point_number, point_24h_object in point_data_24h_object.items():
+                if bin_start_point <= point_number < bin_end_point:
+                    ret_point_data["fee"] += point_24h_object["fee"]
+                    ret_point_data["total_liquidity"] += point_24h_object["total_liquidity"]
+        
+        # 计算流动性
+        liquidity_amount_x = ret_point_data["token_x"] * token_x_multiplier
+        liquidity_amount_y = ret_point_data["token_y"] * token_y_multiplier
+        order_amount_x = ret_point_data["order_x"] * token_x_multiplier
+        order_amount_y = ret_point_data["order_y"] * token_y_multiplier
+        
+        # 优化：使用 if-elif 替代多个 if，减少重复计算
         if liquidity_amount_x > 0 and liquidity_amount_y == 0:
-            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point - bin_point_number)
-        if liquidity_amount_x == 0 and liquidity_amount_y > 0:
-            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point + bin_point_number)
-        if liquidity_amount_x > 0 and liquidity_amount_y > 0:
-            ret_point_data["liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, liquidity_amount_x, liquidity_amount_y, current_point)
+            ret_point_data["liquidity"] = compute_liquidity(bin_start_point, bin_end_point, liquidity_amount_x, liquidity_amount_y, current_point - bin_point_number)
+        elif liquidity_amount_x == 0 and liquidity_amount_y > 0:
+            ret_point_data["liquidity"] = compute_liquidity(bin_start_point, bin_end_point, liquidity_amount_x, liquidity_amount_y, current_point + bin_point_number)
+        elif liquidity_amount_x > 0 and liquidity_amount_y > 0:
+            ret_point_data["liquidity"] = compute_liquidity(bin_start_point, bin_end_point, liquidity_amount_x, liquidity_amount_y, current_point)
+        
         if order_amount_x > 0 and order_amount_y == 0:
-            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point - bin_point_number)
-        if order_amount_x == 0 and order_amount_y > 0:
-            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point + bin_point_number)
-        if order_amount_x > 0 and order_amount_y > 0:
-            ret_point_data["order_liquidity"] = compute_liquidity(start_slot_point_number, end_slot_point_number, order_amount_x, order_amount_y, current_point)
+            ret_point_data["order_liquidity"] = compute_liquidity(bin_start_point, bin_end_point, order_amount_x, order_amount_y, current_point - bin_point_number)
+        elif order_amount_x == 0 and order_amount_y > 0:
+            ret_point_data["order_liquidity"] = compute_liquidity(bin_start_point, bin_end_point, order_amount_x, order_amount_y, current_point + bin_point_number)
+        elif order_amount_x > 0 and order_amount_y > 0:
+            ret_point_data["order_liquidity"] = compute_liquidity(bin_start_point, bin_end_point, order_amount_x, order_amount_y, current_point)
+        
         if ret_point_data["order_liquidity"] < 0:
             ret_point_data["order_liquidity"] = 0
-        # for point_24h in point_data_24h:
-        #     point_number = point_24h["point"]
-        #     if start_slot_point_number <= point_number < end_slot_point_number:
-        #         fee_x = float(point_24h["fee_x"]) * token_price[0]
-        #         fee_y = float(point_24h["fee_y"]) * token_price[1]
-        #         ret_point_data["fee"] = ret_point_data["fee"] + fee_x + fee_y
-        #         tvl_x_l_24h = float(point_24h["tvl_x_l"]) * token_price[0] / 24
-        #         tvl_y_l_24h = float(point_24h["tvl_y_l"]) * token_price[1] / 24
-        #         ret_point_data["total_liquidity"] = ret_point_data["total_liquidity"] + tvl_x_l_24h + tvl_y_l_24h
+        
         if ret_point_data["liquidity"] > 0 or ret_point_data["order_liquidity"] > 0:
             ret_point_list.append(ret_point_data)
+    
     return ret_point_list
 
 

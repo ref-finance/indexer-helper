@@ -43,10 +43,13 @@ def get_redis_data(network_id, key, redis_key):
     try:
         cursor.execute(sql, (key, redis_key))
         row = cursor.fetchone()
+        if row is None:
+            return None
         return row["redis_values"]
     except Exception as e:
         db_conn.rollback()
         print("query liquidation_result_info to db error:", e)
+        return None
     finally:
         cursor.close()
 
