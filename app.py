@@ -731,6 +731,31 @@ def handle_recent_transaction_limit_order():
     return compress_response_content(ret_data)
 
 
+@app.route('/get-dcl-bin-points', methods=['GET'])
+def handle_dcl_bin_points():
+    pool_id = request.args.get("pool_id")
+    slot_number = request.args.get("slot_number", type=int, default=50)
+    start_point = request.args.get("start_point", type=int, default=-800000)
+    end_point = request.args.get("end_point", type=int, default=800000)
+    if pool_id is None:
+        return "null"
+    pool_id_s = pool_id.split("|")
+    token_x = pool_id_s[0]
+    token_y = pool_id_s[1]
+    token_list = [token_x, token_y]
+    token_price = list_token_price_by_id_list(Cfg.NETWORK_ID, token_list)
+    all_point_data, all_point_data_24h = query_dcl_points(Cfg.NETWORK_ID, pool_id)
+    point_data = handle_point_data(all_point_data, int(start_point), int(end_point))
+    point_data_24h = handle_point_data(all_point_data_24h, int(start_point), int(end_point))
+    ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point),
+                                          point_data_24h, token_price)
+    ret_data = {}
+    top_bin_fee_data = handle_top_bin_fee(ret_point_data)
+    ret_data["point_data"] = ret_point_data
+    ret_data["top_bin_fee_data"] = top_bin_fee_data
+    return compress_response_content(ret_data)
+
+
 @app.route('/get-dcl-points', methods=['GET'])
 def handle_dcl_points():
     pool_id = request.args.get("pool_id")
@@ -1368,7 +1393,15 @@ def handel_rnear_apy():
     day_number = request.args.get("day_number", type=int, default=2)
     apy = get_rnear_apy(day_number)
     if apy is None:
-        new_p, old_p = get_rnear_price(day_number)
+        price_result = get_rnear_price(day_number)
+        if price_result is None:
+            ret = {
+                "code": 1,
+                "msg": "Failed to get rNEAR price",
+                "data": None
+            }
+            return ret
+        new_p, old_p = price_result
         apy = (int(new_p) - int(old_p)) / (int(old_p) / (10 ** 24)) / (10 ** 24) / day_number * 365 * 100
         apy = '{:.6f}'.format(apy)
         add_rnear_apy(apy, day_number)
