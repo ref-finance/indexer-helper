@@ -1734,10 +1734,12 @@ def add_multichain_lending_requests(network_id, mca_id, wallet, data_list, page_
     import uuid
     batch_id = uuid.uuid4()
     db_conn = get_db_connect(network_id)
+    # 使用UTC+0时区的时间
+    utc_now = datetime.utcnow()
     sql = "insert into multichain_lending_requests(mca_id, `wallet`, `request`, batch_id, `sequence`, " \
-          "`created_at`, `updated_at`) values(%s,%s,%s,%s,%s,now(), now())"
+          "`created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,%s)"
     insert_sql = "insert into multichain_lending_report_data(`type`, mca_id, `wallet`, request_hash, page_display_data" \
-                 ", `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,now(), now())"
+                 ", `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,%s)"
     insert_data = []
     cursor = db_conn.cursor()
     try:
@@ -1753,11 +1755,12 @@ def add_multichain_lending_requests(network_id, mca_id, wallet, data_list, page_
                     data_json = json.dumps(data)
             else:
                 data_json = json.dumps(data)
-            insert_data.append((mca_id, wallet, data_json, batch_id, i))
+            insert_data.append((mca_id, wallet, data_json, batch_id, i, utc_now, utc_now))
             i += 1
         if len(insert_data) > 0:
             cursor.executemany(sql, insert_data)
-            cursor.execute(insert_sql, (1, mca_id, wallet, batch_id, page_display_data))
+            if page_display_data != "":
+                cursor.execute(insert_sql, (1, mca_id, wallet, batch_id, page_display_data, utc_now, utc_now))
             db_conn.commit()
     except Exception as e:
         db_conn.rollback()
@@ -1770,15 +1773,17 @@ def add_multichain_lending_requests(network_id, mca_id, wallet, data_list, page_
 
 def add_multichain_lending_report(network_id, mca_id, wallet, request_hash, page_display_data):
     db_conn = get_db_connect(network_id)
+    # 使用UTC+0时区的时间
+    utc_now = datetime.utcnow()
     sql = "insert into multichain_lending_report_data(`type`, mca_id, `wallet`, request_hash, page_display_data" \
-          ", `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,now(), now())"
+          ", `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,%s)"
     cursor = db_conn.cursor()
     try:
-        cursor.execute(sql, (1, mca_id, wallet, request_hash, page_display_data))
+        cursor.execute(sql, (1, mca_id, wallet, request_hash, page_display_data, utc_now, utc_now))
         db_conn.commit()
     except Exception as e:
         db_conn.rollback()
-        print("insert multichain_lending_requests to db error:", e)
+        print("insert multichain_lending_report_data to db error:", e)
         raise e
     finally:
         cursor.close()

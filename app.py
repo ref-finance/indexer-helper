@@ -1611,6 +1611,65 @@ def handel_multichain_lending_history():
     if page_size == 0:
         return ""
     data_list, count_number = query_multichain_lending_history(Cfg.NETWORK_ID, mca_id, page_number, page_size)
+    
+    # 将时间字段转换为UTC+0时区格式（数据库现在存储的是UTC时间）
+    from datetime import timezone
+    for record in data_list:
+        # 处理created_at字段
+        if 'created_at' in record and record['created_at']:
+            dt = record['created_at']
+            if isinstance(dt, datetime.datetime):
+                # datetime对象：如果没有时区信息，假设是UTC（因为数据库存储的是UTC）
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    # 如果有时区信息，转换为UTC+0
+                    dt = dt.astimezone(timezone.utc)
+                # 格式化为字符串（UTC+0）
+                record['created_at'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(dt, str):
+                # 字符串格式：数据库存储的是UTC时间，直接返回（假设格式正确）
+                # 如果需要确保格式统一，可以尝试解析和格式化
+                try:
+                    # 尝试解析多种可能的格式
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                        try:
+                            dt_obj = datetime.datetime.strptime(dt, fmt)
+                            record['created_at'] = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                            break
+                        except ValueError:
+                            continue
+                except (ValueError, TypeError):
+                    # 如果解析失败，保持原样
+                    pass
+        
+        # 处理updated_at字段
+        if 'updated_at' in record and record['updated_at']:
+            dt = record['updated_at']
+            if isinstance(dt, datetime.datetime):
+                # datetime对象：如果没有时区信息，假设是UTC（因为数据库存储的是UTC）
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    # 如果有时区信息，转换为UTC+0
+                    dt = dt.astimezone(timezone.utc)
+                # 格式化为字符串（UTC+0）
+                record['updated_at'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(dt, str):
+                # 字符串格式：数据库存储的是UTC时间，直接返回（假设格式正确）
+                try:
+                    # 尝试解析多种可能的格式
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                        try:
+                            dt_obj = datetime.datetime.strptime(dt, fmt)
+                            record['updated_at'] = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                            break
+                        except ValueError:
+                            continue
+                except (ValueError, TypeError):
+                    # 如果解析失败，保持原样
+                    pass
+    
     if count_number % page_size == 0:
         total_page = int(count_number / page_size)
     else:
