@@ -1564,7 +1564,7 @@ def handel_multichain_lending_requests():
             "data": batch_id
         }
     except Exception as e:
-        logger.error("handel_user_wallet error:{}", e)
+        logger.error("multichain_lending_requests error:{}", e)
         ret = {
             "code": -1,
             "msg": "error",
