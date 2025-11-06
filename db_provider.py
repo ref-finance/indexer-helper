@@ -1143,6 +1143,40 @@ def query_recent_transaction_limit_order(network_id, pool_id):
         cursor.close()
 
 
+def query_dcl_bin_points(network_id, pool_id, bin_point_number):
+    db_conn = get_db_connect(network_id)
+    # 优化：使用 JOIN 替代子查询，性能更好
+    sql = "SELECT pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o," \
+          "vol_x_in_l,vol_x_in_o,vol_x_out_l,vol_x_out_o,vol_y_in_l,vol_y_in_o," \
+          "vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,cp,`timestamp` " \
+          "FROM dcl_pool_analysis WHERE pool_id = %s and `timestamp` = %s " \
+          "and `point` >= %s and `point` <= %s ORDER BY point"
+    sql1 = "select `cp`, `timestamp` from dcl_pool_analysis where pool_id = %s order by id desc limit 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql1, pool_id)
+        cp_point_data = cursor.fetchone()
+        cp_point = int(cp_point_data["cp"])
+        start_point = cp_point - (bin_point_number * 10)
+        end_point = cp_point + (bin_point_number * 10)
+        cp_timestamp = cp_point_data["timestamp"]
+        cursor.execute(sql, (pool_id, cp_timestamp, start_point, end_point))
+        point_data = cursor.fetchall()
+        pool_id_list = []
+        point_data_timestamp = get_pool_point_24h_by_pool_id(network_id, pool_id + "timestamp")
+        now = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
+        if point_data_timestamp is None or now - int(point_data_timestamp) > 3600:
+            pool_id_list.append(pool_id)
+            handle_pool_point_data_to_redis(network_id, pool_id_list)
+        point_data_24h = get_pool_point_24h_by_pool_id(network_id, pool_id)
+        return point_data, point_data_24h, start_point, end_point
+    except Exception as e:
+        print("query dcl_pool_analysis to db error:", e)
+        return [], None
+    finally:
+        cursor.close()
+
+
 def query_dcl_points(network_id, pool_id):
     db_conn = get_db_connect(network_id)
     # 优化：使用 JOIN 替代子查询，性能更好
