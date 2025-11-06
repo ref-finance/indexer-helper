@@ -39,7 +39,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 
-service_version = "20250924.01"
+service_version = "20251106.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -738,7 +738,7 @@ def handle_dcl_bin_points():
     slot_number = request.args.get("slot_number", type=int, default=50)
     if pool_id is None:
         return "null"
-    ret_data = get_dcl_bin_point_data(pool_id)
+    ret_data = get_dcl_bin_point_data(pool_id + str(slot_number))
     if ret_data is None:
         pool_id_s = pool_id.split("|")
         token_x = pool_id_s[0]
@@ -758,7 +758,7 @@ def handle_dcl_bin_points():
         top_bin_fee_data = handle_top_bin_fee(ret_point_data)
         ret_data["point_data"] = ret_point_data
         ret_data["top_bin_fee_data"] = top_bin_fee_data
-        add_dcl_bin_point_data(pool_id, json.dumps(ret_data))
+        add_dcl_bin_point_data(pool_id + str(slot_number), json.dumps(ret_data))
         top_bin_data = {"point_data": [], "top_bin_fee_data": top_bin_fee_data}
         add_dcl_point_data(pool_id, json.dumps(top_bin_data))
     else:
