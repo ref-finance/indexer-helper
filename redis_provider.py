@@ -452,20 +452,33 @@ def add_dcl_point_data(key, value):
     cache_key = 'get_dcl_point_data_' + key
     cache_value = {
         'value': value,
-        'ttl': 4200
+        'ttl': 3600
     }
     cache[cache_key] = cache_value
     r = redis.StrictRedis(connection_pool=pool)
-    r.set("DCL_POINT_" + key, value, 4200)
+    r.set("DCL_POINT_" + key, value, 3600)
     r.close()
 
 
 def set_dcl_point_ttl(key):
     r = redis.StrictRedis(connection_pool=pool)
     actual_key = "DCL_POINT_" + key
-    result = r.expire(actual_key, 4200)
+    result = r.expire(actual_key, 3600)
     r.close()
     return result
+
+
+def add_dcl_bin_point_data(key, value):
+    r = redis.StrictRedis(connection_pool=pool)
+    r.set("DCL_BIN_POINT_" + key, value, 3600)
+    r.close()
+
+
+def get_dcl_bin_point_data(key):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("DCL_BIN_POINT_" + key)
+    r.close()
+    return ret
 
 
 class RedisProvider(object):
