@@ -1772,7 +1772,7 @@ def add_multichain_lending_requests(network_id, mca_id, wallet, data_list, page_
     utc_now = datetime.utcnow()
     sql = "insert into multichain_lending_requests(mca_id, `wallet`, `request`, batch_id, `sequence`, " \
           "`created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,%s)"
-    insert_sql = "insert into multichain_lending_report_data(`type`, mca_id, `wallet`, request_hash, page_display_data" \
+    insert_sql = "insert into multichain_lending_report_data(`type`, mca_id, `wallet`, batch_id, page_display_data" \
                  ", `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,%s)"
     insert_data = []
     cursor = db_conn.cursor()
