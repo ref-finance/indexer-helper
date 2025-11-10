@@ -1794,7 +1794,7 @@ def add_multichain_lending_requests(network_id, mca_id, wallet, data_list, page_
         if len(insert_data) > 0:
             cursor.executemany(sql, insert_data)
             if page_display_data != "":
-                cursor.execute(insert_sql, (1, mca_id, wallet, "", page_display_data, utc_now, utc_now))
+                cursor.execute(insert_sql, (1, mca_id, wallet, batch_id, page_display_data, utc_now, utc_now))
             db_conn.commit()
     except Exception as e:
         db_conn.rollback()
@@ -1813,7 +1813,7 @@ def add_multichain_lending_report(network_id, mca_id, wallet, request_hash, page
           ", `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,%s)"
     cursor = db_conn.cursor()
     try:
-        cursor.execute(sql, (1, mca_id, wallet, request_hash, page_display_data, utc_now, utc_now))
+        cursor.execute(sql, (2, mca_id, wallet, request_hash, page_display_data, utc_now, utc_now))
         db_conn.commit()
     except Exception as e:
         db_conn.rollback()
