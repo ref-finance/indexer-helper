@@ -1873,6 +1873,21 @@ def query_multichain_lending_data(network_id, batch_id):
     return
 
 
+def query_multichain_lending_account(network_id, account_address):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from multichain_lending_whitelist where account_address = %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (account_address, ))
+        data_list = cursor.fetchone()
+        return data_list
+    except Exception as e:
+        print("query multichain_lending_whitelist to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()

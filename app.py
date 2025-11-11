@@ -26,7 +26,9 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
-    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points
+    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, \
+    add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, \
+    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -1699,6 +1701,13 @@ def handel_multichain_lending_data():
     batch_id = request.args.get("batch_id", type=str, default='')
     data_list = query_multichain_lending_data(Cfg.NETWORK_ID, batch_id)
     return compress_response_content(data_list)
+
+
+@app.route('/get_multichain_lending_account', methods=['GET'])
+def handel_multichain_lending_account():
+    account_address = request.args.get("account_address", type=str, default='')
+    account_data = query_multichain_lending_account(Cfg.NETWORK_ID, account_address)
+    return compress_response_content(account_data)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
