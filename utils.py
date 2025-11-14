@@ -156,7 +156,8 @@ def combine_pools_info(pools, prices, metadata):
 
 
 def compress_response_content(ret):
-    content = gzip.compress(json.dumps(ret).encode('utf8'), 5)
+    from db_provider import Encoder
+    content = gzip.compress(json.dumps(ret, cls=Encoder).encode('utf8'), 5)
     response = make_response(content)
     response.headers['Content-length'] = len(content)
     response.headers['Content-Encoding'] = 'gzip'

@@ -16,7 +16,7 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id,
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
     get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, \
-    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, get_dcl_bin_point_data
+    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -26,7 +26,9 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_dcl_user_tvl, query_dcl_user_change_log, query_burrow_log, get_history_token_price_by_token, add_orderly_trading_data, \
     add_liquidation_result, get_liquidation_result, update_liquidation_result, add_user_wallet_info, get_pools_volume_24h, \
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
-    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, query_dcl_bin_points
+    get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, \
+    add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, \
+    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -38,6 +40,7 @@ import bleach
 import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
+from s3_client import AwsS3Config, download_and_upload_image_to_s3
 
 service_version = "20251106.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1561,6 +1564,227 @@ def handel_user_swap_record():
             "data": e.args
         }
     return ret
+
+
+@app.route('/multichain_lending_requests', methods=['POST', 'PUT'])
+def handel_multichain_lending_requests():
+    try:
+        multichain_lending_data = request.json
+        batch_id = add_multichain_lending_requests(Cfg.NETWORK_ID, multichain_lending_data["mca_id"], multichain_lending_data["wallet"], multichain_lending_data["request"], multichain_lending_data["page_display_data"])
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": batch_id
+        }
+    except Exception as e:
+        logger.error("multichain_lending_requests error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return ret
+
+
+@app.route('/multichain_lending_report', methods=['POST', 'PUT'])
+def handel_multichain_lending_report():
+    try:
+        multichain_lending_data = request.json
+        batch_id = add_multichain_lending_report(Cfg.NETWORK_ID, multichain_lending_data["mca_id"], multichain_lending_data["wallet"], multichain_lending_data["request_hash"], multichain_lending_data["page_display_data"])
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": batch_id
+        }
+    except Exception as e:
+        logger.error("handel_user_wallet error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return ret
+
+
+@app.route('/get_multichain_lending_config', methods=['GET'])
+def handle_multichain_lending_config():
+    ret_data = []
+    try:
+        ret_data = query_multichain_lending_config(Cfg.NETWORK_ID)
+    except Exception as e:
+        print("Exception when get_multichain_lending_config: ", e)
+    return compress_response_content(ret_data)
+
+
+@app.route('/get_multichain_lending_history', methods=['GET'])
+def handel_multichain_lending_history():
+    mca_id = request.args.get("mca_id", type=str, default='')
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=100)
+    if page_size == 0:
+        return ""
+    data_list, count_number = query_multichain_lending_history(Cfg.NETWORK_ID, mca_id, page_number, page_size)
+
+    # 将时间字段转换为UTC+0时区格式（数据库现在存储的是UTC时间）
+    from datetime import timezone
+    for record in data_list:
+        # 处理created_at字段
+        if 'created_at' in record and record['created_at']:
+            dt = record['created_at']
+            if isinstance(dt, datetime.datetime):
+                # datetime对象：如果没有时区信息，假设是UTC（因为数据库存储的是UTC）
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    # 如果有时区信息，转换为UTC+0
+                    dt = dt.astimezone(timezone.utc)
+                # 格式化为字符串（UTC+0）
+                record['created_at'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(dt, str):
+                # 字符串格式：数据库存储的是UTC时间，直接返回（假设格式正确）
+                # 如果需要确保格式统一，可以尝试解析和格式化
+                try:
+                    # 尝试解析多种可能的格式
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                        try:
+                            dt_obj = datetime.datetime.strptime(dt, fmt)
+                            record['created_at'] = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                            break
+                        except ValueError:
+                            continue
+                except (ValueError, TypeError):
+                    # 如果解析失败，保持原样
+                    pass
+
+        # 处理updated_at字段
+        if 'updated_at' in record and record['updated_at']:
+            dt = record['updated_at']
+            if isinstance(dt, datetime.datetime):
+                # datetime对象：如果没有时区信息，假设是UTC（因为数据库存储的是UTC）
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    # 如果有时区信息，转换为UTC+0
+                    dt = dt.astimezone(timezone.utc)
+                # 格式化为字符串（UTC+0）
+                record['updated_at'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(dt, str):
+                # 字符串格式：数据库存储的是UTC时间，直接返回（假设格式正确）
+                try:
+                    # 尝试解析多种可能的格式
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                        try:
+                            dt_obj = datetime.datetime.strptime(dt, fmt)
+                            record['updated_at'] = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                            break
+                        except ValueError:
+                            continue
+                except (ValueError, TypeError):
+                    # 如果解析失败，保持原样
+                    pass
+
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": data_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/get_multichain_lending_data', methods=['GET'])
+def handel_multichain_lending_data():
+    batch_id = request.args.get("batch_id", type=str, default='')
+    data_list = query_multichain_lending_data(Cfg.NETWORK_ID, batch_id)
+    return compress_response_content(data_list)
+
+
+@app.route('/get_multichain_lending_account', methods=['GET'])
+def handel_multichain_lending_account():
+    account_address = request.args.get("account_address", type=str, default='')
+    account_data = query_multichain_lending_account(Cfg.NETWORK_ID, account_address)
+    return compress_response_content(account_data)
+
+
+@app.route('/get_multichain_lending_tokens_data', methods=['GET'])
+def handel_multichain_lending_tokens_data():
+    chains = request.args.get("chains")
+    chain_list = chains.split(",")
+    ret_token_data = []
+    token_map = {"arb": "arbitrum", "sol": "solana"}
+    conn = RedisProvider()
+    conn.begin_pipe()
+    try:
+        tokens_data = get_multichain_lending_tokens_data()
+        if tokens_data is None:
+            response = requests.get("https://1click.chaindefuser.com/v0/tokens")
+            ret_data = response.text
+            tokens_data = json.loads(ret_data)
+            conn.add_multichain_lending_tokens(ret_data)
+        else:
+            tokens_data = json.loads(tokens_data)
+        s3_config = AwsS3Config(
+            region_name='us-east-1',
+            aws_access_key_id=Cfg.AwsAccessKeyID,
+            aws_secret_access_key=Cfg.AwsSecretAccessKey,
+            bucket=Cfg.Bucket,
+            root_dir='token/',
+            url=f'https://{Cfg.Bucket}.s3.amazonaws.com/'
+        )
+        
+        for token_data in tokens_data:
+            blockchain = token_data["blockchain"]
+            if token_data["blockchain"] in chain_list and "contractAddress" in token_data:
+                contract_address = token_data["contractAddress"]
+                token_icon = get_multichain_lending_token_icon(contract_address)
+                if token_icon is None:
+                    headers = {
+                        "x-cg-pro-api-key": Cfg.COINGECKO_API_KEY
+                    }
+                    try:
+                        if blockchain in token_map:
+                            blockchain = token_map[blockchain]
+                        response = requests.get(
+                            "https://pro-api.coingecko.com/api/v3/onchain/networks/" + blockchain + "/tokens/" + contract_address,
+                            headers=headers)
+                        coingecko_ret_data = response.text
+                        coingecko_token_data = json.loads(coingecko_ret_data)
+                        token_icon = coingecko_token_data["data"]["attributes"]["image_url"]
+                        s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
+                        if upload_error is None and s3_url:
+                            token_icon = s3_url
+                            logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                        else:
+                            logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
+                        conn.add_multichain_lending_token_icon(contract_address, token_icon)
+                    except Exception as e:
+                        print("coingecko err:", e.args)
+                
+                is_s3_url = token_icon and (f"{Cfg.Bucket}.s3.amazonaws.com" in token_icon or f"s3.amazonaws.com/{Cfg.Bucket}" in token_icon)
+                if token_icon and token_icon.startswith("http") and not is_s3_url:
+                    try:
+                        s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
+                        if upload_error is None and s3_url:
+                            conn.add_multichain_lending_token_icon(contract_address, s3_url)
+                            token_icon = s3_url
+                            logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                        else:
+                            logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
+                    except Exception as upload_e:
+                        logger.error(f"Error uploading token icon to S3: {upload_e}, using original URL")
+                
+                token_data["icon"] = token_icon
+                ret_token_data.append(token_data)
+    except Exception as e:
+        print("coingecko err:", e.args)
+        conn.end_pipe()
+        conn.close()
+    return jsonify(ret_token_data)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
