@@ -40,6 +40,7 @@ import bleach
 import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
+from s3_client import AwsS3Config, download_and_upload_image_to_s3
 
 service_version = "20251106.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1727,6 +1728,15 @@ def handel_multichain_lending_tokens_data():
             conn.add_multichain_lending_tokens(ret_data)
         else:
             tokens_data = json.loads(tokens_data)
+        s3_config = AwsS3Config(
+            region_name='us-east-1',
+            aws_access_key_id=Cfg.AwsAccessKeyID,
+            aws_secret_access_key=Cfg.AwsSecretAccessKey,
+            bucket=Cfg.Bucket,
+            root_dir='token/',
+            url=f'https://{Cfg.Bucket}.s3.amazonaws.com/'
+        )
+        
         for token_data in tokens_data:
             blockchain = token_data["blockchain"]
             if token_data["blockchain"] in chain_list and "contractAddress" in token_data:
@@ -1745,9 +1755,29 @@ def handel_multichain_lending_tokens_data():
                         coingecko_ret_data = response.text
                         coingecko_token_data = json.loads(coingecko_ret_data)
                         token_icon = coingecko_token_data["data"]["attributes"]["image_url"]
+                        s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
+                        if upload_error is None and s3_url:
+                            token_icon = s3_url
+                            logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                        else:
+                            logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
                         conn.add_multichain_lending_token_icon(contract_address, token_icon)
                     except Exception as e:
                         print("coingecko err:", e.args)
+                
+                is_s3_url = token_icon and (f"{Cfg.Bucket}.s3.amazonaws.com" in token_icon or f"s3.amazonaws.com/{Cfg.Bucket}" in token_icon)
+                if token_icon and token_icon.startswith("http") and not is_s3_url:
+                    try:
+                        s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
+                        if upload_error is None and s3_url:
+                            conn.add_multichain_lending_token_icon(contract_address, s3_url)
+                            token_icon = s3_url
+                            logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                        else:
+                            logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
+                    except Exception as upload_e:
+                        logger.error(f"Error uploading token icon to S3: {upload_e}, using original URL")
+                
                 token_data["icon"] = token_icon
                 ret_token_data.append(token_data)
     except Exception as e:

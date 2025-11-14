@@ -66,6 +66,13 @@ except ImportError:
     LST_AGO_DAY = 1
     COINGECKO_API_KEY = ""
 
+try:
+    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey
+except ImportError:
+    Bucket = "ref-new-1"
+    AwsAccessKeyID = ""
+    AwsSecretAccessKey = ""
+
 """
 
 """
@@ -475,6 +482,9 @@ class Cfg:
     LST_RPC = LST_RPC
     LST_AGO_DAY = LST_AGO_DAY
     COINGECKO_API_KEY = COINGECKO_API_KEY
+    Bucket = Bucket
+    AwsAccessKeyID = AwsAccessKeyID
+    AwsSecretAccessKey = AwsSecretAccessKey
 
 
 if __name__ == '__main__':
