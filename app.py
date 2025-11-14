@@ -16,7 +16,7 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id,
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
     get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, \
-    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, get_dcl_bin_point_data
+    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -1708,6 +1708,53 @@ def handel_multichain_lending_account():
     account_address = request.args.get("account_address", type=str, default='')
     account_data = query_multichain_lending_account(Cfg.NETWORK_ID, account_address)
     return compress_response_content(account_data)
+
+
+@app.route('/get_multichain_lending_tokens_data', methods=['GET'])
+def handel_multichain_lending_tokens_data():
+    chains = request.args.get("chains")
+    chain_list = chains.split(",")
+    ret_token_data = []
+    token_map = {"arb": "arbitrum", "sol": "solana"}
+    conn = RedisProvider()
+    conn.begin_pipe()
+    try:
+        tokens_data = get_multichain_lending_tokens_data()
+        if tokens_data is None:
+            response = requests.get("https://1click.chaindefuser.com/v0/tokens")
+            ret_data = response.text
+            tokens_data = json.loads(ret_data)
+            conn.add_multichain_lending_tokens(ret_data)
+        else:
+            tokens_data = json.loads(tokens_data)
+        for token_data in tokens_data:
+            blockchain = token_data["blockchain"]
+            if token_data["blockchain"] in chain_list and "contractAddress" in token_data:
+                contract_address = token_data["contractAddress"]
+                token_icon = get_multichain_lending_token_icon(contract_address)
+                if token_icon is None:
+                    headers = {
+                        "x-cg-pro-api-key": Cfg.COINGECKO_API_KEY
+                    }
+                    try:
+                        if blockchain in token_map:
+                            blockchain = token_map[blockchain]
+                        response = requests.get(
+                            "https://pro-api.coingecko.com/api/v3/onchain/networks/" + blockchain + "/tokens/" + contract_address,
+                            headers=headers)
+                        coingecko_ret_data = response.text
+                        coingecko_token_data = json.loads(coingecko_ret_data)
+                        token_icon = coingecko_token_data["data"]["attributes"]["image_url"]
+                        conn.add_multichain_lending_token_icon(contract_address, token_icon)
+                    except Exception as e:
+                        print("coingecko err:", e.args)
+                token_data["icon"] = token_icon
+                ret_token_data.append(token_data)
+    except Exception as e:
+        print("coingecko err:", e.args)
+        conn.end_pipe()
+        conn.close()
+    return jsonify(ret_token_data)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")

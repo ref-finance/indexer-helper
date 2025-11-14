@@ -481,6 +481,20 @@ def get_dcl_bin_point_data(key):
     return ret
 
 
+def get_multichain_lending_tokens_data():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("MULTICHAIN_LENDING_TOKENS")
+    r.close()
+    return ret
+
+
+def get_multichain_lending_token_icon(token):
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.hget("MULTICHAIN_LENDING_TOKENS_ICON", token)
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
@@ -567,6 +581,12 @@ class RedisProvider(object):
 
     def add_whitelist_tokens(self, token_list_str):
         self.r.set("WHITELIST_TOKEN_LIST", token_list_str, ex=300)
+
+    def add_multichain_lending_tokens(self, value):
+        self.r.set("MULTICHAIN_LENDING_TOKENS", value, ex=600)
+
+    def add_multichain_lending_token_icon(self, token, value):
+        self.r.hset("MULTICHAIN_LENDING_TOKENS_ICON", token, value)
 
     def close(self):
         self.r.close()
