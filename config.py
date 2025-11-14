@@ -50,7 +50,7 @@ except ImportError:
 
 
 try:
-    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL, REF_GO_API, LST_CONTRACT_ID, LST_RPC, LST_AGO_DAY
+    from db_info import MARKET_KEY, MARKET_URL, AUTH_SWITCH, NOT_AUTH_LIST, SIGN_EXPIRE, CRYPTO_AES_KEY, REF_URL, REF_SDK_URL, REF_GO_API, LST_CONTRACT_ID, LST_RPC, LST_AGO_DAY, COINGECKO_API_KEY
 except ImportError:
     MARKET_KEY = ""
     MARKET_URL = ""
@@ -64,6 +64,14 @@ except ImportError:
     LST_CONTRACT_ID = ""
     LST_RPC = ""
     LST_AGO_DAY = 1
+    COINGECKO_API_KEY = ""
+
+try:
+    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey
+except ImportError:
+    Bucket = "ref-new-1"
+    AwsAccessKeyID = ""
+    AwsSecretAccessKey = ""
 
 """
 
@@ -473,6 +481,10 @@ class Cfg:
     LST_CONTRACT_ID = LST_CONTRACT_ID
     LST_RPC = LST_RPC
     LST_AGO_DAY = LST_AGO_DAY
+    COINGECKO_API_KEY = COINGECKO_API_KEY
+    Bucket = Bucket
+    AwsAccessKeyID = AwsAccessKeyID
+    AwsSecretAccessKey = AwsSecretAccessKey
 
 
 if __name__ == '__main__':
