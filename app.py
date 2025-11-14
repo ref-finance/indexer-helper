@@ -1739,10 +1739,13 @@ def handel_multichain_lending_tokens_data():
         
         for token_data in tokens_data:
             blockchain = token_data["blockchain"]
-            if token_data["blockchain"] in chain_list and "contractAddress" in token_data:
-                contract_address = token_data["contractAddress"]
+            if token_data["blockchain"] in chain_list:
+                if "contractAddress" in token_data:
+                    contract_address = token_data["contractAddress"]
+                else:
+                    contract_address = token_data["assetId"]
                 token_icon = get_multichain_lending_token_icon(contract_address)
-                if token_icon is None:
+                if token_icon is None and "contractAddress" in token_data:
                     headers = {
                         "x-cg-pro-api-key": Cfg.COINGECKO_API_KEY
                     }
