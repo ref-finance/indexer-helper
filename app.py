@@ -28,7 +28,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
     get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, \
     add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, \
-    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account
+    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account, query_multichain_lending_zcash_data
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -41,6 +41,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
+from zcash_utils import get_deposit_address, verify_add_zcash
 
 service_version = "20251106.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1788,6 +1789,109 @@ def handel_multichain_lending_tokens_data():
         conn.end_pipe()
         conn.close()
     return jsonify(ret_token_data)
+
+
+@app.route('/mca_creation_via_zcash', methods=['GET'])
+def handle_mca_creation_via_zcash():
+    am_id = request.args.get("am_id", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if am_id == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "am_id cannot be empty"
+        return jsonify(ret)
+    import uuid
+    deposit_uuid = str(uuid.uuid4())
+    path_data = {"am_id": am_id, "uuid": deposit_uuid}
+    deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 1, 0, deposit_uuid)
+    ret["data"] = deposit_address
+    return jsonify(ret)
+
+
+@app.route('/zcash_business', methods=['GET'])
+def handle_zcash_business():
+    am_id = request.args.get("am_id", type=str, default="")
+    mca_id = request.args.get("mca_id", type=str, default="")
+    nonce = request.args.get("nonce", type=str, default="")
+    deadline = request.args.get("deadline", type=str, default="")
+    tx_requests = request.args.get("tx_requests", type=str, default="")
+    near_number = request.args.get("near_number", type=float, default=0)
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if am_id == "" or mca_id == "" or nonce == "" or deadline == "" or tx_requests == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    path_data = {"am_id": am_id, "mca_id": mca_id, "nonce": nonce, "deadline": deadline, "tx_requests": tx_requests}
+    deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 2, near_number, "")
+    ret["data"] = deposit_address
+    return jsonify(ret)
+
+
+@app.route('/zcash_adding', methods=['GET'])
+def handle_zcash_adding():
+    am_id = request.args.get("am_id", type=str, default="")
+    mca_id = request.args.get("mca_id", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if am_id == "" or mca_id == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    path_data = {"am_id": am_id, "mca_id": mca_id}
+    deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 3, 0, "")
+    ret["data"] = deposit_address
+    return jsonify(ret)
+
+
+@app.route('/get_data_by_mca_id', methods=['GET'])
+def handle_data_by_mca_id():
+    address = request.args.get("address", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if address == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    zcash_data = query_multichain_lending_zcash_data(Cfg.NETWORK_ID, address)
+    ret["data"] = zcash_data
+    return jsonify(ret)
+
+
+@app.route('/signed_zcash_adding_application', methods=['GET'])
+def handle_signed_zcash_adding_application():
+    application = request.args.get("application", type=str, default="")
+    signer_wallet = request.args.get("signer_wallet", type=str, default="")
+    signer_signature = request.args.get("signer_signature", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if application == "" or signer_wallet == "" or signer_signature == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    zcash_data = verify_add_zcash(Cfg.NETWORK_ID, application, signer_wallet, signer_signature)
+    ret["data"] = zcash_data
+    return jsonify(ret)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")

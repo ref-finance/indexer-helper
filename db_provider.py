@@ -1,7 +1,7 @@
 import decimal
 import pymysql
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from config import Cfg
 import time
 from redis_provider import RedisProvider, list_history_token_price, list_token_price, get_account_pool_assets, get_pool_point_24h_by_pool_id
@@ -1883,6 +1883,99 @@ def query_multichain_lending_account(network_id, account_address):
         return data_list
     except Exception as e:
         print("query multichain_lending_whitelist to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
+def query_multichain_lending_zcash_pending(network_id, minutes=10):
+    try:
+        minutes = int(minutes)
+    except (TypeError, ValueError):
+        minutes = 10
+    minutes = max(minutes, 1)
+
+    time_threshold = datetime.utcnow() - timedelta(minutes=minutes)
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from multichain_lending_zcash_data where `tx_hash` is not null and `updated_at` >= %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (time_threshold,))
+        return cursor.fetchall()
+    except Exception as e:
+        print("query multichain_lending_zcash_data to db error:", e)
+    finally:
+        cursor.close()
+    return []
+
+
+def add_multichain_lending_zcash_data(network_id, am_id, deposit_address, request_data, type_data, near_number, deposit_uuid):
+    db_conn = get_db_connect(network_id)
+    sql = "insert into multichain_lending_zcash_data(`ma_id`, deposit_address, request_data, `type`, near_number, " \
+          "deposit_uuid, `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,now(),now())"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (am_id, deposit_address, request_data, type_data, near_number, deposit_uuid))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert multichain_lending_zcash_data to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+
+
+def update_multichain_lending_zcash_data(network_id, hex_data, pre_info, data_id):
+    sql = "UPDATE multichain_lending_zcash_data SET `status` = 1, `hex` = %s, pre_info = %s WHERE id = %s"
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (hex_data, pre_info, data_id))
+        db_conn.commit()
+    except Exception as e:
+        print("update_multichain_lending_zcash_data to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_multichain_lending_zcash_data(network_id, mca_id):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from multichain_lending_zcash_data where deposit_address = %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (mca_id, ))
+        ret_data = cursor.fetchone()
+        return ret_data
+    except Exception as e:
+        print("query multichain_lending_zcash_data to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
+def update_multichain_lending_zcash_public_key(network_id, public_key, data_id):
+    sql = "UPDATE multichain_lending_zcash_data SET `public_key` = %s WHERE id = %s"
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (public_key, data_id))
+        db_conn.commit()
+    except Exception as e:
+        print("update_multichain_lending_zcash_public_key to db error:", e)
+    finally:
+        cursor.close()
+
+
+def query_multichain_lending_zcash_data_by_tx(network_id, tx_hash):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from multichain_lending_zcash_data where tx_hash = %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (tx_hash, ))
+        ret_data = cursor.fetchone()
+        return ret_data
+    except Exception as e:
+        print("query query_multichain_lending_zcash_data_by_tx to db error:", e)
     finally:
         cursor.close()
     return

@@ -158,6 +158,7 @@ class Cfg:
             "DCL_CONTRACT": "dclv2.ref-labs.near",
             "ORDERLY_CONTRACT": "asset-manager.orderly-network.near",
             "BURROW_CONTRACT": "contract.main.burrow.near",
+            "ZCASH_VERIFY_CONTRACT": "zcashtx.verifiers.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",
