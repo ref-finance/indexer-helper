@@ -2,11 +2,19 @@ import json
 import requests
 import hashlib
 import base58
+import base64
+from dataclasses import dataclass
+from typing import List, Tuple, Union, Optional
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
 from config import Cfg
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from db_provider import add_multichain_lending_zcash_data
+from near_api.account import Account
+from near_api.providers import JsonProvider as NearJsonProvider
+from near_api.signer import Signer, KeyPair
 
 # Try to use hashlib for RIPEMD160, fallback to pycryptodome if not available
 try:
@@ -25,6 +33,344 @@ except (ValueError, AttributeError):
 
 DEFAULT_ZCASH_RPC_URL = "https://go.getblock.io/88e3cf13488c4b63959f67ebc83b3211/"
 
+DEFAULT_FUNCTION_CALL_GAS = 300000000000000
+DEFAULT_FUNCTION_CALL_DEPOSIT = 1  # yoctoNEAR
+
+ZCASH_HEADERS_HASH_PERSONALIZATION = b"ZTxIdHeadersHash"
+ZCASH_TRANSPARENT_HASH_PERSONALIZATION = b"ZTxIdTranspaHash"
+ZCASH_PREVOUTS_HASH_PERSONALIZATION = b"ZTxIdPrevoutHash"
+ZCASH_SEQUENCE_HASH_PERSONALIZATION = b"ZTxIdSequencHash"
+ZCASH_OUTPUTS_HASH_PERSONALIZATION = b"ZTxIdOutputsHash"
+ZCASH_SAPLING_DIGEST_PERSONALIZATION = b"ZTxIdSaplingHash"
+ZCASH_ORCHARD_DIGEST_PERSONALIZATION = b"ZTxIdOrchardHash"
+ZCASH_TRANSPARENT_INPUT_HASH_PERSONALIZATION = b"Zcash___TxInHash"
+ZCASH_TRANSPARENT_AMOUNTS_HASH_PERSONALIZATION = b"ZTxTrAmountsHash"
+ZCASH_TRANSPARENT_SCRIPTS_HASH_PERSONALIZATION = b"ZTxTrScriptsHash"
+ZCASH_TX_PERSONALIZATION_PREFIX = b"ZcashTxHash_"
+
+
+@dataclass
+class TxInput:
+    prev_tx_hash: bytes
+    prev_tx_index: int
+    script: bytes
+    sequence: int
+
+
+@dataclass
+class TxOutput:
+    value: int
+    script: bytes
+
+
+@dataclass
+class PreviousOutput:
+    value: int
+    script: bytes
+
+
+def _blake2b_personal(data: bytes, personalization: bytes) -> bytes:
+    return hashlib.blake2b(data, digest_size=32, person=personalization).digest()
+
+
+class Blake2b32(hashes.HashAlgorithm):
+    name = "blake2b32"
+    digest_size = 32
+    block_size = 128
+
+
+def _int_to_le_bytes(value: int, length: int) -> bytes:
+    return value.to_bytes(length, byteorder="little", signed=value < 0)
+
+
+def _read_compact_size(data: bytes, offset: int) -> Tuple[int, int]:
+    first = data[offset]
+    offset += 1
+    if first < 0xFD:
+        return first, offset
+    if first == 0xFD:
+        val = int.from_bytes(data[offset:offset + 2], "little")
+        return val, offset + 2
+    if first == 0xFE:
+        val = int.from_bytes(data[offset:offset + 4], "little")
+        return val, offset + 4
+    val = int.from_bytes(data[offset:offset + 8], "little")
+    return val, offset + 8
+
+
+def _read_bytes(data: bytes, offset: int, length: int) -> Tuple[bytes, int]:
+    return data[offset:offset + length], offset + length
+
+
+@dataclass
+class TransactionV5:
+    version: int
+    version_group_id: int
+    consensus_branch_id: int
+    lock_time: int
+    expiry_height: int
+    inputs: List[TxInput]
+    outputs: List[TxOutput]
+
+    @classmethod
+    def parse(cls, tx_hex: str) -> "TransactionV5":
+        tx_bytes = bytes.fromhex(tx_hex)
+        offset = 0
+
+        header_bytes, offset = _read_bytes(tx_bytes, offset, 4)
+        header = int.from_bytes(header_bytes, "little")
+        version = header & ((1 << 31) - 1)
+        overwintered = (header >> 31) != 0
+        if version != 5 or not overwintered:
+            raise ValueError(f"Expected overwintered v5 transaction, got header {version}")
+
+        vg_id_bytes, offset = _read_bytes(tx_bytes, offset, 4)
+        version_group_id = int.from_bytes(vg_id_bytes, "little")
+
+        branch_id_bytes, offset = _read_bytes(tx_bytes, offset, 4)
+        consensus_branch_id = int.from_bytes(branch_id_bytes, "little")
+
+        lock_time_bytes, offset = _read_bytes(tx_bytes, offset, 4)
+        lock_time = int.from_bytes(lock_time_bytes, "little")
+
+        expiry_height_bytes, offset = _read_bytes(tx_bytes, offset, 4)
+        expiry_height = int.from_bytes(expiry_height_bytes, "little")
+
+        input_count, offset = _read_compact_size(tx_bytes, offset)
+        inputs: List[TxInput] = []
+        for _ in range(input_count):
+            prev_hash, offset = _read_bytes(tx_bytes, offset, 32)
+            prev_index_bytes, offset = _read_bytes(tx_bytes, offset, 4)
+            prev_index = int.from_bytes(prev_index_bytes, "little")
+            script_len, offset = _read_compact_size(tx_bytes, offset)
+            script, offset = _read_bytes(tx_bytes, offset, script_len)
+            sequence_bytes, offset = _read_bytes(tx_bytes, offset, 4)
+            sequence = int.from_bytes(sequence_bytes, "little")
+            inputs.append(TxInput(prev_hash, prev_index, script, sequence))
+
+        output_count, offset = _read_compact_size(tx_bytes, offset)
+        outputs: List[TxOutput] = []
+        for _ in range(output_count):
+            value_bytes, offset = _read_bytes(tx_bytes, offset, 8)
+            value = int.from_bytes(value_bytes, "little", signed=True)
+            script_len, offset = _read_compact_size(tx_bytes, offset)
+            script, offset = _read_bytes(tx_bytes, offset, script_len)
+            outputs.append(TxOutput(value, script))
+
+        return cls(
+            version, version_group_id, consensus_branch_id,
+            lock_time, expiry_height, inputs, outputs
+        )
+
+    def header_digest(self) -> bytes:
+        header = 0x80000005
+        data = bytearray()
+        data.extend(header.to_bytes(4, "little"))
+        data.extend(self.version_group_id.to_bytes(4, "little"))
+        data.extend(self.consensus_branch_id.to_bytes(4, "little"))
+        data.extend(self.lock_time.to_bytes(4, "little"))
+        data.extend(self.expiry_height.to_bytes(4, "little"))
+        return _blake2b_personal(bytes(data), ZCASH_HEADERS_HASH_PERSONALIZATION)
+
+    def prevouts_hash(self) -> bytes:
+        data = bytearray()
+        for txin in self.inputs:
+            data.extend(txin.prev_tx_hash)
+            data.extend(txin.prev_tx_index.to_bytes(4, "little"))
+        return _blake2b_personal(bytes(data), ZCASH_PREVOUTS_HASH_PERSONALIZATION)
+
+    def amounts_hash(self, previous_outputs: List[PreviousOutput]) -> bytes:
+        data = bytearray()
+        for prev_out in previous_outputs:
+            data.extend(prev_out.value.to_bytes(8, "little", signed=True))
+        return _blake2b_personal(bytes(data), ZCASH_TRANSPARENT_AMOUNTS_HASH_PERSONALIZATION)
+
+    def scripts_hash(self, previous_outputs: List[PreviousOutput]) -> bytes:
+        data = bytearray()
+        for prev_out in previous_outputs:
+            script = prev_out.script
+            data.append(len(script) & 0xFF)
+            data.extend(script)
+        return _blake2b_personal(bytes(data), ZCASH_TRANSPARENT_SCRIPTS_HASH_PERSONALIZATION)
+
+    def sequence_hash(self) -> bytes:
+        data = bytearray()
+        for txin in self.inputs:
+            data.extend(txin.sequence.to_bytes(4, "little"))
+        return _blake2b_personal(bytes(data), ZCASH_SEQUENCE_HASH_PERSONALIZATION)
+
+    def outputs_hash(self) -> bytes:
+        data = bytearray()
+        for txout in self.outputs:
+            data.extend(txout.value.to_bytes(8, "little", signed=True))
+            data.append(len(txout.script) & 0xFF)
+            data.extend(txout.script)
+        return _blake2b_personal(bytes(data), ZCASH_OUTPUTS_HASH_PERSONALIZATION)
+
+    def transparent_sig_digest(
+        self,
+        input_index: int,
+        previous_outputs: List[PreviousOutput],
+        hash_type: int,
+    ) -> bytes:
+        data = bytearray()
+        data.append(hash_type)
+        data.extend(self.prevouts_hash())
+        data.extend(self.amounts_hash(previous_outputs))
+        data.extend(self.scripts_hash(previous_outputs))
+        data.extend(self.sequence_hash())
+        data.extend(self.outputs_hash())
+
+        txin = self.inputs[input_index]
+        prev_out = previous_outputs[input_index]
+        txin_data = bytearray()
+        txin_data.extend(txin.prev_tx_hash)
+        txin_data.extend(txin.prev_tx_index.to_bytes(4, "little"))
+        txin_data.extend(prev_out.value.to_bytes(8, "little", signed=True))
+        txin_data.append(len(prev_out.script) & 0xFF)
+        txin_data.extend(prev_out.script)
+        txin_data.extend(txin.sequence.to_bytes(4, "little"))
+        txin_digest = _blake2b_personal(bytes(txin_data), ZCASH_TRANSPARENT_INPUT_HASH_PERSONALIZATION)
+        data.extend(txin_digest)
+
+        return _blake2b_personal(bytes(data), ZCASH_TRANSPARENT_HASH_PERSONALIZATION)
+
+    @staticmethod
+    def sapling_digest_empty() -> bytes:
+        return _blake2b_personal(b"", ZCASH_SAPLING_DIGEST_PERSONALIZATION)
+
+    @staticmethod
+    def orchard_digest_empty() -> bytes:
+        return _blake2b_personal(b"", ZCASH_ORCHARD_DIGEST_PERSONALIZATION)
+
+    def calculate_sighash(
+        self,
+        input_index: int,
+        previous_outputs: List[PreviousOutput],
+        hash_type: int,
+    ) -> bytes:
+        data = bytearray()
+        data.extend(self.header_digest())
+        data.extend(self.transparent_sig_digest(input_index, previous_outputs, hash_type))
+        data.extend(self.sapling_digest_empty())
+        data.extend(self.orchard_digest_empty())
+        personalization = bytearray(16)
+        personalization[:12] = ZCASH_TX_PERSONALIZATION_PREFIX
+        personalization[12:] = self.consensus_branch_id.to_bytes(4, "little")
+        return _blake2b_personal(bytes(data), bytes(personalization))
+
+def _get_near_rpc_url(network_id):
+    rpc_urls = Cfg.NETWORK[network_id]["NEAR_RPC_URL"]
+    if isinstance(rpc_urls, (list, tuple)) and len(rpc_urls) > 0:
+        return rpc_urls[0]
+    return rpc_urls
+
+
+def _build_near_account(network_id):
+    signer_id = getattr(Cfg, "ZCASH_SIGNER_ACCOUNT_ID", "")
+    signer_private_key = getattr(Cfg, "ZCASH_SIGNER_PRIVATE_KEY", "")
+    if not signer_id or not signer_private_key:
+        raise ValueError("ZCASH signer credentials are not configured in Cfg")
+    rpc_url = _get_near_rpc_url(network_id)
+    provider = NearJsonProvider(rpc_url)
+    key_pair = KeyPair(signer_private_key)
+    signer = Signer(signer_id, key_pair)
+    return Account(provider, signer, signer_id)
+
+
+def _decode_success_value(tx_result):
+    status = tx_result.get("status")
+    if not isinstance(status, dict):
+        return None
+    success_value = status.get("SuccessValue")
+    if success_value is None or success_value == "":
+        return None
+    padding = "=" * ((4 - len(success_value) % 4) % 4)
+    decoded_bytes = base64.b64decode(success_value + padding)
+    if not decoded_bytes:
+        return None
+    try:
+        return json.loads(decoded_bytes.decode("utf-8"))
+    except json.JSONDecodeError:
+        return decoded_bytes.decode("utf-8")
+
+
+def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposit=None):
+    account = _build_near_account(network_id)
+    gas_amount = gas if gas is not None else getattr(Cfg, "ZCASH_VERIFY_GAS", DEFAULT_FUNCTION_CALL_GAS)
+    deposit_amount = deposit if deposit is not None else getattr(Cfg, "ZCASH_VERIFY_DEPOSIT", DEFAULT_FUNCTION_CALL_DEPOSIT)
+    contract_id = Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"]
+    tx_result = account.function_call(
+        contract_id,
+        method_name,
+        request_data,
+        gas=gas_amount,
+        amount=deposit_amount
+    )
+    print(f"{method_name} tx_result:", tx_result)
+    ret = _decode_success_value(tx_result)
+    print(f"{method_name} ret:", ret)
+    return ret if ret is not None else tx_result
+
+
+def _hash160_to_address(hash_bytes: bytes) -> str:
+    version = b"\x1C\xB8"
+    payload = version + hash_bytes
+    checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
+    return base58.b58encode(payload + checksum).decode("utf-8")
+
+
+def _parse_script(script: bytes):
+    if (
+        len(script) == 25
+        and script[0] == 0x76
+        and script[1] == 0xA9
+        and script[2] == 0x14
+        and script[23] == 0x88
+        and script[24] == 0xAC
+    ):
+        return ("p2pkh", script[3:23])
+    if (
+        len(script) == 23
+        and script[0] == 0xA9
+        and script[1] == 0x14
+        and script[22] == 0x87
+    ):
+        return ("p2sh", script[2:22])
+    if (len(script) in (35, 67)) and script[-1] == 0xAC:
+        pub_len = script[0]
+        if pub_len in (33, 65) and pub_len == len(script) - 2:
+            return ("p2pk", script[1:-1])
+    if script and script[0] == 0x6A:
+        return ("nulldata", script[1:])
+    return ("unknown", script)
+
+
+def _parse_script_push(script_sig: bytes) -> List[bytes]:
+    parts = []
+    pos = 0
+    length = len(script_sig)
+    while pos < length:
+        op = script_sig[pos]
+        pos += 1
+        if op <= 75:
+            if pos + op > length:
+                break
+            parts.append(script_sig[pos:pos + op])
+            pos += op
+        elif op == 0x4C:
+            if pos >= length:
+                break
+            op_len = script_sig[pos]
+            pos += 1
+            if pos + op_len > length:
+                break
+            parts.append(script_sig[pos:pos + op_len])
+            pos += op_len
+        else:
+            break
+    return parts
+
 
 def get_deposit_address(network_id, am_id, path_data, type_data, near_number, deposit_uuid):
     deposit_address = ""
@@ -38,26 +384,19 @@ def get_deposit_address(network_id, am_id, path_data, type_data, near_number, de
             add_multichain_lending_zcash_data(network_id, am_id, deposit_address, json.dumps(request_data), type_data, near_number, deposit_uuid)
     except Exception as e:
         print("get_deposit_address error:", e)
-        raise
+        return
     return deposit_address
 
 
-def verify_mca_creation(network_id, am_id, hax_data, prevs):
+def verify_mca_creation(network_id, am_id, hax_data, prevs, deposit_uuid):
     try:
-        path = {"am_id": am_id}
+        path = {"am_id": am_id, "uuid": deposit_uuid}
         request_data = {"msg": json.dumps(path), "tx": hax_data, "prevs": prevs}
         print("verify_mca_creation request_data:", json.dumps(request_data))
-        conn = MultiNodeJsonProvider(network_id)
-        res_data = conn.view_call(Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"], "verify_mca_creation", json.dumps(request_data).encode(encoding='utf-8'))
-        print("verify_mca_creation res_data:", res_data)
-        if "result" in res_data:
-            json_str = "".join([chr(x) for x in res_data["result"]])
-            ret = json.loads(json_str)
-            print("verify_mca_creation ret:", ret)
-            return ret
+        return _call_zcash_contract(network_id, "verify_mca_creation", request_data)
     except Exception as e:
         print("verify_mca_creation error:", e)
-        raise
+        return
 
 
 def verify_business(network_id, path_data, hax_data, prevs, near_number):
@@ -66,34 +405,101 @@ def verify_business(network_id, path_data, hax_data, prevs, near_number):
         if near_number is not None and near_number != 0:
             request_data["amount"] = str(near_number)
         print("verify_business request_data:", json.dumps(request_data))
-        conn = MultiNodeJsonProvider(network_id)
-        res_data = conn.view_call(Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"], "verify_business",
-                                  json.dumps(request_data).encode(encoding='utf-8'))
-        print("verify_business res_data:", res_data)
-        if "result" in res_data:
-            json_str = "".join([chr(x) for x in res_data["result"]])
-            ret = json.loads(json_str)
-            print("verify_mca_creation ret:", ret)
-            return ret
+        return _call_zcash_contract(network_id, "verify_business", request_data, deposit=near_number)
     except Exception as e:
         print("verify_business error:", e)
-        raise
+        return
 
 
 def verify_add_zcash(network_id, application, signer_wallet, signer_signature):
     try:
         request_data = {"application": application, "signer_wallet": signer_wallet, "signer_signature": signer_signature}
         print("verify_add_zcash request_data:", json.dumps(request_data))
-        conn = MultiNodeJsonProvider(network_id)
-        res_data = conn.view_call(Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"], "verify_add_zcash", json.dumps(request_data).encode(encoding='utf-8'))
-        print("verify_add_zcash res_data:", res_data)
-        if "result" in res_data:
-            json_str = "".join([chr(x) for x in res_data["result"]])
-            ret = json.loads(json_str)
-            print("create_mca_from_zcash ret:", ret)
+        return _call_zcash_contract(network_id, "verify_add_zcash", request_data)
     except Exception as e:
         print("verify_add_zcash error:", e)
-        raise
+        return
+
+
+def _normalize_previous_outputs(previous_outputs: List[Union[PreviousOutput, Tuple[Union[str, int], Union[str, bytes]], dict]]) -> List[PreviousOutput]:
+    normalized = []
+    for item in previous_outputs:
+        if isinstance(item, PreviousOutput):
+            normalized.append(item)
+            continue
+        value: Optional[int] = None
+        script_bytes: Optional[bytes] = None
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            value = int(item[0])
+            script_bytes = bytes.fromhex(item[1]) if isinstance(item[1], str) else item[1]
+        elif isinstance(item, dict):
+            if "value" in item:
+                value = int(item["value"])
+            if "script" in item:
+                script_field = item["script"]
+                script_bytes = bytes.fromhex(script_field) if isinstance(script_field, str) else script_field
+        else:
+            raise ValueError(f"Unsupported previous output format: {item}")
+        if value is None or script_bytes is None:
+            raise ValueError(f"Incomplete previous output data: {item}")
+        normalized.append(PreviousOutput(value=value, script=script_bytes))
+    return normalized
+
+
+def extract_pubkey_from_v5_tx(
+    tx_hex: str,
+    input_index: int,
+    previous_outputs: List[Union[PreviousOutput, Tuple[Union[str, int], Union[str, bytes]], dict]],
+) -> str:
+    tx = TransactionV5.parse(tx_hex)
+    prev_outs = _normalize_previous_outputs(previous_outputs)
+    if input_index >= len(tx.inputs):
+        raise ValueError("input_index out of bounds for transaction inputs")
+    if input_index >= len(prev_outs):
+        raise ValueError("previous_outputs missing data for requested input index")
+
+    script_parts = _parse_script_push(tx.inputs[input_index].script)
+    if len(script_parts) < 2:
+        raise ValueError("Unable to parse signature and pubkey from input script")
+    signature_data = script_parts[0]
+    pubkey_data = script_parts[1]
+    if not signature_data:
+        raise ValueError("Empty signature in scriptSig")
+    hash_type = signature_data[-1]
+    signature_bytes = signature_data[:-1]
+
+    sighash = tx.calculate_sighash(input_index, prev_outs, hash_type)
+    try:
+        pubkey = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), pubkey_data)
+    except ValueError as exc:
+        raise ValueError(f"Invalid public key encoding: {exc}") from exc
+
+    try:
+        pubkey.verify(
+            signature_bytes,
+            sighash,
+            ec.ECDSA(asym_utils.Prehashed(Blake2b32())),
+        )
+    except Exception as exc:
+        raise ValueError(f"Signature verification failed: {exc}") from exc
+
+    return pubkey_data.hex()
+
+
+def internal_verify_v5_py(
+    tx_hex: str,
+    input_index: int,
+    previous_outputs: List[Union[PreviousOutput, Tuple[Union[str, int], Union[str, bytes]], dict]],
+) -> str:
+    """
+    Python port of the internal_verify_v5 logic from v5.rs.
+    Returns the hex-encoded public key extracted from the specified transaction input.
+    """
+    return extract_pubkey_from_v5_tx(
+        tx_hex=tx_hex,
+        input_index=input_index,
+        previous_outputs=previous_outputs,
+    )
 
 
 def get_raw_transaction(tx_hash, verbose=1, block_hash=None, rpc_url=None, timeout=10, rpc_id="getblock.io"):
@@ -194,7 +600,7 @@ def get_zcash_address_by_pubkey(pubkey_bytes: bytes) -> str:
         y = int.from_bytes(pubkey_bytes[33:65], 'big')
 
         # Verify the point is on the curve by creating the public key
-        public_key = ec.EllipticCurvePublicNumbers(x, y, ec.SECP256K1()).public_key(default_backend())
+        ec.EllipticCurvePublicNumbers(x, y, ec.SECP256K1()).public_key(default_backend())
 
         # Convert to compressed format
         # Compressed format: 0x02 if y is even, 0x03 if y is odd, followed by x coordinate
@@ -207,12 +613,60 @@ def get_zcash_address_by_pubkey(pubkey_bytes: bytes) -> str:
         raise ValueError(f"Invalid pubkey_bytes: {e}")
 
 
+def compressed_to_uncompressed_pubkey(compressed_pubkey: str) -> str:
+    """
+    Convert a compressed secp256k1 public key hex string to its uncompressed form.
+
+    Args:
+        compressed_pubkey: Hex-encoded compressed public key (33 bytes, starts with 02/03).
+
+    Returns:
+        Hex-encoded uncompressed public key (65 bytes, starts with 04).
+    """
+    try:
+        compressed_bytes = bytes.fromhex(compressed_pubkey)
+    except ValueError as exc:
+        raise ValueError(f"Invalid hex string for compressed pubkey: {exc}") from exc
+
+    try:
+        pubkey = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), compressed_bytes)
+    except ValueError as exc:
+        raise ValueError(f"Invalid compressed public key: {exc}") from exc
+
+    uncompressed_bytes = pubkey.public_bytes(
+        encoding=serialization.Encoding.X962,
+        format=serialization.PublicFormat.UncompressedPoint,
+    )
+    return uncompressed_bytes.hex()
+
+
+def get_pubkey(tx_hex, prev_outputs):
+    pubkey_data = internal_verify_v5_py(tx_hex, 0, prev_outputs)
+    encryption_pubkey = compressed_to_uncompressed_pubkey(pubkey_data)
+    pubkey_bytes = bytes.fromhex(encryption_pubkey)
+    t_address = get_zcash_address_by_pubkey(pubkey_bytes)
+    return t_address, encryption_pubkey
+
+
 if __name__ == '__main__':
+    print("-------------------------------------")
     # ret_data = get_raw_transaction("t1Vk9C7swsZv4mTKaPQnJZTsG7j1QLGGFnY")
     # print(ret_data)
 
-    # Convert hex string to bytes
-    hex_string = "76a91416020139a3d3c82670ee507261b659da900da23c88ac"
-    pubkey_bytes = bytes.fromhex(hex_string)
-    ret = get_zcash_address_by_pubkey(pubkey_bytes)
-    print(ret)
+    # tx_hex = "050000800a27a7265510e7c80000000027c72f0001a96bcb23ceb4c614bc4cf97eff5f4cf55cb0eacbe207b8cc2f07c6b44471288b000000006a47304402204946fb994962314463bd80c874e784a3299600fb6e6ac9bbe21142db6b38793a02201bada3ac136e76d40842602b6e633fb020ec20838fe8a18e2d778b09b332cacf01210277417aa9c95dd36a05695dc829351215d73621966e4ba33a7f3d44d2ac5ea542ffffffff0240420f00000000001976a91416020139a3d3c82670ee507261b659da900da23c88ac302d8900000000001976a9145ec4d80de0dff42c0cb00c57472424cd7bb428ba88ac000000"
+    # prev_outputs = [
+    #     {
+    #         "value": 10000000,
+    #         "script": "76a9145ec4d80de0dff42c0cb00c57472424cd7bb428ba88ac",
+    #     }
+    # ]
+    # result = internal_verify_v5_py(tx_hex, 0, prev_outputs)
+    # print("Extracted pubkey:", result)
+
+    # result = compressed_to_uncompressed_pubkey("0277417aa9c95dd36a05695dc829351215d73621966e4ba33a7f3d44d2ac5ea542")
+    # print("ret:", result)
+
+    # hex_string = "0477417aa9c95dd36a05695dc829351215d73621966e4ba33a7f3d44d2ac5ea54205da54e5cbe5800d2d8b11c0d57e8f055083010f5bcc902a2e66f20fc4662f2c"
+    # pubkey_bytes = bytes.fromhex(hex_string)
+    # ret = get_zcash_address_by_pubkey(pubkey_bytes)
+    # print("ret", ret)

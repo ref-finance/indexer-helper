@@ -67,11 +67,13 @@ except ImportError:
     COINGECKO_API_KEY = ""
 
 try:
-    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey
+    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey, ZCASH_SIGNER_ACCOUNT_ID, ZCASH_SIGNER_PRIVATE_KEY
 except ImportError:
     Bucket = "ref-new-1"
     AwsAccessKeyID = ""
     AwsSecretAccessKey = ""
+    ZCASH_SIGNER_ACCOUNT_ID = ""
+    ZCASH_SIGNER_PRIVATE_KEY = ""
 
 """
 
@@ -85,6 +87,10 @@ class Cfg:
         "REDIS_HOST": REDIS_HOST,
         "REDIS_PORT": REDIS_PORT,
     }
+    ZCASH_SIGNER_ACCOUNT_ID = ZCASH_SIGNER_ACCOUNT_ID
+    ZCASH_SIGNER_PRIVATE_KEY = ZCASH_SIGNER_PRIVATE_KEY
+    ZCASH_VERIFY_GAS = 300000000000000
+    ZCASH_VERIFY_DEPOSIT = 1  # yoctoNEAR
     NETWORK = {
         "DEVNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
