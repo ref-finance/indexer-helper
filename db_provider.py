@@ -1888,6 +1888,26 @@ def query_multichain_lending_account(network_id, account_address):
     return
 
 
+def add_multichain_lending_whitelist(network_id, account_address):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from multichain_lending_whitelist where account_address = %s"
+    sql = "insert into multichain_lending_whitelist(`account_address`, `created_at`, `updated_at`) values(%s, now(), now())"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(query_sql, (account_address,))
+        account_data = cursor.fetchone()
+        if account_data is None:
+            cursor.execute(sql, (account_address, ))
+            db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert multichain_lending_report_data to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+    return account_address
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()

@@ -67,11 +67,12 @@ except ImportError:
     COINGECKO_API_KEY = ""
 
 try:
-    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey
+    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey, MULTICHAIN_LENDING_WHITELIST_PWD
 except ImportError:
     Bucket = "ref-new-1"
     AwsAccessKeyID = ""
     AwsSecretAccessKey = ""
+    MULTICHAIN_LENDING_WHITELIST_PWD = ""
 
 """
 
@@ -85,6 +86,7 @@ class Cfg:
         "REDIS_HOST": REDIS_HOST,
         "REDIS_PORT": REDIS_PORT,
     }
+    MULTICHAIN_LENDING_WHITELIST_PWD = MULTICHAIN_LENDING_WHITELIST_PWD
     NETWORK = {
         "DEVNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
