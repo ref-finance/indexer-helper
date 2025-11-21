@@ -28,7 +28,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
     get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, \
     add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, \
-    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account, query_multichain_lending_zcash_data
+    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -43,7 +43,7 @@ from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash
 
-service_version = "20251106.01"
+service_version = "20251121.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1789,6 +1789,17 @@ def handel_multichain_lending_tokens_data():
         conn.end_pipe()
         conn.close()
     return jsonify(ret_token_data)
+
+
+@app.route('/add_multichain_lending_whitelist', methods=['GET'])
+def handel_multichain_lending_whitelist():
+    account_address = request.args.get("account_address", type=str, default='')
+    pwd = request.args.get("pwd", type=str, default='')
+    if pwd == Cfg.MULTICHAIN_LENDING_WHITELIST_PWD:
+        add_multichain_lending_whitelist(Cfg.NETWORK_ID, account_address)
+    else:
+        return "pwd error"
+    return compress_response_content(account_address)
 
 
 @app.route('/mca_creation_via_zcash', methods=['GET'])
