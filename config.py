@@ -67,7 +67,7 @@ except ImportError:
     COINGECKO_API_KEY = ""
 
 try:
-    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey, MULTICHAIN_LENDING_WHITELIST_PWD, ZCASH_SIGNER_ACCOUNT_ID, ZCASH_SIGNER_PRIVATE_KEY
+    from db_info import Bucket, AwsAccessKeyID, AwsSecretAccessKey, MULTICHAIN_LENDING_WHITELIST_PWD, ZCASH_SIGNER_ACCOUNT_ID, ZCASH_SIGNER_PRIVATE_KEY, ZCASH_RPC_URL, ZCASH_RPC_USER, ZCASH_RPC_PWD
 except ImportError:
     Bucket = "ref-new-1"
     AwsAccessKeyID = ""
@@ -75,6 +75,9 @@ except ImportError:
     MULTICHAIN_LENDING_WHITELIST_PWD = ""
     ZCASH_SIGNER_ACCOUNT_ID = ""
     ZCASH_SIGNER_PRIVATE_KEY = ""
+    ZCASH_RPC_URL = ""
+    ZCASH_RPC_USER = ""
+    ZCASH_RPC_PWD = ""
 
 """
 
@@ -93,6 +96,9 @@ class Cfg:
     ZCASH_SIGNER_PRIVATE_KEY = ZCASH_SIGNER_PRIVATE_KEY
     ZCASH_VERIFY_GAS = 300000000000000
     ZCASH_VERIFY_DEPOSIT = 1  # yoctoNEAR
+    ZCASH_RPC_URL = ZCASH_RPC_URL
+    ZCASH_RPC_USER = ZCASH_RPC_USER
+    ZCASH_RPC_PWD = ZCASH_RPC_PWD
     NETWORK = {
         "DEVNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
@@ -167,6 +173,7 @@ class Cfg:
             "ORDERLY_CONTRACT": "asset-manager.orderly-network.near",
             "BURROW_CONTRACT": "contract.main.burrow.near",
             "ZCASH_VERIFY_CONTRACT": "zcashtx.verifiers.near",
+            "ZCASH_MA_CONTRACT": "ma.private-mainnet.ref-dev-team.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",

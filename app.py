@@ -41,7 +41,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
-from zcash_utils import get_deposit_address, verify_add_zcash
+from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC
 
 service_version = "20251121.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1841,7 +1841,7 @@ def handle_zcash_business():
         ret["msg"] = "error"
         ret["data"] = "request parameter error"
         return jsonify(ret)
-    path_data = {"am_id": am_id, "mca_id": mca_id, "nonce": nonce, "deadline": deadline, "tx_requests": tx_requests}
+    path_data = {"am_id": am_id, "mca_id": mca_id, "nonce": nonce, "deadline": deadline, "tx_requests": json.loads(tx_requests)}
     deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 2, near_number, "")
     ret["data"] = deposit_address
     return jsonify(ret)
@@ -1902,6 +1902,33 @@ def handle_signed_zcash_adding_application():
         return jsonify(ret)
     zcash_data = verify_add_zcash(Cfg.NETWORK_ID, application, signer_wallet, signer_signature)
     ret["data"] = zcash_data
+    return jsonify(ret)
+
+
+@app.route('/get_address_balance', methods=['GET'])
+def handle_address_balance():
+    address = request.args.get("address", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if address == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    try:
+        rpc = ZcashRPC()
+        balance = rpc.getaddressbalance([address])
+        ret_data = {"balance": f"{balance['balance'] / 1e8:.8f}", "received": f"{balance['balance'] / 1e8:.8f}"}
+        ret["data"] = ret_data
+    except Exception as e:
+        print(f"\n❌ error: {e}")
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = e.args
+        return jsonify(ret)
     return jsonify(ret)
 
 

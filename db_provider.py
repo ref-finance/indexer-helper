@@ -1897,7 +1897,7 @@ def query_multichain_lending_zcash_pending(network_id, minutes=10):
 
     time_threshold = datetime.utcnow() - timedelta(minutes=minutes)
     db_conn = get_db_connect(network_id)
-    query_sql = "select * from multichain_lending_zcash_data where `tx_hash` is not null and `updated_at` >= %s"
+    query_sql = "select * from multichain_lending_zcash_data where `status` = 0 and `created_at` >= %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         cursor.execute(query_sql, (time_threshold,))
@@ -1925,12 +1925,13 @@ def add_multichain_lending_zcash_data(network_id, am_id, deposit_address, reques
         cursor.close()
 
 
-def update_multichain_lending_zcash_data(network_id, hex_data, pre_info, data_id, t_address, encryption_pubkey):
-    sql = "UPDATE multichain_lending_zcash_data SET `status` = 1, `hex` = %s, pre_info = %s, t_address = %s, public_key = %s WHERE id = %s"
+def update_multichain_lending_zcash_data(network_id, hex_data, pre_info, data_id, t_address, encryption_pubkey, mca_id, tx_hash, error_msg):
+    sql = "UPDATE multichain_lending_zcash_data SET `status` = 1, `hex` = %s, pre_info = %s, t_address = %s, " \
+          "public_key = %s, mca_id = %s, tx_hash = %s, error_msg = %s WHERE id = %s"
     db_conn = get_db_connect(network_id)
     cursor = db_conn.cursor()
     try:
-        cursor.execute(sql, (hex_data, pre_info, t_address, encryption_pubkey, data_id))
+        cursor.execute(sql, (hex_data, pre_info, t_address, encryption_pubkey, mca_id, tx_hash, error_msg, data_id))
         db_conn.commit()
     except Exception as e:
         print("update_multichain_lending_zcash_data to db error:", e)

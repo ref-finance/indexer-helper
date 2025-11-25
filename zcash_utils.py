@@ -4,7 +4,7 @@ import hashlib
 import base58
 import base64
 from dataclasses import dataclass
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Dict, Any, Optional
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -296,20 +296,26 @@ def _decode_success_value(tx_result):
 
 
 def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposit=None):
-    account = _build_near_account(network_id)
-    gas_amount = gas if gas is not None else getattr(Cfg, "ZCASH_VERIFY_GAS", DEFAULT_FUNCTION_CALL_GAS)
-    deposit_amount = deposit if deposit is not None else getattr(Cfg, "ZCASH_VERIFY_DEPOSIT", DEFAULT_FUNCTION_CALL_DEPOSIT)
-    contract_id = Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"]
-    tx_result = account.function_call(
-        contract_id,
-        method_name,
-        request_data,
-        gas=gas_amount,
-        amount=deposit_amount
-    )
-    print(f"{method_name} tx_result:", tx_result)
-    ret = _decode_success_value(tx_result)
-    print(f"{method_name} ret:", ret)
+    try:
+        account = _build_near_account(network_id)
+        gas_amount = gas if gas is not None else getattr(Cfg, "ZCASH_VERIFY_GAS", DEFAULT_FUNCTION_CALL_GAS)
+        deposit_amount = deposit if deposit is not None else getattr(Cfg, "ZCASH_VERIFY_DEPOSIT",
+                                                                     DEFAULT_FUNCTION_CALL_DEPOSIT)
+        contract_id = Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"]
+        tx_result = account.function_call(
+            contract_id,
+            method_name,
+            request_data,
+            gas=gas_amount,
+            amount=deposit_amount
+        )
+        print(f"{method_name} tx_result:", tx_result)
+        ret = _decode_success_value(tx_result)
+        print(f"{method_name} ret:", ret)
+    except Exception as e:
+        print("_call_zcash_contract error:", e.args)
+        ret = e.args
+        tx_result = e.args
     return ret if ret is not None else tx_result
 
 
@@ -401,11 +407,11 @@ def verify_mca_creation(network_id, am_id, hax_data, prevs, deposit_uuid):
 
 def verify_business(network_id, path_data, hax_data, prevs, near_number):
     try:
-        request_data = {"msg": json.dumps(path_data), "tx": hax_data, "prevs": prevs}
-        if near_number is not None and near_number != 0:
-            request_data["amount"] = str(near_number)
+        res_data = json.loads(path_data)
+        path_data = res_data["path"]
+        request_data = {"msg": path_data, "tx": hax_data, "prevs": prevs}
         print("verify_business request_data:", json.dumps(request_data))
-        return _call_zcash_contract(network_id, "verify_business", request_data, deposit=near_number)
+        return _call_zcash_contract(network_id, "verify_business", request_data)
     except Exception as e:
         print("verify_business error:", e)
         return
@@ -491,10 +497,6 @@ def internal_verify_v5_py(
     input_index: int,
     previous_outputs: List[Union[PreviousOutput, Tuple[Union[str, int], Union[str, bytes]], dict]],
 ) -> str:
-    """
-    Python port of the internal_verify_v5 logic from v5.rs.
-    Returns the hex-encoded public key extracted from the specified transaction input.
-    """
     return extract_pubkey_from_v5_tx(
         tx_hex=tx_hex,
         input_index=input_index,
@@ -502,23 +504,12 @@ def internal_verify_v5_py(
     )
 
 
-def get_raw_transaction(tx_hash, verbose=1, block_hash=None, rpc_url=None, timeout=10, rpc_id="getblock.io"):
-    """
-    Query the Zcash raw transaction data through the configured RPC endpoint.
-
-    :param tx_hash: Transaction hash to query.
-    :param verbose: Verbosity flag (0 or 1) as required by the RPC.
-    :param block_hash: Optional block hash to limit the lookup scope.
-    :param rpc_url: Optional override for the RPC endpoint.
-    :param timeout: Request timeout in seconds.
-    :param rpc_id: JSON-RPC id field value.
-    :return: The RPC response payload as a Python dict.
-    """
+def get_raw_transaction(tx_hash, verbose=1, rpc_url=None, timeout=10, rpc_id="getblock.io"):
     try:
         payload = {
             "jsonrpc": "2.0",
             "method": "getrawtransaction",
-            "params": [tx_hash, verbose, block_hash],
+            "params": [tx_hash, verbose],
             "id": rpc_id
         }
         url = rpc_url or DEFAULT_ZCASH_RPC_URL
@@ -536,15 +527,6 @@ def get_raw_transaction(tx_hash, verbose=1, block_hash=None, rpc_url=None, timeo
 
 
 def pubkey_to_zcash_address(pubkey_bytes: bytes) -> str:
-    """
-    Convert public key bytes to Zcash address.
-
-    Args:
-        pubkey_bytes: Compressed public key bytes
-
-    Returns:
-        Zcash address as base58 string
-    """
     # Step 1: Calculate SHA256
     sha256_hash = hashlib.sha256(pubkey_bytes).digest()
 
@@ -648,6 +630,112 @@ def get_pubkey(tx_hex, prev_outputs):
     return t_address, encryption_pubkey
 
 
+def get_mca_by_wallet(network_id, encryption_pubkey):
+    mca_id = ""
+    try:
+        request_data = {"wallet": {"Zcash": encryption_pubkey}}
+        conn = MultiNodeJsonProvider(network_id)
+        mca_ret_data = conn.view_call(Cfg.NETWORK[network_id]["ZCASH_MA_CONTRACT"], "get_mca_by_wallet", json.dumps(request_data).encode(encoding='utf-8'))
+        if "result" in mca_ret_data:
+            json_str = "".join([chr(x) for x in mca_ret_data["result"]])
+            mca_id = json.loads(json_str)
+    except Exception as e:
+        print("get_mca_by_wallet error:", e)
+        return
+    return mca_id
+
+
+class ZcashRPC:
+    """Zcash RPC客户端"""
+
+    def __init__(self, user: str = Cfg.ZCASH_RPC_USER, password: str = Cfg.ZCASH_RPC_PWD,
+                 host: str = Cfg.ZCASH_RPC_URL, port: int = 8232):
+        self.url = f"http://{host}:{port}"
+        self.auth = (user, password)
+        self.headers = {'content-type': 'application/json'}
+
+    def call(self, method: str, params: Any = None) -> Any:
+        """执行RPC调用"""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": "python-client",
+            "method": method,
+            "params": params if params is not None else []
+        }
+
+        try:
+            response = requests.post(
+                self.url,
+                data=json.dumps(payload),
+                headers=self.headers,
+                auth=self.auth,
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+
+            if 'error' in result and result['error']:
+                raise Exception(f"RPC Error: {result['error']}")
+
+            return result.get('result')
+
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"连接错误: {e}")
+
+    def getaddresstxids(self, addresses: List[str],
+                       start: Optional[int] = None,
+                       end: Optional[int] = None) -> List[str]:
+        """
+        获取指定地址的所有交易ID
+
+        Args:
+            addresses: 地址列表
+            start: 起始区块高度（可选）
+            end: 结束区块高度（可选）
+
+        Returns:
+            交易ID列表（按区块高度排序）
+        """
+        params = {"addresses": addresses}
+
+        if start is not None:
+            params["start"] = start
+        if end is not None:
+            params["end"] = end
+
+        return self.call("getaddresstxids", [params])
+
+    def getaddressbalance(self, addresses: List[str]) -> Dict:
+        """获取地址余额"""
+        params = {"addresses": addresses}
+        return self.call("getaddressbalance", [params])
+
+    def getaddressdeltas(self, addresses: List[str],
+                        start: Optional[int] = None,
+                        end: Optional[int] = None) -> List[Dict]:
+        """获取地址的所有余额变动"""
+        params = {"addresses": addresses}
+
+        if start is not None:
+            params["start"] = start
+        if end is not None:
+            params["end"] = end
+
+        return self.call("getaddressdeltas", [params])
+
+    def getrawtransaction(self, txid: str, verbose: int = 1) -> Dict:
+        """获取交易详情"""
+        return self.call("getrawtransaction", [txid, verbose])
+
+    def getblockcount(self) -> int:
+        """获取当前区块高度"""
+        return self.call("getblockcount")
+
+    def decoderawtransaction(self, hex_data: str) -> Dict:
+        """根据tx原文解码"""
+        return self.call("decoderawtransaction", [hex_data])
+
+
 if __name__ == '__main__':
     print("-------------------------------------")
     # ret_data = get_raw_transaction("t1Vk9C7swsZv4mTKaPQnJZTsG7j1QLGGFnY")
@@ -670,3 +758,27 @@ if __name__ == '__main__':
     # pubkey_bytes = bytes.fromhex(hex_string)
     # ret = get_zcash_address_by_pubkey(pubkey_bytes)
     # print("ret", ret)
+
+    # mca_id = get_mca_by_wallet("MAINNET", "04ce305e028aeede9136992d21a479381462586b7d6be1fdc4f07e674777f3faec924ff4e41e04f2f41608cfb5490a31d32428bf9e2489aa6c270603d71cafca0a")
+    # print(mca_id)
+
+    rpc = ZcashRPC()
+    try:
+        # # 获取地址余额
+        # print("\n正在查询地址余额...")
+        # balance = rpc.getaddressbalance(["t1KsyGrJMo6K6MJc2RSdZKXSuTozJ4M9iJ4"])
+        # print(f"余额: {balance['balance'] / 1e8:.8f} ZEC")
+        # print(f"已接收总额: {balance.get('received', 0) / 1e8:.8f} ZEC")
+        address_ = "t1fT3QoWWwnfPq49Mg2iPK5CcC1LfxeE7iw"
+        tx_id_list = rpc.getaddresstxids([address_])
+        print("tx_id_list:", tx_id_list)
+        if tx_id_list is not None:
+            for tx_is in tx_id_list:
+                tx_data_ = rpc.getrawtransaction(tx_is)
+                print("tx_data_:", tx_data_)
+
+        hex_ = "050000800a27a7265510e7c80000000027c72f0001a96bcb23ceb4c614bc4cf97eff5f4cf55cb0eacbe207b8cc2f07c6b44471288b000000006a47304402204946fb994962314463bd80c874e784a3299600fb6e6ac9bbe21142db6b38793a02201bada3ac136e76d40842602b6e633fb020ec20838fe8a18e2d778b09b332cacf01210277417aa9c95dd36a05695dc829351215d73621966e4ba33a7f3d44d2ac5ea542ffffffff0240420f00000000001976a91416020139a3d3c82670ee507261b659da900da23c88ac302d8900000000001976a9145ec4d80de0dff42c0cb00c57472424cd7bb428ba88ac000000"
+        hex_ret = rpc.decoderawtransaction(hex_)
+        print("hex_ret:", hex_ret)
+    except Exception as e:
+        print(f"\n❌ error: {e}")
