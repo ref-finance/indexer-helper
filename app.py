@@ -331,6 +331,9 @@ def handle_list_pools_by_ids():
     list_pools_by_ids
     """
     ids = request.args.get("ids", "")
+    ids = ids.strip("|")
+    if not ids:
+        return compress_response_content([])
     id_str_list = ids.split("|")
 
     pools = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_str_list])
@@ -1759,12 +1762,15 @@ def handel_multichain_lending_tokens_data():
                         coingecko_ret_data = response.text
                         coingecko_token_data = json.loads(coingecko_ret_data)
                         token_icon = coingecko_token_data["data"]["attributes"]["image_url"]
-                        s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
-                        if upload_error is None and s3_url:
-                            token_icon = s3_url
-                            logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                        if token_icon:
+                            s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
+                            if upload_error is None and s3_url:
+                                token_icon = s3_url
+                                logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                            else:
+                                logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
                         else:
-                            logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
+                            logger.warning("CoinGecko did not return token icon URL, skip uploading")
                         conn.add_multichain_lending_token_icon(contract_address, token_icon)
                     except Exception as e:
                         print("coingecko err:", e.args)
