@@ -3,6 +3,7 @@ import requests
 import hashlib
 import base58
 import base64
+import time
 from dataclasses import dataclass
 from typing import List, Tuple, Union, Dict, Any, Optional
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -295,28 +296,80 @@ def _decode_success_value(tx_result):
         return decoded_bytes.decode("utf-8")
 
 
-def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposit=None):
-    try:
-        account = _build_near_account(network_id)
-        gas_amount = gas if gas is not None else getattr(Cfg, "ZCASH_VERIFY_GAS", DEFAULT_FUNCTION_CALL_GAS)
-        deposit_amount = deposit if deposit is not None else getattr(Cfg, "ZCASH_VERIFY_DEPOSIT",
-                                                                     DEFAULT_FUNCTION_CALL_DEPOSIT)
-        contract_id = Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"]
-        tx_result = account.function_call(
-            contract_id,
-            method_name,
-            request_data,
-            gas=gas_amount,
-            amount=deposit_amount
-        )
-        print(f"{method_name} tx_result:", tx_result)
-        ret = _decode_success_value(tx_result)
-        print(f"{method_name} ret:", ret)
-    except Exception as e:
-        print("_call_zcash_contract error:", e.args)
-        ret = e.args
-        tx_result = e.args
-    return ret if ret is not None else tx_result
+def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposit=None, max_retries=3, retry_delay=2):
+    account = _build_near_account(network_id)
+    gas_amount = gas if gas is not None else getattr(Cfg, "ZCASH_VERIFY_GAS", DEFAULT_FUNCTION_CALL_GAS)
+    deposit_amount = deposit if deposit is not None else getattr(Cfg, "ZCASH_VERIFY_DEPOSIT",
+                                                                 DEFAULT_FUNCTION_CALL_DEPOSIT)
+    contract_id = Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"]
+    
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            tx_result = account.function_call(
+                contract_id,
+                method_name,
+                request_data,
+                gas=gas_amount,
+                amount=deposit_amount
+            )
+            print(f"{method_name} tx_result:", tx_result)
+            ret = _decode_success_value(tx_result)
+            print(f"{method_name} ret:", ret)
+            return ret if ret is not None else tx_result
+        except Exception as e:
+            last_exception = e
+            # 检查是否是 ReadTimeoutError
+            is_timeout_error = False
+            error_str = str(e)
+            error_args_str = str(e.args) if e.args else ""
+            
+            # 检查错误类型或错误信息中是否包含 ReadTimeoutError
+            if "ReadTimeoutError" in error_str or "ReadTimeoutError" in error_args_str:
+                is_timeout_error = True
+            # 也检查 urllib3 的 ReadTimeoutError
+            try:
+                from urllib3.exceptions import ReadTimeoutError as Urllib3ReadTimeoutError
+                # 检查异常本身或其原因链中是否有 ReadTimeoutError
+                current_exception = e
+                while current_exception:
+                    if isinstance(current_exception, Urllib3ReadTimeoutError):
+                        is_timeout_error = True
+                        break
+                    current_exception = getattr(current_exception, '__cause__', None) or getattr(current_exception, 'reason', None)
+            except ImportError:
+                pass
+            # 检查 requests 的 ReadTimeout
+            try:
+                from requests.exceptions import ReadTimeout as RequestsReadTimeout
+                current_exception = e
+                while current_exception:
+                    if isinstance(current_exception, RequestsReadTimeout):
+                        is_timeout_error = True
+                        break
+                    current_exception = getattr(current_exception, '__cause__', None) or getattr(current_exception, 'reason', None)
+            except ImportError:
+                pass
+            
+            # 如果是超时错误且还有重试机会，则重试
+            if is_timeout_error and attempt < max_retries - 1:
+                print(f"_call_zcash_contract error (attempt {attempt + 1}/{max_retries}): {e.args}, retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+                continue
+            else:
+                # 如果不是超时错误，或者已经达到最大重试次数，则返回错误
+                print("_call_zcash_contract error:", e.args)
+                ret = e.args
+                tx_result = e.args
+                return ret if ret is not None else tx_result
+    
+    # 如果所有重试都失败了，返回最后的异常
+    print("_call_zcash_contract error (all retries failed):", last_exception.args if last_exception else "Unknown error")
+    if last_exception:
+        ret = last_exception.args
+        tx_result = last_exception.args
+        return ret if ret is not None else tx_result
+    return None
 
 
 def _hash160_to_address(hash_bytes: bytes) -> str:
