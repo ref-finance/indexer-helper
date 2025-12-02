@@ -1857,17 +1857,18 @@ def handle_zcash_business():
 def handle_zcash_adding():
     am_id = request.args.get("am_id", type=str, default="")
     mca_id = request.args.get("mca_id", type=str, default="")
+    nonce = request.args.get("nonce", type=str, default="")
     ret = {
         "code": 0,
         "msg": "success",
         "data": ""
     }
-    if am_id == "" or mca_id == "":
+    if am_id == "" or mca_id == "" or nonce == "":
         ret["code"] = -1
         ret["msg"] = "error"
         ret["data"] = "request parameter error"
         return jsonify(ret)
-    path_data = {"am_id": am_id, "mca_id": mca_id}
+    path_data = {"am_id": am_id, "mca_id": mca_id, "nonce": nonce}
     deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 3, 0, "")
     ret["data"] = deposit_address
     return jsonify(ret)
