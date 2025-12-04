@@ -15,6 +15,26 @@ from near_multinode_rpc_provider import MultiNodeJsonProvider
 from db_provider import add_multichain_lending_zcash_data
 from near_api.account import Account
 from near_api.providers import JsonProvider as NearJsonProvider
+
+
+class CustomZcashJsonProvider(NearJsonProvider):
+    def __init__(self, rpc_addr, tx_timeout=30, query_timeout=10):
+        super().__init__(rpc_addr)
+        self._tx_timeout = tx_timeout
+        self._query_timeout = query_timeout
+    
+    def send_tx_and_wait(self, signed_tx, timeout=None):
+        return self.json_rpc('broadcast_tx_commit', [base64.b64encode(signed_tx).decode('utf8')], timeout=self._tx_timeout)
+    
+    def json_rpc(self, method, params, timeout=None):
+        if timeout is None:
+            timeout = self._query_timeout
+        return super().json_rpc(method, params, timeout=timeout)
+    
+    def get_status(self):
+        return self.json_rpc('status', [None])
+
+
 from near_api.signer import Signer, KeyPair
 
 # Try to use hashlib for RIPEMD160, fallback to pycryptodome if not available
@@ -31,8 +51,6 @@ except (ValueError, AttributeError):
     except ImportError:
         raise ImportError("RIPEMD160 not available. Please install pycryptodome: pip install pycryptodome")
 
-
-DEFAULT_ZCASH_RPC_URL = "https://go.getblock.io/88e3cf13488c4b63959f67ebc83b3211/"
 
 DEFAULT_FUNCTION_CALL_GAS = 300000000000000
 DEFAULT_FUNCTION_CALL_DEPOSIT = 1  # yoctoNEAR
@@ -78,10 +96,6 @@ class Blake2b32(hashes.HashAlgorithm):
     name = "blake2b32"
     digest_size = 32
     block_size = 128
-
-
-def _int_to_le_bytes(value: int, length: int) -> bytes:
-    return value.to_bytes(length, byteorder="little", signed=value < 0)
 
 
 def _read_compact_size(data: bytes, offset: int) -> Tuple[int, int]:
@@ -260,6 +274,7 @@ class TransactionV5:
         personalization[12:] = self.consensus_branch_id.to_bytes(4, "little")
         return _blake2b_personal(bytes(data), bytes(personalization))
 
+
 def _get_near_rpc_url(network_id):
     rpc_urls = Cfg.NETWORK[network_id]["NEAR_RPC_URL"]
     if isinstance(rpc_urls, (list, tuple)) and len(rpc_urls) > 0:
@@ -273,7 +288,10 @@ def _build_near_account(network_id):
     if not signer_id or not signer_private_key:
         raise ValueError("ZCASH signer credentials are not configured in Cfg")
     rpc_url = _get_near_rpc_url(network_id)
-    provider = NearJsonProvider(rpc_url)
+    tx_timeout = getattr(Cfg, "ZCASH_TX_TIMEOUT", 30)
+    query_timeout = getattr(Cfg, "ZCASH_QUERY_TIMEOUT", 10)
+    provider = CustomZcashJsonProvider(rpc_url, tx_timeout=tx_timeout, query_timeout=query_timeout)
+    print(f"Using CustomZcashJsonProvider with tx_timeout={tx_timeout}s, query_timeout={query_timeout}s")
     key_pair = KeyPair(signer_private_key)
     signer = Signer(signer_id, key_pair)
     return Account(provider, signer, signer_id)
@@ -319,18 +337,20 @@ def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposi
             return ret if ret is not None else tx_result
         except Exception as e:
             last_exception = e
-            # 检查是否是 ReadTimeoutError
             is_timeout_error = False
             error_str = str(e)
             error_args_str = str(e.args) if e.args else ""
+            error_repr = repr(e)
             
-            # 检查错误类型或错误信息中是否包含 ReadTimeoutError
-            if "ReadTimeoutError" in error_str or "ReadTimeoutError" in error_args_str:
-                is_timeout_error = True
-            # 也检查 urllib3 的 ReadTimeoutError
+            timeout_keywords = ["ReadTimeoutError", "Read timed out", "timeout", "timed out"]
+            for keyword in timeout_keywords:
+                if keyword in error_str or keyword in error_args_str or keyword in error_repr:
+                    is_timeout_error = True
+                    print(f"_call_zcash_contract detected timeout keyword '{keyword}' in error")
+                    break
+            
             try:
                 from urllib3.exceptions import ReadTimeoutError as Urllib3ReadTimeoutError
-                # 检查异常本身或其原因链中是否有 ReadTimeoutError
                 current_exception = e
                 while current_exception:
                     if isinstance(current_exception, Urllib3ReadTimeoutError):
@@ -339,7 +359,6 @@ def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposi
                     current_exception = getattr(current_exception, '__cause__', None) or getattr(current_exception, 'reason', None)
             except ImportError:
                 pass
-            # 检查 requests 的 ReadTimeout
             try:
                 from requests.exceptions import ReadTimeout as RequestsReadTimeout
                 current_exception = e
@@ -351,58 +370,25 @@ def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposi
             except ImportError:
                 pass
             
-            # 如果是超时错误且还有重试机会，则重试
             if is_timeout_error and attempt < max_retries - 1:
                 print(f"_call_zcash_contract error (attempt {attempt + 1}/{max_retries}): {e.args}, retrying in {retry_delay}s...")
                 time.sleep(retry_delay)
                 continue
             else:
-                # 如果不是超时错误，或者已经达到最大重试次数，则返回错误
-                print("_call_zcash_contract error:", e.args)
+                if not is_timeout_error:
+                    print(f"_call_zcash_contract error (not a timeout error): {e.args}")
+                else:
+                    print(f"_call_zcash_contract error (max retries reached): {e.args}")
                 ret = e.args
                 tx_result = e.args
                 return ret if ret is not None else tx_result
     
-    # 如果所有重试都失败了，返回最后的异常
     print("_call_zcash_contract error (all retries failed):", last_exception.args if last_exception else "Unknown error")
     if last_exception:
         ret = last_exception.args
         tx_result = last_exception.args
         return ret if ret is not None else tx_result
     return None
-
-
-def _hash160_to_address(hash_bytes: bytes) -> str:
-    version = b"\x1C\xB8"
-    payload = version + hash_bytes
-    checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
-    return base58.b58encode(payload + checksum).decode("utf-8")
-
-
-def _parse_script(script: bytes):
-    if (
-        len(script) == 25
-        and script[0] == 0x76
-        and script[1] == 0xA9
-        and script[2] == 0x14
-        and script[23] == 0x88
-        and script[24] == 0xAC
-    ):
-        return ("p2pkh", script[3:23])
-    if (
-        len(script) == 23
-        and script[0] == 0xA9
-        and script[1] == 0x14
-        and script[22] == 0x87
-    ):
-        return ("p2sh", script[2:22])
-    if (len(script) in (35, 67)) and script[-1] == 0xAC:
-        pub_len = script[0]
-        if pub_len in (33, 65) and pub_len == len(script) - 2:
-            return ("p2pk", script[1:-1])
-    if script and script[0] == 0x6A:
-        return ("nulldata", script[1:])
-    return ("unknown", script)
 
 
 def _parse_script_push(script_sig: bytes) -> List[bytes]:
@@ -557,28 +543,6 @@ def internal_verify_v5_py(
     )
 
 
-def get_raw_transaction(tx_hash, verbose=1, rpc_url=None, timeout=10, rpc_id="getblock.io"):
-    try:
-        payload = {
-            "jsonrpc": "2.0",
-            "method": "getrawtransaction",
-            "params": [tx_hash, verbose],
-            "id": rpc_id
-        }
-        url = rpc_url or DEFAULT_ZCASH_RPC_URL
-        response = requests.post(url, headers={"Content-Type": "application/json"}, json=payload, timeout=timeout)
-        response.raise_for_status()
-        data = response.json()
-        if data.get("error"):
-            print(f"get_raw_transaction error: {data['error']}")
-            print(f"request tx_hash:", tx_hash)
-            return None
-        return data.get("result", data)
-    except Exception as e:
-        print("get_raw_transaction error:", e)
-        raise
-
-
 def pubkey_to_zcash_address(pubkey_bytes: bytes) -> str:
     # Step 1: Calculate SHA256
     sha256_hash = hashlib.sha256(pubkey_bytes).digest()
@@ -699,7 +663,6 @@ def get_mca_by_wallet(network_id, encryption_pubkey):
 
 
 class ZcashRPC:
-    """Zcash RPC客户端"""
 
     def __init__(self, user: str = Cfg.ZCASH_RPC_USER, password: str = Cfg.ZCASH_RPC_PWD,
                  host: str = Cfg.ZCASH_RPC_URL, port: int = 8232):
@@ -708,7 +671,6 @@ class ZcashRPC:
         self.headers = {'content-type': 'application/json'}
 
     def call(self, method: str, params: Any = None) -> Any:
-        """执行RPC调用"""
         payload = {
             "jsonrpc": "2.0",
             "id": "python-client",
@@ -733,22 +695,11 @@ class ZcashRPC:
             return result.get('result')
 
         except requests.exceptions.RequestException as e:
-            raise Exception(f"连接错误: {e}")
+            raise Exception(f"Connection error: {e}")
 
     def getaddresstxids(self, addresses: List[str],
                        start: Optional[int] = None,
                        end: Optional[int] = None) -> List[str]:
-        """
-        获取指定地址的所有交易ID
-
-        Args:
-            addresses: 地址列表
-            start: 起始区块高度（可选）
-            end: 结束区块高度（可选）
-
-        Returns:
-            交易ID列表（按区块高度排序）
-        """
         params = {"addresses": addresses}
 
         if start is not None:
@@ -759,33 +710,13 @@ class ZcashRPC:
         return self.call("getaddresstxids", [params])
 
     def getaddressbalance(self, addresses: List[str]) -> Dict:
-        """获取地址余额"""
         params = {"addresses": addresses}
         return self.call("getaddressbalance", [params])
 
-    def getaddressdeltas(self, addresses: List[str],
-                        start: Optional[int] = None,
-                        end: Optional[int] = None) -> List[Dict]:
-        """获取地址的所有余额变动"""
-        params = {"addresses": addresses}
-
-        if start is not None:
-            params["start"] = start
-        if end is not None:
-            params["end"] = end
-
-        return self.call("getaddressdeltas", [params])
-
     def getrawtransaction(self, txid: str, verbose: int = 1) -> Dict:
-        """获取交易详情"""
         return self.call("getrawtransaction", [txid, verbose])
 
-    def getblockcount(self) -> int:
-        """获取当前区块高度"""
-        return self.call("getblockcount")
-
     def decoderawtransaction(self, hex_data: str) -> Dict:
-        """根据tx原文解码"""
         return self.call("decoderawtransaction", [hex_data])
 
 
