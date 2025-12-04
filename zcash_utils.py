@@ -315,7 +315,6 @@ def _decode_success_value(tx_result):
 
 
 def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposit=None, max_retries=3, retry_delay=2):
-    account = _build_near_account(network_id)
     gas_amount = gas if gas is not None else getattr(Cfg, "ZCASH_VERIFY_GAS", DEFAULT_FUNCTION_CALL_GAS)
     deposit_amount = deposit if deposit is not None else getattr(Cfg, "ZCASH_VERIFY_DEPOSIT",
                                                                  DEFAULT_FUNCTION_CALL_DEPOSIT)
@@ -324,6 +323,8 @@ def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposi
     last_exception = None
     for attempt in range(max_retries):
         try:
+            # Rebuild account for each retry to ensure fresh connection
+            account = _build_near_account(network_id)
             tx_result = account.function_call(
                 contract_id,
                 method_name,
@@ -338,37 +339,114 @@ def _call_zcash_contract(network_id, method_name, request_data, gas=None, deposi
         except Exception as e:
             last_exception = e
             is_timeout_error = False
-            error_str = str(e)
-            error_args_str = str(e.args) if e.args else ""
-            error_repr = repr(e)
             
-            timeout_keywords = ["ReadTimeoutError", "Read timed out", "timeout", "timed out"]
-            for keyword in timeout_keywords:
-                if keyword in error_str or keyword in error_args_str or keyword in error_repr:
-                    is_timeout_error = True
-                    print(f"_call_zcash_contract detected timeout keyword '{keyword}' in error")
+            # 收集异常链中的所有错误字符串
+            error_strings = []
+            current_exception = e
+            while current_exception:
+                error_strings.append(str(current_exception))
+                error_strings.append(repr(current_exception))
+                if hasattr(current_exception, 'args') and current_exception.args:
+                    error_strings.append(str(current_exception.args))
+                current_exception = getattr(current_exception, '__cause__', None) or getattr(current_exception, '__context__', None)
+            
+            # 打印所有收集到的错误字符串用于调试
+            print(f"_call_zcash_contract exception type: {type(e).__name__}, error strings: {error_strings[:3]}")
+            
+            # 检查所有可能的超时关键词（更全面的列表）
+            timeout_keywords = [
+                "timeout", "timed out", "readtimeout", "connecttimeout", "request timeout",
+                "httpconnectionpool", "connection timeout", "read timed out", "connect timed out",
+                "408", "504", "503", "502", "gateway timeout", "service unavailable",
+                "bad gateway", "request timeout", "client error", "server error"
+            ]
+            for error_text in error_strings:
+                lower_text = error_text.lower()
+                for keyword in timeout_keywords:
+                    if keyword in lower_text:
+                        is_timeout_error = True
+                        print(f"_call_zcash_contract detected timeout keyword '{keyword}' in error: {error_text[:200]}")
+                        break
+                if is_timeout_error:
                     break
             
+            # 检查异常类型链中的所有可能的超时/连接异常
+            current_exception = e
+            exception_chain = []
+            while current_exception:
+                exception_chain.append(current_exception)
+                current_exception = getattr(current_exception, '__cause__', None) or getattr(current_exception, '__context__', None) or getattr(current_exception, 'reason', None)
+            
+            # 检查 requests 库的异常
             try:
-                from urllib3.exceptions import ReadTimeoutError as Urllib3ReadTimeoutError
-                current_exception = e
-                while current_exception:
-                    if isinstance(current_exception, Urllib3ReadTimeoutError):
+                from requests.exceptions import (
+                    ReadTimeout, ConnectTimeout, Timeout, 
+                    HTTPError, ConnectionError, RequestException
+                )
+                for exc in exception_chain:
+                    # 所有超时相关的异常
+                    if isinstance(exc, (ReadTimeout, ConnectTimeout, Timeout)):
                         is_timeout_error = True
+                        print(f"_call_zcash_contract detected timeout exception: {type(exc).__name__}")
                         break
-                    current_exception = getattr(current_exception, '__cause__', None) or getattr(current_exception, 'reason', None)
+                    # HTTP 错误中的超时状态码
+                    if isinstance(exc, HTTPError):
+                        response = getattr(exc, 'response', None)
+                        if response:
+                            status_code = getattr(response, 'status_code', None)
+                            # 408 Request Timeout, 504 Gateway Timeout, 503 Service Unavailable, 502 Bad Gateway
+                            if status_code in (408, 504, 503, 502):
+                                is_timeout_error = True
+                                print(f"_call_zcash_contract detected HTTP {status_code} timeout status code")
+                                break
+                    # 连接错误也可能是超时导致的
+                    if isinstance(exc, ConnectionError):
+                        # 检查错误信息中是否包含超时相关关键词
+                        exc_str = str(exc).lower()
+                        if any(kw in exc_str for kw in ["timeout", "timed out", "408", "504"]):
+                            is_timeout_error = True
+                            print(f"_call_zcash_contract detected ConnectionError with timeout: {type(exc).__name__}")
+                            break
             except ImportError:
                 pass
+            
+            # 检查 urllib3 库的异常
             try:
-                from requests.exceptions import ReadTimeout as RequestsReadTimeout
-                current_exception = e
-                while current_exception:
-                    if isinstance(current_exception, RequestsReadTimeout):
+                from urllib3.exceptions import (
+                    ReadTimeoutError, ConnectTimeoutError, 
+                    TimeoutError as Urllib3TimeoutError,
+                    HTTPError as Urllib3HTTPError
+                )
+                for exc in exception_chain:
+                    if isinstance(exc, (ReadTimeoutError, ConnectTimeoutError, Urllib3TimeoutError)):
                         is_timeout_error = True
+                        print(f"_call_zcash_contract detected urllib3 timeout exception: {type(exc).__name__}")
                         break
-                    current_exception = getattr(current_exception, '__cause__', None) or getattr(current_exception, 'reason', None)
             except ImportError:
                 pass
+            
+            # 检查 socket 异常（连接超时）
+            try:
+                import socket
+                for exc in exception_chain:
+                    if isinstance(exc, (socket.timeout, socket.error)):
+                        exc_str = str(exc).lower()
+                        if "timeout" in exc_str or "timed out" in exc_str:
+                            is_timeout_error = True
+                            print(f"_call_zcash_contract detected socket timeout: {type(exc).__name__}")
+                            break
+            except ImportError:
+                pass
+            
+            # 检查 OSError/IOError（可能包含连接超时）
+            for exc in exception_chain:
+                if isinstance(exc, (OSError, IOError)):
+                    exc_str = str(exc).lower()
+                    # 检查是否是连接相关的超时错误
+                    if any(kw in exc_str for kw in ["timeout", "timed out", "connection", "408", "504"]):
+                        is_timeout_error = True
+                        print(f"_call_zcash_contract detected OSError/IOError with timeout: {type(exc).__name__}")
+                        break
             
             if is_timeout_error and attempt < max_retries - 1:
                 print(f"_call_zcash_contract error (attempt {attempt + 1}/{max_retries}): {e.args}, retrying in {retry_delay}s...")
