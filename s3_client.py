@@ -163,8 +163,14 @@ def _get_file_extension_from_url(url: str, content_type: str = "") -> str:
 def download_and_upload_image_to_s3(image_url: str, conf: AwsS3Config, 
                                     timeout: int = 30) -> tuple[Optional[str], Optional[Exception]]:
     try:
+        if not image_url or not image_url.lower().startswith(("http://", "https://")):
+            raise ValueError(f"Invalid image url: {image_url}")
         logger.info(f"Downloading image from {image_url}")
-        response = requests.get(image_url, timeout=timeout, stream=True)
+        default_headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; TokenIconFetcher/1.0)",
+            "Accept": "*/*",
+        }
+        response = requests.get(image_url, timeout=timeout, stream=True, headers=default_headers)
         response.raise_for_status()
         image_data = response.content
         if not image_data:

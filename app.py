@@ -28,7 +28,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
     get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, \
     add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, \
-    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account, add_multichain_lending_whitelist
+    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -41,6 +41,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
+from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC
 
 service_version = "20251121.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -330,6 +331,9 @@ def handle_list_pools_by_ids():
     list_pools_by_ids
     """
     ids = request.args.get("ids", "")
+    ids = ids.strip("|")
+    if not ids:
+        return compress_response_content([])
     id_str_list = ids.split("|")
 
     pools = list_pools_by_id_list(Cfg.NETWORK_ID, [int(x) for x in id_str_list])
@@ -1758,12 +1762,15 @@ def handel_multichain_lending_tokens_data():
                         coingecko_ret_data = response.text
                         coingecko_token_data = json.loads(coingecko_ret_data)
                         token_icon = coingecko_token_data["data"]["attributes"]["image_url"]
-                        s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
-                        if upload_error is None and s3_url:
-                            token_icon = s3_url
-                            logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                        if token_icon:
+                            s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
+                            if upload_error is None and s3_url:
+                                token_icon = s3_url
+                                logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                            else:
+                                logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
                         else:
-                            logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
+                            logger.warning("CoinGecko did not return token icon URL, skip uploading")
                         conn.add_multichain_lending_token_icon(contract_address, token_icon)
                     except Exception as e:
                         print("coingecko err:", e.args)
@@ -1799,6 +1806,137 @@ def handel_multichain_lending_whitelist():
     else:
         return "pwd error"
     return compress_response_content(account_address)
+
+
+@app.route('/mca_creation_via_zcash', methods=['GET'])
+def handle_mca_creation_via_zcash():
+    am_id = request.args.get("am_id", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if am_id == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "am_id cannot be empty"
+        return jsonify(ret)
+    import uuid
+    deposit_uuid = str(uuid.uuid4())
+    path_data = {"am_id": am_id, "uuid": deposit_uuid}
+    deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 1, 0, deposit_uuid)
+    ret["data"] = deposit_address
+    return jsonify(ret)
+
+
+@app.route('/zcash_business', methods=['GET'])
+def handle_zcash_business():
+    am_id = request.args.get("am_id", type=str, default="")
+    mca_id = request.args.get("mca_id", type=str, default="")
+    nonce = request.args.get("nonce", type=str, default="")
+    deadline = request.args.get("deadline", type=str, default="")
+    tx_requests = request.args.get("tx_requests", type=str, default="")
+    near_number = request.args.get("near_number", type=float, default=0)
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if am_id == "" or mca_id == "" or nonce == "" or deadline == "" or tx_requests == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    path_data = {"am_id": am_id, "mca_id": mca_id, "nonce": nonce, "deadline": deadline, "tx_requests": json.loads(tx_requests)}
+    deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 2, near_number, "")
+    ret["data"] = deposit_address
+    return jsonify(ret)
+
+
+@app.route('/zcash_adding', methods=['GET'])
+def handle_zcash_adding():
+    am_id = request.args.get("am_id", type=str, default="")
+    mca_id = request.args.get("mca_id", type=str, default="")
+    nonce = request.args.get("nonce", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if am_id == "" or mca_id == "" or nonce == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    path_data = {"am_id": am_id, "mca_id": mca_id, "nonce": nonce}
+    deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 3, 0, "")
+    ret["data"] = deposit_address
+    return jsonify(ret)
+
+
+@app.route('/get_data_by_mca_id', methods=['GET'])
+def handle_data_by_mca_id():
+    address = request.args.get("address", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if address == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    zcash_data = query_multichain_lending_zcash_data(Cfg.NETWORK_ID, address)
+    ret["data"] = zcash_data
+    return jsonify(ret)
+
+
+@app.route('/signed_zcash_adding_application', methods=['GET'])
+def handle_signed_zcash_adding_application():
+    application = request.args.get("application", type=str, default="")
+    signer_wallet = request.args.get("signer_wallet", type=str, default="")
+    signer_signature = request.args.get("signer_signature", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if application == "" or signer_wallet == "" or signer_signature == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    zcash_data = verify_add_zcash(Cfg.NETWORK_ID, application, signer_wallet, signer_signature)
+    ret["data"] = zcash_data
+    return jsonify(ret)
+
+
+@app.route('/get_address_balance', methods=['GET'])
+def handle_address_balance():
+    address = request.args.get("address", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if address == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    try:
+        rpc = ZcashRPC()
+        balance = rpc.getaddressbalance([address])
+        ret_data = {"balance": f"{balance['balance'] / 1e8:.8f}", "received": f"{balance['balance'] / 1e8:.8f}"}
+        ret["data"] = ret_data
+    except Exception as e:
+        print(f"\n❌ error: {e}")
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = e.args
+        return jsonify(ret)
+    return jsonify(ret)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
