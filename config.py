@@ -173,7 +173,7 @@ class Cfg:
             "ORDERLY_CONTRACT": "asset-manager.orderly-network.near",
             "BURROW_CONTRACT": "contract.main.burrow.near",
             "ZCASH_VERIFY_CONTRACT": "zcashtx.verifiers.near",
-            "ZCASH_MA_CONTRACT": "ma.private-mainnet.ref-dev-team.near",
+            "ZCASH_MA_CONTRACT": "multica.near",
             "REDIS_KEY": "FARMS_MAINNET",
             "REDIS_POOL_BY_TOKEN_KEY": "POOLS_BY_TOKEN_MAINNET",
             "REDIS_POOL_KEY": "POOLS_MAINNET",
