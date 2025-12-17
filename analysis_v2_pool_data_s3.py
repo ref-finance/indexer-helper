@@ -97,18 +97,38 @@ def download_file_local(object_name, file_name):
     s3.download_file(BUCKET_NAME, object_name, file_name)
 
 
+def cleanup_local_file(file_path):
+    try:
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+        folder = os.path.dirname(file_path)
+        if folder and folder != "." and os.path.exists(folder) and not os.listdir(folder):
+            os.rmdir(folder)
+    except OSError as exc:
+        print(f"cleanup_local_file error: {exc}")
+
+
 def analysis_v2_pool_data_to_s3(file_name, network_id):
     file_path = download_file_s3(file_name)
-    add_data_to_db(file_path, network_id)
+    try:
+        add_data_to_db(file_path, network_id)
+    finally:
+        cleanup_local_file(file_path)
 
 
 def analysis_v2_pool_account_data_to_s3(file_name, network_id):
     file_path = download_file_s3(file_name)
-    add_dcl_user_liquidity_to_db(file_path, network_id)
+    try:
+        add_dcl_user_liquidity_to_db(file_path, network_id)
+    finally:
+        cleanup_local_file(file_path)
 
     file_name_f = file_name.replace("dcl_user_liquidity_stats", "dcl_user_liquidities")
     file_path_f = download_file_s3(file_name_f)
-    add_dcl_user_liquidity_fee_to_db(file_path_f, network_id)
+    try:
+        add_dcl_user_liquidity_fee_to_db(file_path_f, network_id)
+    finally:
+        cleanup_local_file(file_path_f)
 
 
 if __name__ == "__main__":
