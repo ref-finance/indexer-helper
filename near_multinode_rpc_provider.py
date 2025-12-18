@@ -73,9 +73,9 @@ class MultiNodeJsonProvider(object):
         return self.json_rpc('query', {"request_type": "view_access_key", "account_id": account_id,
                                        "public_key": public_key, "finality": finality})
 
-    def view_call(self, account_id, method_name, args, finality='optimistic'):
+    def view_call(self, account_id, method_name, args, finality='optimistic', timeout=None):
         return self.json_rpc('query', {"request_type": "call_function", "account_id": account_id,
-                                       "method_name": method_name, "args_base64": base64.b64encode(args).decode('utf8'), "finality": finality})
+                                       "method_name": method_name, "args_base64": base64.b64encode(args).decode('utf8'), "finality": finality}, timeout=timeout if timeout is not None else 2)
 
     def get_block(self, block_id):
         return self.json_rpc('block', [block_id])

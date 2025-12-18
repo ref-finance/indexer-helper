@@ -504,10 +504,13 @@ def get_deposit_address(network_id, am_id, path_data, type_data, near_number, de
         method_name = "get_deposit_address"
         request_data_encoded = json.dumps(request_data).encode(encoding='utf-8')
         
-        logger.info(f"get_deposit_address calling view_call: network_id={network_id}, contract_id={contract_id}, method_name={method_name}, request_data={request_data}")
+        # 从配置中获取超时时间，默认30秒
+        view_call_timeout = getattr(Cfg, "ZCASH_VIEW_CALL_TIMEOUT", 30)
+        
+        logger.info(f"get_deposit_address calling view_call: network_id={network_id}, contract_id={contract_id}, method_name={method_name}, request_data={request_data}, timeout={view_call_timeout}s")
         
         conn = MultiNodeJsonProvider(network_id)
-        deposit_address_ret = conn.view_call(contract_id, method_name, request_data_encoded)
+        deposit_address_ret = conn.view_call(contract_id, method_name, request_data_encoded, timeout=view_call_timeout)
         
         logger.info(f"get_deposit_address view_call returned: {deposit_address_ret}")
         
