@@ -15,6 +15,7 @@ from near_multinode_rpc_provider import MultiNodeJsonProvider
 from db_provider import add_multichain_lending_zcash_data
 from near_api.account import Account
 from near_api.providers import JsonProvider as NearJsonProvider
+from loguru import logger
 
 
 class CustomZcashJsonProvider(NearJsonProvider):
@@ -499,14 +500,26 @@ def get_deposit_address(network_id, am_id, path_data, type_data, near_number, de
     deposit_address = ""
     try:
         request_data = {"am_id": am_id, "path": json.dumps(path_data)}
+        contract_id = Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"]
+        method_name = "get_deposit_address"
+        request_data_encoded = json.dumps(request_data).encode(encoding='utf-8')
+        
+        logger.info(f"get_deposit_address calling view_call: network_id={network_id}, contract_id={contract_id}, method_name={method_name}, request_data={request_data}")
+        
         conn = MultiNodeJsonProvider(network_id)
-        deposit_address_ret = conn.view_call(Cfg.NETWORK[network_id]["ZCASH_VERIFY_CONTRACT"], "get_deposit_address", json.dumps(request_data).encode(encoding='utf-8'))
+        deposit_address_ret = conn.view_call(contract_id, method_name, request_data_encoded)
+        
+        logger.info(f"get_deposit_address view_call returned: {deposit_address_ret}")
+        
         if "result" in deposit_address_ret:
             json_str = "".join([chr(x) for x in deposit_address_ret["result"]])
             deposit_address = json.loads(json_str)
+            logger.info(f"get_deposit_address parsed result: deposit_address={deposit_address}")
             add_multichain_lending_zcash_data(network_id, am_id, deposit_address, json.dumps(request_data), type_data, near_number, deposit_uuid)
+        else:
+            logger.warning(f"get_deposit_address view_call result missing 'result' key: {deposit_address_ret}")
     except Exception as e:
-        print("get_deposit_address error:", e)
+        logger.error(f"get_deposit_address error: {e}", exc_info=True)
         return
     return deposit_address
 
@@ -844,3 +857,10 @@ if __name__ == '__main__':
         print("hex_ret:", hex_ret)
     except Exception as e:
         print(f"\n❌ error: {e}")
+
+    import uuid
+    am_id = "multica.near"
+    deposit_uuid = str(uuid.uuid4())
+    path_data = {"am_id": am_id, "uuid": deposit_uuid}
+    deposit_address = get_deposit_address(Cfg.NETWORK_ID, am_id, path_data, 1, 0, deposit_uuid)
+    print("deposit_address:", deposit_address)
