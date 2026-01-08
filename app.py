@@ -16,7 +16,7 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id,
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
     get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, \
-    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon
+    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon, get_lst_total_fee, get_lst_total_revenue, get_cross_chain_total_fee, get_cross_chain_total_revenue
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -1174,10 +1174,19 @@ def handel_get_total_fee():
         ret = {
             "total_fee": str(total_fee),
         }
+        lst_total_fee = get_lst_total_fee()
+        burrow_total_fee = get_burrow_total_fee()
+        cross_chain_total_fee = get_cross_chain_total_fee()
+        fee_data = {
+            "lst_fee": lst_total_fee,
+            "burrow_fee": burrow_total_fee,
+            "cross_chain_fee": cross_chain_total_fee
+        }
         ret_data = {
             "code": 0,
             "msg": "success",
-            "data": ret
+            "data": ret,
+            "fee_data": fee_data
         }
     except Exception as e:
         logger.info("handel_get_total_fee error:{}", e.args)
@@ -1199,10 +1208,19 @@ def handel_get_total_revenue():
             "data": ret["data"]
         }
     else:
+        lst_total_revenue = get_lst_total_revenue()
+        burrow_total_revenue = get_burrow_total_revenue()
+        cross_chain_total_revenue = get_cross_chain_total_revenue()
+        revenue_data = {
+            "lst_revenue": lst_total_revenue,
+            "burrow_revenue": burrow_total_revenue,
+            "cross_chain_revenue": cross_chain_total_revenue
+        }
         ret_data = {
             "code": 0,
             "msg": "success",
-            "data": {"total_revenue": str(float(ret["data"]["total_fee"]) * 0.2)}
+            "data": {"total_revenue": str(float(ret["data"]["total_fee"]) * 0.2)},
+            "revenue_data": revenue_data
         }
     return jsonify(ret_data)
 
