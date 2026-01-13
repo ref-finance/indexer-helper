@@ -495,6 +495,34 @@ def get_multichain_lending_token_icon(token):
     return ret
 
 
+def get_lst_total_fee_24h():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("LST_TOTAL_FEE_24H")
+    r.close()
+    return ret
+
+
+def get_lst_total_revenue_24h():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("LST_TOTAL_REVENUE_24H")
+    r.close()
+    return ret
+
+
+def get_cross_chain_total_fee_24h():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("CROSS_CHAIN_TOTAL_FEE_24H")
+    r.close()
+    return ret
+
+
+def get_cross_chain_total_revenue_24h():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("CROSS_CHAIN_TOTAL_REVENUE_24H")
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
