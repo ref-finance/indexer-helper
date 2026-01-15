@@ -41,7 +41,7 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
-from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC
+from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
 
 service_version = "20260109.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1908,6 +1908,50 @@ def handle_data_by_mca_id():
     zcash_data = query_multichain_lending_zcash_data(Cfg.NETWORK_ID, address)
     ret["data"] = zcash_data
     return jsonify(ret)
+
+
+@app.route('/evm_mpc_call', methods=['POST'])
+def handle_evm_mpc_call():
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    
+    try:
+        # 获取请求数据，直接接收的 JSON 就是调用合约需要的 JSON
+        if not request.is_json:
+            ret["code"] = -1
+            ret["msg"] = "error"
+            ret["data"] = "Request must be JSON format"
+            return jsonify(ret)
+        
+        request_data = request.get_json()
+        
+        if not request_data or not isinstance(request_data, dict):
+            ret["code"] = -1
+            ret["msg"] = "error"
+            ret["data"] = "Request body must be a non-empty JSON object"
+            return jsonify(ret)
+        
+        # 调用合约方法 request_signature
+        result = call_evm_mpc_contract(Cfg.NETWORK_ID, request_data)
+        
+        # 如果返回结果包含错误，设置错误码
+        if isinstance(result, dict) and "error" in result:
+            ret["code"] = -1
+            ret["msg"] = "error"
+            ret["data"] = result["error"]
+        else:
+            ret["data"] = result
+        
+        return jsonify(ret)
+    except Exception as e:
+        logger.error(f"handle_evm_mpc_call error: {e}")
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = str(e)
+        return jsonify(ret)
 
 
 @app.route('/signed_zcash_adding_application', methods=['GET'])

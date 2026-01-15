@@ -560,6 +560,31 @@ def verify_add_zcash(network_id, application, signer_wallet, signer_signature):
         return
 
 
+def call_evm_mpc_contract(network_id, request_data):
+    try:
+        # 从配置获取合约地址
+        contract_id = Cfg.NETWORK[network_id].get("EVM_MPC_CONTRACT", "evm_mpc_addr_agent.stg.ref-dev-team.near")
+        
+        # 使用 _build_near_account 构建 Account 对象
+        account = _build_near_account(network_id)
+        
+        # 调用合约方法 request_signature，deposit 固定为 1 yoctoNEAR
+        tx_result = account.function_call(
+            contract_id,
+            "request_signature",
+            request_data,
+            gas=300000000000000,  # 默认 gas
+            amount=1  # 固定为 1 yoctoNEAR
+        )
+        
+        return tx_result
+    except Exception as e:
+        # 直接返回错误信息
+        error_msg = str(e)
+        print(f"call_evm_mpc_contract error: {error_msg}")
+        return {"error": error_msg}
+
+
 def _normalize_previous_outputs(previous_outputs: List[Union[PreviousOutput, Tuple[Union[str, int], Union[str, bytes]], dict]]) -> List[PreviousOutput]:
     normalized = []
     for item in previous_outputs:
