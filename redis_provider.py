@@ -523,6 +523,13 @@ def get_cross_chain_total_revenue_24h():
     return ret
 
 
+def get_cross_chain_total_volume_24h():
+    r = redis.StrictRedis(connection_pool=pool)
+    ret = r.get("CROSS_CHAIN_TOTAL_VOLUME_24H")
+    r.close()
+    return ret
+
+
 class RedisProvider(object):
 
     def __init__(self):
