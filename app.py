@@ -16,7 +16,9 @@ from redis_provider import list_token_price_by_id_list, get_proposal_hash_by_id,
 from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, get_dcl_pools_tvl_list, \
     get_token_price_ratio_report, get_history_token_price_report, get_market_token_price, get_burrow_total_fee, \
     get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, \
-    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon, get_lst_total_fee_24h, get_lst_total_revenue_24h, get_cross_chain_total_fee_24h, get_cross_chain_total_revenue_24h
+    get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, \
+    get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon, get_lst_total_fee_24h, \
+    get_lst_total_revenue_24h, get_cross_chain_total_fee_24h, get_cross_chain_total_revenue_24h, get_cross_chain_total_volume_24h
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -41,9 +43,9 @@ import requests
 from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
-from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC
+from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
 
-service_version = "20260109.01"
+service_version = "20260123.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1910,6 +1912,50 @@ def handle_data_by_mca_id():
     return jsonify(ret)
 
 
+@app.route('/evm_mpc_call', methods=['POST'])
+def handle_evm_mpc_call():
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    
+    try:
+        # 获取请求数据，直接接收的 JSON 就是调用合约需要的 JSON
+        if not request.is_json:
+            ret["code"] = -1
+            ret["msg"] = "error"
+            ret["data"] = "Request must be JSON format"
+            return jsonify(ret)
+        
+        request_data = request.get_json()
+        
+        if not request_data or not isinstance(request_data, dict):
+            ret["code"] = -1
+            ret["msg"] = "error"
+            ret["data"] = "Request body must be a non-empty JSON object"
+            return jsonify(ret)
+        
+        # 调用合约方法 request_signature
+        result = call_evm_mpc_contract(Cfg.NETWORK_ID, request_data)
+        
+        # 如果返回结果包含错误，设置错误码
+        if isinstance(result, dict) and "error" in result:
+            ret["code"] = -1
+            ret["msg"] = "error"
+            ret["data"] = result["error"]
+        else:
+            ret["data"] = result
+        
+        return jsonify(ret)
+    except Exception as e:
+        logger.error(f"handle_evm_mpc_call error: {e}")
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = str(e)
+        return jsonify(ret)
+
+
 @app.route('/signed_zcash_adding_application', methods=['GET'])
 def handle_signed_zcash_adding_application():
     application = request.args.get("application", type=str, default="")
@@ -1954,6 +2000,17 @@ def handle_address_balance():
         ret["msg"] = "error"
         ret["data"] = e.args
         return jsonify(ret)
+    return jsonify(ret)
+
+
+@app.route('/get_cross_chain_total_volume_24h', methods=['GET'])
+def handle_cross_chain_total_volume_24h():
+    chain_total_volume_24h = get_cross_chain_total_volume_24h()
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": chain_total_volume_24h
+    }
     return jsonify(ret)
 
 
