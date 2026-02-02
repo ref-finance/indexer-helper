@@ -1951,7 +1951,7 @@ def handle_evm_mpc_call():
             cached_result = query_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet_str, payload, proof)
             if cached_result is not None:
                 # 数据库中有缓存，直接返回
-                ret["data"] = cached_result
+                ret["data"] = json.loads(cached_result)
                 return jsonify(ret)
         
         # 数据库中没有缓存，调用合约方法 request_signature
