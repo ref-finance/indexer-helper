@@ -2014,6 +2014,14 @@ def handle_cross_chain_total_volume_24h():
     return jsonify(ret)
 
 
+@app.route('/proxy/prove', methods=['POST'])
+def handle_proxy_prove():
+    request_data = request.get_json()
+    estimate_ret = requests.post('http://10.10.0.2:3000/prove', json=request_data).content
+    result = json.loads(estimate_ret)
+    return result
+
+
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 log_file = "app-%s.log" % current_date
 logger.add(log_file)
