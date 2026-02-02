@@ -2002,6 +2002,60 @@ def add_multichain_lending_whitelist(network_id, account_address):
     return account_address
 
 
+def zcash_get_public_key(network_id, t_address):
+    public_key = ""
+    db_conn = get_db_connect(network_id)
+    query_sql = "select public_key from multichain_lending_zcash_data where t_address = %s order by id desc limit 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (t_address,))
+        ret_data = cursor.fetchone()
+        if ret_data is not None:
+            public_key = ret_data["public_key"]
+    except Exception as e:
+        db_conn.rollback()
+        print("insert zcash_get_public_key to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+    return public_key
+
+
+def query_evm_mpc_call_cache(network_id, wallet, payload, proof):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select result from evm_mpc_call_cache where wallet = %s and payload = %s and proof = %s limit 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (wallet, payload, proof))
+        ret_data = cursor.fetchone()
+        if ret_data is not None:
+            return ret_data["result"]
+        return None
+    except Exception as e:
+        print("query evm_mpc_call_cache to db error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def add_evm_mpc_call_cache(network_id, wallet, payload, proof, result):
+    db_conn = get_db_connect(network_id)
+    sql = "insert into evm_mpc_call_cache(wallet, payload, proof, result, created_at, updated_at) " \
+          "values(%s, %s, %s, %s, now(), now())"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (wallet, payload, proof, result))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert evm_mpc_call_cache to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
 if __name__ == '__main__':
     print("#########MAINNET###########")
     # clear_token_price()
