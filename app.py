@@ -1943,9 +1943,12 @@ def handle_evm_mpc_call():
         payload = request_data.get("payload", "")
         proof = request_data.get("proof", "")
         
+        # wallet 可能是 dict 类型，需要转换为 JSON 字符串用于数据库查询
+        wallet_str = json.dumps(wallet) if isinstance(wallet, dict) else str(wallet) if wallet else ""
+        
         # 先查询数据库是否有缓存数据
-        if wallet and payload and proof:
-            cached_result = query_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet, payload, proof)
+        if wallet_str and payload and proof:
+            cached_result = query_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet_str, payload, proof)
             if cached_result is not None:
                 # 数据库中有缓存，直接返回
                 ret["data"] = cached_result
@@ -1962,11 +1965,11 @@ def handle_evm_mpc_call():
         else:
             ret["data"] = result
             # 调用成功后，将结果存入数据库缓存
-            if wallet and payload and proof:
+            if wallet_str and payload and proof:
                 try:
                     # 将 result 转换为字符串存储
                     result_str = json.dumps(result) if isinstance(result, (dict, list)) else str(result)
-                    add_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet, payload, proof, result_str)
+                    add_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet_str, payload, proof, result_str)
                 except Exception as cache_error:
                     logger.error(f"Failed to cache evm_mpc_call result: {cache_error}")
         
