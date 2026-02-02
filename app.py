@@ -30,7 +30,9 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_meme_burrow_log, get_whitelisted_tokens_to_db, query_conversion_token_record, get_token_day_data_list, \
     get_conversion_token_day_data_list, get_rhea_token_day_data_list, add_user_swap_record, \
     add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, \
-    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data
+    query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, \
+    query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data, zcash_get_public_key, \
+    query_evm_mpc_call_cache, add_evm_mpc_call_cache
 import re
 # from flask_limiter import Limiter
 from loguru import logger
@@ -45,7 +47,7 @@ from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
 
-service_version = "20260123.01"
+service_version = "20260202.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1936,7 +1938,20 @@ def handle_evm_mpc_call():
             ret["data"] = "Request body must be a non-empty JSON object"
             return jsonify(ret)
         
-        # 调用合约方法 request_signature
+        # 从请求数据中提取 wallet, payload, proof 参数
+        wallet = request_data.get("wallet", "")
+        payload = request_data.get("payload", "")
+        proof = request_data.get("proof", "")
+        
+        # 先查询数据库是否有缓存数据
+        if wallet and payload and proof:
+            cached_result = query_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet, payload, proof)
+            if cached_result is not None:
+                # 数据库中有缓存，直接返回
+                ret["data"] = cached_result
+                return jsonify(ret)
+        
+        # 数据库中没有缓存，调用合约方法 request_signature
         result = call_evm_mpc_contract(Cfg.NETWORK_ID, request_data)
         
         # 如果返回结果包含错误，设置错误码
@@ -1946,6 +1961,14 @@ def handle_evm_mpc_call():
             ret["data"] = result["error"]
         else:
             ret["data"] = result
+            # 调用成功后，将结果存入数据库缓存
+            if wallet and payload and proof:
+                try:
+                    # 将 result 转换为字符串存储
+                    result_str = json.dumps(result) if isinstance(result, (dict, list)) else str(result)
+                    add_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet, payload, proof, result_str)
+                except Exception as cache_error:
+                    logger.error(f"Failed to cache evm_mpc_call result: {cache_error}")
         
         return jsonify(ret)
     except Exception as e:
@@ -2020,6 +2043,24 @@ def handle_proxy_prove():
     estimate_ret = requests.post('http://10.10.0.2:3000/prove', json=request_data).content
     result = json.loads(estimate_ret)
     return result
+
+
+@app.route('/zcash_get_public_key', methods=['GET'])
+def handle_zcash_get_public_key():
+    t_address = request.args.get("t_address", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if t_address == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    public_key = zcash_get_public_key(Cfg.NETWORK_ID, t_address)
+    ret["data"] = public_key
+    return jsonify(ret)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
