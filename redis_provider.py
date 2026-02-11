@@ -4,6 +4,8 @@ from config import Cfg
 import redis
 from data_utils import get_redis_data, batch_get_redis_data
 from cachetools import TTLCache
+from typing import Dict
+import time
 
 pool = redis.ConnectionPool(host=Cfg.REDIS["REDIS_HOST"], port=int(Cfg.REDIS["REDIS_PORT"]), decode_responses=True)
 cache = TTLCache(maxsize=10000, ttl=20)
@@ -528,6 +530,46 @@ def get_cross_chain_total_volume_24h():
     ret = r.get("CROSS_CHAIN_TOTAL_VOLUME_24H")
     r.close()
     return ret
+
+
+def get_chain_prices(chain: str, max_age_seconds: int = None) -> Dict[str, str]:
+    redis_provider = RedisProvider()
+    redis_key = f"{Cfg.REDIS_TOKEN_PRICE_PREFIX}:{chain}"
+    timestamp_key = f"{Cfg.REDIS_TOKEN_PRICE_PREFIX}:{chain}:timestamp"
+
+    if max_age_seconds is not None:
+        timestamp_str = redis_provider.r.get(timestamp_key)
+        if timestamp_str:
+            timestamp = int(timestamp_str)
+            current_time = int(time.time())
+            if current_time - timestamp > max_age_seconds:
+                redis_provider.close()
+                return {}
+
+    prices = redis_provider.r.hgetall(redis_key)
+    redis_provider.close()
+    return prices
+
+
+def get_multichain_token_price(chain: str, address: str, max_age_seconds: int = None) -> str:
+    redis_provider = RedisProvider()
+    redis_key = f"{Cfg.REDIS_TOKEN_PRICE_PREFIX}:{chain}"
+    timestamp_key = f"{Cfg.REDIS_TOKEN_PRICE_PREFIX}:{chain}:timestamp"
+
+    if max_age_seconds is not None:
+        timestamp_str = redis_provider.r.get(timestamp_key)
+        if not timestamp_str:
+            redis_provider.close()
+            return ""
+        timestamp = int(timestamp_str)
+        current_time = int(time.time())
+        if current_time - timestamp > max_age_seconds:
+            redis_provider.close()
+            return ""
+
+    price = redis_provider.r.hget(redis_key, address.lower())
+    redis_provider.close()
+    return price
 
 
 class RedisProvider(object):

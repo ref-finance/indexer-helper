@@ -2,11 +2,10 @@
 # -*- coding:utf-8 -*-
 __author__ = 'Marco'
 
-# Import flask class
-from http.client import responses
 from flask import Flask
 from flask import request
 from flask import jsonify
+from flask import Response
 import json
 import logging
 from indexer_provider import get_proposal_id_hash
@@ -18,7 +17,7 @@ from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, 
     get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, \
     get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, \
     get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon, get_lst_total_fee_24h, \
-    get_lst_total_revenue_24h, get_cross_chain_total_fee_24h, get_cross_chain_total_revenue_24h, get_cross_chain_total_volume_24h
+    get_lst_total_revenue_24h, get_cross_chain_total_fee_24h, get_cross_chain_total_revenue_24h, get_cross_chain_total_volume_24h, get_chain_prices
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -33,8 +32,6 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, \
     query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data, zcash_get_public_key, \
     query_evm_mpc_call_cache, add_evm_mpc_call_cache
-import re
-# from flask_limiter import Limiter
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import datetime
@@ -46,6 +43,8 @@ from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
+from bitget_utils import proxy_bitget_request
+from proxy_api_utils import proxy_api_request
 
 service_version = "20260202.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -1793,22 +1792,23 @@ def handel_multichain_lending_tokens_data():
                                 logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
                         else:
                             logger.warning("CoinGecko did not return token icon URL, skip uploading")
+                            token_icon = ""
                         conn.add_multichain_lending_token_icon(contract_address, token_icon)
                     except Exception as e:
                         print("coingecko err:", e.args)
                 
-                is_s3_url = token_icon and (f"{Cfg.Bucket}.s3.amazonaws.com" in token_icon or f"s3.amazonaws.com/{Cfg.Bucket}" in token_icon)
-                if token_icon and token_icon.startswith("http") and not is_s3_url:
-                    try:
-                        s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
-                        if upload_error is None and s3_url:
-                            conn.add_multichain_lending_token_icon(contract_address, s3_url)
-                            token_icon = s3_url
-                            logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
-                        else:
-                            logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
-                    except Exception as upload_e:
-                        logger.error(f"Error uploading token icon to S3: {upload_e}, using original URL")
+                # is_s3_url = token_icon and (f"{Cfg.Bucket}.s3.amazonaws.com" in token_icon or f"s3.amazonaws.com/{Cfg.Bucket}" in token_icon)
+                # if token_icon and token_icon.startswith("http") and not is_s3_url:
+                #     try:
+                #         s3_url, upload_error = download_and_upload_image_to_s3(token_icon, s3_config)
+                #         if upload_error is None and s3_url:
+                #             conn.add_multichain_lending_token_icon(contract_address, s3_url)
+                #             token_icon = s3_url
+                #             logger.info(f"Successfully uploaded token icon to S3: {s3_url}")
+                #         else:
+                #             logger.warning(f"Failed to upload token icon to S3: {upload_error}, using original URL")
+                #     except Exception as upload_e:
+                #         logger.error(f"Error uploading token icon to S3: {upload_e}, using original URL")
                 
                 token_data["icon"] = token_icon
                 ret_token_data.append(token_data)
@@ -1943,12 +1943,15 @@ def handle_evm_mpc_call():
         payload = request_data.get("payload", "")
         proof = request_data.get("proof", "")
         
+        # wallet 可能是 dict 类型，需要转换为 JSON 字符串用于数据库查询
+        wallet_str = json.dumps(wallet) if isinstance(wallet, dict) else str(wallet) if wallet else ""
+        
         # 先查询数据库是否有缓存数据
-        if wallet and payload and proof:
-            cached_result = query_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet, payload, proof)
+        if wallet_str and payload and proof:
+            cached_result = query_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet_str, payload, proof)
             if cached_result is not None:
                 # 数据库中有缓存，直接返回
-                ret["data"] = cached_result
+                ret["data"] = json.loads(cached_result)
                 return jsonify(ret)
         
         # 数据库中没有缓存，调用合约方法 request_signature
@@ -1962,11 +1965,11 @@ def handle_evm_mpc_call():
         else:
             ret["data"] = result
             # 调用成功后，将结果存入数据库缓存
-            if wallet and payload and proof:
+            if wallet_str and payload and proof:
                 try:
                     # 将 result 转换为字符串存储
                     result_str = json.dumps(result) if isinstance(result, (dict, list)) else str(result)
-                    add_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet, payload, proof, result_str)
+                    add_evm_mpc_call_cache(Cfg.NETWORK_ID, wallet_str, payload, proof, result_str)
                 except Exception as cache_error:
                     logger.error(f"Failed to cache evm_mpc_call result: {cache_error}")
         
@@ -2061,6 +2064,173 @@ def handle_zcash_get_public_key():
     public_key = zcash_get_public_key(Cfg.NETWORK_ID, t_address)
     ret["data"] = public_key
     return jsonify(ret)
+
+
+@app.route('/get_chain_prices', methods=['GET'])
+def handle_get_chain_prices():
+    chain = request.args.get("chain", type=str, default="")
+    ret = {
+        "code": 0,
+        "msg": "success",
+        "data": ""
+    }
+    if chain == "":
+        ret["code"] = -1
+        ret["msg"] = "error"
+        ret["data"] = "request parameter error"
+        return jsonify(ret)
+    price_data = get_chain_prices(chain)
+    ret["data"] = price_data
+    return jsonify(ret)
+
+
+@app.route('/proxy/bitget', methods=['POST'])
+def handle_proxy_bitget():
+    try:
+        if not request.is_json:
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "Request must be JSON format"
+            })
+
+        request_data = request.get_json()
+        if not request_data or not isinstance(request_data, dict):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "Request body must be a non-empty JSON object"
+            })
+
+        api_path = request_data.get("apiPath", "")
+        method = request_data.get("method", "POST")
+        body = request_data.get("body", None)
+        query = request_data.get("query", None)
+
+        if not api_path or not isinstance(api_path, str) or not api_path.startswith("/"):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "apiPath is required and must start with '/'"
+            })
+
+        if body is not None and not isinstance(body, dict):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "body must be a JSON object"
+            })
+
+        if query is not None and not isinstance(query, dict):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "query must be a JSON object"
+            })
+
+        allowed_methods = {"GET", "POST", "PUT", "DELETE"}
+        method_upper = str(method).upper()
+        if method_upper not in allowed_methods:
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": f"method must be one of {sorted(allowed_methods)}"
+            })
+
+        result = proxy_bitget_request(
+            api_path=api_path,
+            method=method_upper,
+            body=body,
+            query=query,
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"handle_proxy_bitget error: {e}")
+        return jsonify({
+            "code": -1,
+            "msg": "error",
+            "data": str(e)
+        })
+
+
+@app.route('/proxy/api', methods=['POST'])
+def handle_proxy_api():
+    try:
+        if not request.is_json:
+            return jsonify({
+                "code": -400,
+                "message": "Request must be JSON format"
+            })
+
+        request_data = request.get_json()
+        if not request_data or not isinstance(request_data, dict):
+            return jsonify({
+                "code": -400,
+                "message": "Request body must be a non-empty JSON object"
+            })
+
+        api_path = request_data.get("apiPath", "")
+        method = request_data.get("method", "GET")
+        body = request_data.get("body", None)
+        query = request_data.get("query", None)
+
+        if not api_path or not isinstance(api_path, str) or not api_path.startswith("/"):
+            return jsonify({
+                "code": -400,
+                "message": "apiPath is required and must start with '/'"
+            })
+
+        if body is not None and not isinstance(body, dict):
+            return jsonify({
+                "code": -400,
+                "message": "body must be a JSON object"
+            })
+
+        if query is not None and not isinstance(query, dict):
+            return jsonify({
+                "code": -400,
+                "message": "query must be a JSON object"
+            })
+
+        allowed_methods = {"GET", "POST", "PUT", "DELETE"}
+        method_upper = str(method).upper()
+        if method_upper not in allowed_methods:
+            return jsonify({
+                "code": -400,
+                "message": f"method must be one of {sorted(allowed_methods)}"
+            })
+
+        authorization = request.headers.get("Authorization", "")
+        response = proxy_api_request(
+            base_url=Cfg.PROXY_API_URL,
+            api_path=api_path,
+            method=method_upper,
+            body=body,
+            query=query,
+            authorization=authorization,
+        )
+
+        if response.status_code >= 400:
+            message = response.text
+            try:
+                error_json = response.json()
+                if isinstance(error_json, dict) and "message" in error_json:
+                    message = error_json["message"]
+            except Exception:
+                pass
+            return jsonify({
+                "code": -400,
+                "message": message
+            })
+
+        content_type = response.headers.get("Content-Type", "application/json")
+        return Response(response.content, status=response.status_code, content_type=content_type)
+    except Exception as e:
+        logger.error(f"handle_proxy_api error: {e}")
+        return jsonify({
+            "code": -400,
+            "message": str(e)
+        })
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
