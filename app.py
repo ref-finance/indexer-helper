@@ -5,6 +5,7 @@ __author__ = 'Marco'
 from flask import Flask
 from flask import request
 from flask import jsonify
+from flask import Response
 import json
 import logging
 from indexer_provider import get_proposal_id_hash
@@ -43,6 +44,7 @@ from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
 from bitget_utils import proxy_bitget_request
+from proxy_api_utils import proxy_api_request
 
 service_version = "20260202.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -2148,6 +2150,86 @@ def handle_proxy_bitget():
             "code": -1,
             "msg": "error",
             "data": str(e)
+        })
+
+
+@app.route('/proxy/api', methods=['POST'])
+def handle_proxy_api():
+    try:
+        if not request.is_json:
+            return jsonify({
+                "code": -400,
+                "message": "Request must be JSON format"
+            })
+
+        request_data = request.get_json()
+        if not request_data or not isinstance(request_data, dict):
+            return jsonify({
+                "code": -400,
+                "message": "Request body must be a non-empty JSON object"
+            })
+
+        api_path = request_data.get("apiPath", "")
+        method = request_data.get("method", "GET")
+        body = request_data.get("body", None)
+        query = request_data.get("query", None)
+
+        if not api_path or not isinstance(api_path, str) or not api_path.startswith("/"):
+            return jsonify({
+                "code": -400,
+                "message": "apiPath is required and must start with '/'"
+            })
+
+        if body is not None and not isinstance(body, dict):
+            return jsonify({
+                "code": -400,
+                "message": "body must be a JSON object"
+            })
+
+        if query is not None and not isinstance(query, dict):
+            return jsonify({
+                "code": -400,
+                "message": "query must be a JSON object"
+            })
+
+        allowed_methods = {"GET", "POST", "PUT", "DELETE"}
+        method_upper = str(method).upper()
+        if method_upper not in allowed_methods:
+            return jsonify({
+                "code": -400,
+                "message": f"method must be one of {sorted(allowed_methods)}"
+            })
+
+        authorization = request.headers.get("Authorization", "")
+        response = proxy_api_request(
+            base_url=Cfg.PROXY_API_URL,
+            api_path=api_path,
+            method=method_upper,
+            body=body,
+            query=query,
+            authorization=authorization,
+        )
+
+        if response.status_code >= 400:
+            message = response.text
+            try:
+                error_json = response.json()
+                if isinstance(error_json, dict) and "message" in error_json:
+                    message = error_json["message"]
+            except Exception:
+                pass
+            return jsonify({
+                "code": -400,
+                "message": message
+            })
+
+        content_type = response.headers.get("Content-Type", "application/json")
+        return Response(response.content, status=response.status_code, content_type=content_type)
+    except Exception as e:
+        logger.error(f"handle_proxy_api error: {e}")
+        return jsonify({
+            "code": -400,
+            "message": str(e)
         })
 
 

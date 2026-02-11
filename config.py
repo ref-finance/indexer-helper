@@ -81,11 +81,12 @@ except ImportError:
 
 
 try:
-    from db_info import BITGET_API_KEY, BITGET_API_SECRET, BITGET_PARTNER_CODE
+    from db_info import BITGET_API_KEY, BITGET_API_SECRET, BITGET_PARTNER_CODE, PROXY_API_URL
 except ImportError:
     BITGET_API_KEY = ""
     BITGET_API_SECRET = ""
     BITGET_PARTNER_CODE = ""
+    PROXY_API_URL = ""
 
 
 class Cfg:
@@ -108,6 +109,7 @@ class Cfg:
     BITGET_API_KEY = BITGET_API_KEY
     BITGET_API_SECRET = BITGET_API_SECRET
     BITGET_PARTNER_CODE = BITGET_PARTNER_CODE
+    PROXY_API_URL = PROXY_API_URL
     NETWORK = {
         "DEVNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
