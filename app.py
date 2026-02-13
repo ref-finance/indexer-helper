@@ -31,7 +31,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     add_multichain_lending_requests, query_multichain_lending_config, query_multichain_lending_data, \
     query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, \
     query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data, zcash_get_public_key, \
-    query_evm_mpc_call_cache, add_evm_mpc_call_cache
+    query_evm_mpc_call_cache, add_evm_mpc_call_cache, query_supported_chains, \
+    check_supported_chains_expired, refresh_supported_chains
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import datetime
@@ -43,7 +44,7 @@ from near_multinode_rpc_provider import MultiNodeJsonProvider
 from redis_provider import RedisProvider
 from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
-from bitget_utils import proxy_bitget_request
+from bitget_utils import proxy_bitget_request, proxy_okx_request
 from proxy_api_utils import proxy_api_request
 
 service_version = "20260202.01"
@@ -2231,6 +2232,114 @@ def handle_proxy_api():
             "code": -400,
             "message": str(e)
         })
+
+
+@app.route('/proxy/okx', methods=['POST'])
+def handle_proxy_okx():
+    try:
+        if not request.is_json:
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "Request must be JSON format"
+            })
+
+        request_data = request.get_json()
+        if not request_data or not isinstance(request_data, dict):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "Request body must be a non-empty JSON object"
+            })
+
+        api_path = request_data.get("apiPath", "")
+        method = request_data.get("method", "POST")
+        body = request_data.get("body", None)
+        query = request_data.get("query", None)
+
+        if not api_path or not isinstance(api_path, str) or not api_path.startswith("/"):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "apiPath is required and must start with '/'"
+            })
+
+        if body is not None and not isinstance(body, dict):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "body must be a JSON object"
+            })
+
+        if query is not None and not isinstance(query, dict):
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": "query must be a JSON object"
+            })
+
+        allowed_methods = {"GET", "POST", "PUT", "DELETE"}
+        method_upper = str(method).upper()
+        if method_upper not in allowed_methods:
+            return jsonify({
+                "code": -1,
+                "msg": "error",
+                "data": f"method must be one of {sorted(allowed_methods)}"
+            })
+
+        result = proxy_okx_request(
+            api_path=api_path,
+            method=method_upper,
+            body=body,
+            query=query,
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"handle_proxy_bitget error: {e}")
+        return jsonify({
+            "code": -1,
+            "msg": "error",
+            "data": str(e)
+        })
+
+
+@app.route('/get_supported_chains', methods=['GET'])
+def handle_get_supported_chains():
+    try:
+        if check_supported_chains_expired(Cfg.NETWORK_ID, "okx"):
+            try:
+                okx_result = proxy_okx_request(
+                    api_path="/api/v6/dex/aggregator/supported/chain",
+                    method="GET",
+                    body=None,
+                    query=None,
+                )
+                if okx_result and okx_result.get("code") == "0" and okx_result.get("data"):
+                    okx_chains = okx_result["data"]
+                    if isinstance(okx_chains, list) and len(okx_chains) > 0:
+                        refresh_supported_chains(Cfg.NETWORK_ID, "okx", okx_chains)
+                        logger.info(f"Refreshed OKX supported chains, count: {len(okx_chains)}")
+                    else:
+                        logger.warning("OKX API returned empty chain list, skip refresh")
+                else:
+                    logger.warning(f"OKX API returned unexpected result: {okx_result}")
+            except Exception as okx_err:
+                logger.error(f"Failed to refresh OKX supported chains: {okx_err}")
+
+        chain_data = query_supported_chains(Cfg.NETWORK_ID)
+        ret = {
+            "code": "0",
+            "data": chain_data,
+            "msg": ""
+        }
+    except Exception as e:
+        logger.error(f"handle_get_supported_chains error: {e}")
+        ret = {
+            "code": "-1",
+            "data": {},
+            "msg": str(e)
+        }
+    return jsonify(ret)
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")

@@ -2039,6 +2039,85 @@ def query_evm_mpc_call_cache(network_id, wallet, payload, proof):
         db_conn.close()
 
 
+def query_supported_chains(network_id):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select platform, chain_index, chain_id, chain_name, dex_token_approve_address from supported_chains order by platform, id"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql)
+        rows = cursor.fetchall()
+        result = {}
+        for row in rows:
+            platform = row["platform"]
+            if platform not in result:
+                result[platform] = []
+            result[platform].append({
+                "chainIndex": row["chain_index"],
+                "chainId": row["chain_id"],
+                "chainName": row["chain_name"],
+                "dexTokenApproveAddress": row["dex_token_approve_address"]
+            })
+        return result
+    except Exception as e:
+        print("query supported_chains to db error:", e)
+        return {}
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def check_supported_chains_expired(network_id, platform, max_age_seconds=3600):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select created_at from supported_chains where platform = %s order by created_at desc limit 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (platform,))
+        row = cursor.fetchone()
+        if row is None:
+            return True
+        created_at = row["created_at"]
+        if isinstance(created_at, str):
+            created_at = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
+        now = datetime.utcnow()
+        diff_seconds = (now - created_at).total_seconds()
+        return diff_seconds > max_age_seconds
+    except Exception as e:
+        print("check_supported_chains_expired error:", e)
+        return True
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def refresh_supported_chains(network_id, platform, chains_list):
+    db_conn = get_db_connect(network_id)
+    delete_sql = "delete from supported_chains where platform = %s"
+    insert_sql = "insert into supported_chains(platform, chain_index, chain_id, chain_name, " \
+                 "dex_token_approve_address, created_at, updated_at) values(%s, %s, %s, %s, %s, now(), now())"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(delete_sql, (platform,))
+        insert_data = []
+        for chain in chains_list:
+            insert_data.append((
+                platform,
+                chain.get("chainIndex", ""),
+                chain.get("chainId", ""),
+                chain.get("chainName", ""),
+                chain.get("dexTokenApproveAddress", "")
+            ))
+        if insert_data:
+            cursor.executemany(insert_sql, insert_data)
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("refresh_supported_chains to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
 def add_evm_mpc_call_cache(network_id, wallet, payload, proof, result):
     db_conn = get_db_connect(network_id)
     sql = "insert into evm_mpc_call_cache(wallet, payload, proof, result, created_at, updated_at) " \
