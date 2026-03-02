@@ -46,6 +46,15 @@ from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
 from bitget_utils import proxy_bitget_request, proxy_okx_request
 from proxy_api_utils import proxy_api_request
+from trxx_utils import (
+    trxx_create_order, trxx_query_order, trxx_estimate_price, trxx_get_index_data,
+    trxx_reclaim_order, trxx_transfer_activate, verify_trxx_webhook_signature,
+    verify_frontend_signature, VALID_PERIODS, PERIOD_MAP, start_trxx_scheduler,
+    _notify_third_party,
+)
+from db_provider import create_trxx_order, get_trxx_order_by_id, get_trxx_order_by_serial, \
+    update_trxx_order_status as db_update_trxx_order_status, get_pending_trxx_orders, \
+    trxx_webhook_event_exists, create_trxx_webhook_event
 
 service_version = "20260202.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -2358,9 +2367,319 @@ def handle_get_supported_chains():
     return jsonify(ret)
 
 
+# ============================================================
+# TRXX Energy Rental API (matching TypeScript project routes)
+# ============================================================
+
+@app.route('/api/orders', methods=['POST'])
+def api_create_order():
+    """Create a TRXX energy rental order"""
+    try:
+        if not request.is_json:
+            return jsonify({"errno": -1, "message": "Request must be JSON"}), 400
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"errno": -1, "message": "Request body must be a non-empty JSON object"}), 400
+
+        # Verify frontend signature if FRONTEND_API_SECRET is configured
+        if Cfg.FRONTEND_API_SECRET:
+            ts = request.headers.get("TIMESTAMP", "")
+            sig = request.headers.get("SIGNATURE", "")
+            if not ts or not sig:
+                return jsonify({"errno": -1, "message": "Missing TIMESTAMP or SIGNATURE headers"}), 401
+            valid, err = verify_frontend_signature(ts, body, sig)
+            if not valid:
+                return jsonify({"errno": -1, "message": f"Signature verification failed: {err}"}), 401
+
+        # Validate required fields
+        receive_address = body.get("receiveAddress") or body.get("receive_address")
+        period = body.get("period")
+        energy_amount = body.get("energyAmount") or body.get("energy_amount")
+
+        if not receive_address:
+            return jsonify({"errno": -1, "message": "receiveAddress is required"}), 400
+        if not period:
+            return jsonify({"errno": -1, "message": "period is required"}), 400
+        if not energy_amount:
+            return jsonify({"errno": -1, "message": "energyAmount is required"}), 400
+
+        try:
+            energy_amount = int(energy_amount)
+        except (ValueError, TypeError):
+            return jsonify({"errno": -1, "message": "energyAmount must be an integer"}), 400
+
+        if period not in VALID_PERIODS:
+            return jsonify({"errno": -1, "message": f"Invalid period. Valid: {VALID_PERIODS}"}), 400
+
+        # Map period & generate order ID
+        import uuid as _uuid
+        order_id = str(_uuid.uuid4())
+        out_trade_no = order_id[:32]
+        trxx_period = PERIOD_MAP.get(period, period)
+
+        # Call TRXX API to create order
+        trxx_params = {
+            "receive_address": receive_address,
+            "period": trxx_period,
+            "energy_amount": energy_amount,
+            "out_trade_no": out_trade_no,
+        }
+        trxx_result = trxx_create_order(trxx_params)
+
+        trxx_data = trxx_result.get("data", {})
+        if trxx_result.get("errno") != 0:
+            return jsonify({
+                "errno": -1,
+                "message": trxx_result.get("message") or "TRXX API error",
+                "data": trxx_data,
+            }), 502
+
+        serial = trxx_data.get("serial") if isinstance(trxx_data, dict) else None
+        price_sun = trxx_data.get("amount") if isinstance(trxx_data, dict) else None
+
+        # Persist order to database
+        try:
+            create_trxx_order(
+                Cfg.NETWORK_ID, order_id, out_trade_no, serial,
+                receive_address, period, energy_amount,
+                status="pending", price_sun=price_sun,
+            )
+        except Exception as db_err:
+            logger.error(f"api_create_order DB error (order still created at TRXX): {db_err}")
+
+        return jsonify({
+            "errno": 0,
+            "data": {
+                "orderId": order_id,
+                "serial": serial,
+                "receiveAddress": receive_address,
+                "period": period,
+                "energyAmount": energy_amount,
+                "priceSun": price_sun,
+                "status": "pending",
+                "trxx": trxx_data,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"api_create_order error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/orders/<order_id>', methods=['GET'])
+def api_get_order(order_id):
+    """Get order details by ID, with optional live sync from TRXX"""
+    try:
+        order = get_trxx_order_by_id(Cfg.NETWORK_ID, order_id)
+        if not order:
+            return jsonify({"errno": -1, "message": "Order not found"}), 404
+
+        # If still pending and has serial, attempt to sync from TRXX
+        if order.get("status") == "pending" and order.get("serial"):
+            try:
+                trxx_result = trxx_query_order(order["serial"])
+                if trxx_result.get("errno") == 0:
+                    trxx_data = trxx_result.get("data", {})
+                    if isinstance(trxx_data, dict):
+                        trxx_status = int(trxx_data.get("status", 0))
+                        if trxx_status == 40:
+                            new_status = "delegated"
+                        elif trxx_status == 41:
+                            new_status = "failed"
+                        else:
+                            new_status = "pending"
+
+                        if new_status != "pending":
+                            db_update_trxx_order_status(
+                                Cfg.NETWORK_ID, order["serial"], new_status,
+                                trxx_status=trxx_status,
+                                txid=trxx_data.get("txid"),
+                                bandwidth_hash=trxx_data.get("bandwidth_hash"),
+                                active_hash=trxx_data.get("active_hash"),
+                            )
+                            order["status"] = new_status
+                            order["trxx_status"] = trxx_status
+                            order["txid"] = trxx_data.get("txid")
+                            order["bandwidth_hash"] = trxx_data.get("bandwidth_hash")
+                            order["active_hash"] = trxx_data.get("active_hash")
+            except Exception as sync_err:
+                logger.warning(f"api_get_order sync error: {sync_err}")
+
+        return jsonify({
+            "errno": 0,
+            "data": _format_order_response(order),
+        })
+
+    except Exception as e:
+        logger.error(f"api_get_order error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/orders/<order_id>/reclaim', methods=['POST'])
+def api_reclaim_order(order_id):
+    """Reclaim (return early) an order"""
+    try:
+        order = get_trxx_order_by_id(Cfg.NETWORK_ID, order_id)
+        if not order:
+            return jsonify({"errno": -1, "message": "Order not found"}), 404
+        if not order.get("serial"):
+            return jsonify({"errno": -1, "message": "Order has no serial, cannot reclaim"}), 400
+        if order.get("status") != "delegated":
+            return jsonify({"errno": -1, "message": "Only delegated orders can be reclaimed"}), 400
+
+        result = trxx_reclaim_order(order["serial"])
+        if result.get("errno") == 0:
+            db_update_trxx_order_status(
+                Cfg.NETWORK_ID, order["serial"], "reclaimed",
+            )
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"api_reclaim_order error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/price', methods=['GET'])
+def api_price():
+    """Estimate price for energy rental"""
+    try:
+        period = request.args.get('period')
+        energy_amount = request.args.get('energy_amount') or request.args.get('energyAmount')
+
+        if not period or not energy_amount:
+            return jsonify({"errno": -1, "message": "period and energy_amount are required"}), 400
+
+        try:
+            energy_amount_int = int(energy_amount)
+        except (ValueError, TypeError):
+            return jsonify({"errno": -1, "message": "energy_amount must be an integer"}), 400
+
+        result = trxx_estimate_price(period, energy_amount_int)
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"api_price error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/index-data', methods=['GET'])
+def api_index_data():
+    """Get TRXX public index data / pricing tiers"""
+    try:
+        result = trxx_get_index_data()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"api_index_data error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/webhook/trxx', methods=['POST'])
+def webhook_trxx():
+    """TRXX callback webhook for order status updates"""
+    try:
+        ts = request.headers.get("TIMESTAMP", "")
+        sig = request.headers.get("SIGNATURE", "")
+        body = request.get_json(silent=True)
+
+        if not body:
+            return jsonify({"errno": -1, "message": "Empty body"}), 400
+
+        # Verify signature
+        valid, err = verify_trxx_webhook_signature(ts, body, sig)
+        if not valid:
+            logger.warning(f"webhook_trxx signature invalid: {err}")
+            return jsonify({"errno": -1, "message": f"Signature verification failed: {err}"}), 401
+
+        serial = body.get("serial") or body.get("data", {}).get("serial")
+        if not serial:
+            return jsonify({"errno": -1, "message": "Missing serial in webhook payload"}), 400
+
+        # Idempotency check
+        if trxx_webhook_event_exists(Cfg.NETWORK_ID, serial):
+            return jsonify({"errno": 0, "message": "Already processed"})
+
+        # Persist webhook event
+        import uuid as _uuid
+        event_id = str(_uuid.uuid4())
+        try:
+            create_trxx_webhook_event(
+                Cfg.NETWORK_ID, event_id, serial, sig, ts,
+                json.dumps(body, ensure_ascii=False),
+            )
+        except Exception as ev_err:
+            logger.error(f"webhook_trxx save event error: {ev_err}")
+
+        # Extract status from webhook payload
+        webhook_data = body if "status" in body else body.get("data", {})
+        trxx_status = int(webhook_data.get("status", 0))
+
+        if trxx_status == 40:
+            new_status = "delegated"
+        elif trxx_status == 41:
+            new_status = "failed"
+        else:
+            new_status = "pending"
+
+        # Update order in DB
+        try:
+            db_update_trxx_order_status(
+                Cfg.NETWORK_ID, serial, new_status,
+                trxx_status=trxx_status,
+                txid=webhook_data.get("txid"),
+                bandwidth_hash=webhook_data.get("bandwidth_hash"),
+                active_hash=webhook_data.get("active_hash"),
+            )
+            logger.info(f"webhook_trxx updated order serial={serial} to status={new_status}")
+        except Exception as up_err:
+            logger.error(f"webhook_trxx update error: {up_err}")
+
+        # Notify third party if delegated
+        if new_status == "delegated" and Cfg.THIRDPARTY_WEBHOOK_URL:
+            order = get_trxx_order_by_serial(Cfg.NETWORK_ID, serial)
+            if order:
+                _notify_third_party(order, serial, webhook_data, source="webhook")
+
+        return jsonify({"errno": 0, "message": "ok"})
+
+    except Exception as e:
+        logger.error(f"webhook_trxx error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+def _format_order_response(order):
+    """Format DB order row to API response"""
+    if not order:
+        return None
+    return {
+        "orderId": order.get("id"),
+        "outTradeNo": order.get("out_trade_no"),
+        "serial": order.get("serial"),
+        "receiveAddress": order.get("receive_address"),
+        "period": order.get("period"),
+        "energyAmount": order.get("energy_amount"),
+        "status": order.get("status"),
+        "trxxStatus": order.get("trxx_status"),
+        "txid": order.get("txid"),
+        "bandwidthHash": order.get("bandwidth_hash"),
+        "activeHash": order.get("active_hash"),
+        "priceSun": order.get("price_sun"),
+        "createdAt": str(order.get("created_at", "")),
+        "updatedAt": str(order.get("updated_at", "")),
+    }
+
+
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 log_file = "app-%s.log" % current_date
 logger.add(log_file)
+
+# Start TRXX pending order polling scheduler
+try:
+    start_trxx_scheduler()
+except Exception as sched_err:
+    logger.warning(f"Failed to start TRXX scheduler: {sched_err}")
+
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
     app.logger.info(Welcome)

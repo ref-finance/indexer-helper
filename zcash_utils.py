@@ -783,9 +783,8 @@ def get_mca_by_wallet(network_id, encryption_pubkey):
 
 class ZcashRPC:
 
-    def __init__(self, user: str = Cfg.ZCASH_RPC_USER, password: str = Cfg.ZCASH_RPC_PWD,
-                 host: str = Cfg.ZCASH_RPC_URL, port: int = 8232):
-        self.url = f"http://{host}:{port}"
+    def __init__(self, user: str = Cfg.ZCASH_RPC_USER, password: str = Cfg.ZCASH_RPC_PWD):
+        self.url = Cfg.ZCASH_RPC_URL
         self.auth = (user, password)
         self.headers = {'content-type': 'application/json'}
 

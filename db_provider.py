@@ -2155,3 +2155,145 @@ if __name__ == '__main__':
     # print(timestamp)
 
     add_redis_data("MAINNET", "test", "test6", "6")
+
+
+# ============================================================
+# TRXX Order & Webhook Database Operations
+# ============================================================
+
+def create_trxx_order(network_id, order_id, out_trade_no, serial, receive_address, period, energy_amount, status="pending", price_sun=None):
+    """Insert a new TRXX order into database"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO trxx_orders (id, out_trade_no, serial, receive_address, period, energy_amount, status, price_sun, created_at, updated_at)
+             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (order_id, out_trade_no, serial, receive_address, period, energy_amount, status, price_sun))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("create_trxx_order error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_trxx_order_by_id(network_id, order_id):
+    """Get a TRXX order by its UUID id"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM trxx_orders WHERE id = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (order_id,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_trxx_order_by_id error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_trxx_order_by_serial(network_id, serial):
+    """Get a TRXX order by its TRXX serial number"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM trxx_orders WHERE serial = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (serial,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_trxx_order_by_serial error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_trxx_order_status(network_id, serial, status, trxx_status=None, txid=None, bandwidth_hash=None, active_hash=None):
+    """Update a TRXX order's status by serial"""
+    db_conn = get_db_connect(network_id)
+    sql = """UPDATE trxx_orders
+             SET status = %s, trxx_status = %s, txid = %s, bandwidth_hash = %s, active_hash = %s, updated_at = NOW()
+             WHERE serial = %s"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (status, trxx_status, txid, bandwidth_hash, active_hash, serial))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_trxx_order_status error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_trxx_order_serial(network_id, order_id, serial):
+    """Update a TRXX order's serial (after TRXX API returns it)"""
+    db_conn = get_db_connect(network_id)
+    sql = "UPDATE trxx_orders SET serial = %s, updated_at = NOW() WHERE id = %s"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (serial, order_id))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_trxx_order_serial error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_pending_trxx_orders(network_id, older_than_seconds=120):
+    """Get pending TRXX orders older than threshold (for cron polling)"""
+    db_conn = get_db_connect(network_id)
+    sql = """SELECT * FROM trxx_orders
+             WHERE status = 'pending' AND created_at < DATE_SUB(NOW(), INTERVAL %s SECOND)
+             ORDER BY created_at ASC LIMIT 100"""
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (older_than_seconds,))
+        return cursor.fetchall()
+    except Exception as e:
+        print("get_pending_trxx_orders error:", e)
+        return []
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def trxx_webhook_event_exists(network_id, serial):
+    """Check if a webhook event for this serial already exists (idempotency)"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT id FROM trxx_webhook_events WHERE serial = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (serial,))
+        return cursor.fetchone() is not None
+    except Exception as e:
+        print("trxx_webhook_event_exists error:", e)
+        return False
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def create_trxx_webhook_event(network_id, event_id, serial, signature, timestamp_val, payload_json):
+    """Insert a new webhook event record"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO trxx_webhook_events (id, serial, signature, timestamp, payload_json, processed, created_at)
+             VALUES (%s, %s, %s, %s, %s, 0, NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (event_id, serial, signature, timestamp_val, payload_json))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("create_trxx_webhook_event error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
