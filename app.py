@@ -46,6 +46,7 @@ from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
 from bitget_utils import proxy_bitget_request, proxy_okx_request
 from proxy_api_utils import proxy_api_request
+from swap_utils import aggregate_quote, build_swap_tx, build_approve_tx, get_supported_routers
 from trxx_utils import (
     trxx_create_order, trxx_query_order, trxx_estimate_price, trxx_get_index_data,
     trxx_reclaim_order, trxx_transfer_activate, verify_trxx_webhook_signature,
@@ -2365,6 +2366,230 @@ def handle_get_supported_chains():
             "msg": str(e)
         }
     return jsonify(ret)
+
+
+# ============================================================
+# EVM DEX Aggregation API (Quote + Build-TX for frontend wallet signing)
+# ============================================================
+
+@app.route('/api/swap/quote', methods=['POST'])
+def api_swap_quote():
+    """
+    Aggregated DEX quote from Bitget/OKX.
+    Queries multiple DEX routers in parallel and returns the best quote.
+
+    Request body:
+    {
+        "chainId": 1,
+        "tokenIn": {"address": "0x...", "symbol": "USDT", "decimals": 6},
+        "tokenOut": {"address": "0x...", "symbol": "USDC", "decimals": 6},
+        "amountIn": "1000000",
+        "slippage": 0.5,
+        "sender": "0x...",
+        "recipient": "0x..."  // optional, defaults to sender
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        chain_id = body.get("chainId")
+        token_in = body.get("tokenIn")
+        token_out = body.get("tokenOut")
+        amount_in = body.get("amountIn")
+        slippage = body.get("slippage", 0.5)
+        sender = body.get("sender")
+        recipient = body.get("recipient")
+
+        # Validate required fields
+        if not chain_id or not isinstance(chain_id, int):
+            return jsonify({"code": -1, "msg": "chainId is required and must be an integer", "data": None})
+        if not token_in or not isinstance(token_in, dict):
+            return jsonify({"code": -1, "msg": "tokenIn is required and must be a JSON object", "data": None})
+        if not token_out or not isinstance(token_out, dict):
+            return jsonify({"code": -1, "msg": "tokenOut is required and must be a JSON object", "data": None})
+        if not amount_in:
+            return jsonify({"code": -1, "msg": "amountIn is required", "data": None})
+        if not sender:
+            return jsonify({"code": -1, "msg": "sender address is required", "data": None})
+
+        result = aggregate_quote(
+            chain_id=chain_id,
+            token_in=token_in,
+            token_out=token_out,
+            amount_in=str(amount_in),
+            slippage=float(slippage),
+            sender=sender,
+            recipient=recipient,
+        )
+
+        if result.get("success"):
+            return jsonify({"code": 0, "msg": "success", "data": result})
+        else:
+            return jsonify({"code": -1, "msg": result.get("error", "Quote failed"), "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_quote error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/swap/build-tx', methods=['POST'])
+def api_swap_build_tx():
+    """
+    Build swap transaction parameters for wallet signing.
+    Frontend calls this after getting a quote, then sends the tx via wallet.
+
+    Request body:
+    {
+        "chainId": 1,
+        "router": "bitget",
+        "tokenIn": {"address": "0x...", "symbol": "USDT", "decimals": 6},
+        "tokenOut": {"address": "0x...", "symbol": "USDC", "decimals": 6},
+        "amountIn": "1000000",
+        "slippage": 0.5,
+        "sender": "0x...",
+        "recipient": "0x...",
+        "market": "..."  // required for Bitget (from quote response)
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        chain_id = body.get("chainId")
+        router = body.get("router")
+        token_in = body.get("tokenIn")
+        token_out = body.get("tokenOut")
+        amount_in = body.get("amountIn")
+        slippage = body.get("slippage", 0.5)
+        sender = body.get("sender")
+        recipient = body.get("recipient")
+        market = body.get("market")
+
+        # Validate required fields
+        if not chain_id or not isinstance(chain_id, int):
+            return jsonify({"code": -1, "msg": "chainId is required and must be an integer", "data": None})
+        if not router or router not in ("bitget", "okx"):
+            return jsonify({"code": -1, "msg": "router is required and must be 'bitget' or 'okx'", "data": None})
+        if not token_in or not isinstance(token_in, dict):
+            return jsonify({"code": -1, "msg": "tokenIn is required and must be a JSON object", "data": None})
+        if not token_out or not isinstance(token_out, dict):
+            return jsonify({"code": -1, "msg": "tokenOut is required and must be a JSON object", "data": None})
+        if not amount_in:
+            return jsonify({"code": -1, "msg": "amountIn is required", "data": None})
+        if not sender:
+            return jsonify({"code": -1, "msg": "sender address is required", "data": None})
+        if not recipient:
+            recipient = sender
+
+        result = build_swap_tx(
+            chain_id=chain_id,
+            router=router,
+            token_in=token_in,
+            token_out=token_out,
+            amount_in=str(amount_in),
+            slippage=float(slippage),
+            sender=sender,
+            recipient=recipient,
+            market=market,
+        )
+
+        if result.get("success"):
+            return jsonify({"code": 0, "msg": "success", "data": result})
+        else:
+            return jsonify({"code": -1, "msg": result.get("error", "Build transaction failed"), "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_build_tx error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/swap/approve-tx', methods=['POST'])
+def api_swap_approve_tx():
+    """
+    Build ERC20 approve transaction for wallet signing.
+    Required before swap if token allowance is insufficient.
+
+    Request body:
+    {
+        "chainId": 1,
+        "router": "okx",
+        "tokenAddress": "0x...",
+        "approveAmount": "1000000",  // or "max" for unlimited
+        "spender": "0x..."  // required for Bitget (from build-tx 'approveSpender')
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        chain_id = body.get("chainId")
+        router = body.get("router")
+        token_address = body.get("tokenAddress")
+        approve_amount = body.get("approveAmount", "max")
+        spender = body.get("spender")
+
+        # Validate required fields
+        if not chain_id or not isinstance(chain_id, int):
+            return jsonify({"code": -1, "msg": "chainId is required and must be an integer", "data": None})
+        if not router or router not in ("bitget", "okx"):
+            return jsonify({"code": -1, "msg": "router is required and must be 'bitget' or 'okx'", "data": None})
+        if not token_address:
+            return jsonify({"code": -1, "msg": "tokenAddress is required", "data": None})
+
+        # Convert "max"/"unlimited" to a large number for OKX API
+        if approve_amount in ("max", "unlimited"):
+            # Use a very large number (2^255) for OKX API; for Bitget we use MaxUint256 directly
+            if router == "okx":
+                approve_amount = str(2 ** 255)
+        else:
+            approve_amount = str(approve_amount)
+
+        result = build_approve_tx(
+            chain_id=chain_id,
+            router=router,
+            token_address=token_address,
+            approve_amount=approve_amount,
+            spender=spender,
+        )
+
+        if result.get("success"):
+            return jsonify({"code": 0, "msg": "success", "data": result})
+        else:
+            return jsonify({"code": -1, "msg": result.get("error", "Build approve transaction failed"), "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_approve_tx error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/swap/supported-routers', methods=['GET'])
+def api_swap_supported_routers():
+    """
+    Get supported DEX routers and chain information.
+
+    Query params:
+        chainId (optional): specific chain ID to query
+    """
+    try:
+        chain_id_str = request.args.get("chainId")
+        chain_id = int(chain_id_str) if chain_id_str else None
+
+        result = get_supported_routers(chain_id=chain_id)
+
+        return jsonify({"code": 0, "msg": "success", "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_supported_routers error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
 
 
 # ============================================================
