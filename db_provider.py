@@ -2297,3 +2297,119 @@ def create_trxx_webhook_event(network_id, event_id, serial, signature, timestamp
     finally:
         cursor.close()
         db_conn.close()
+
+
+# ============================================================
+# Random Records Database Operations
+# ============================================================
+
+def insert_random_record(network_id, uuid, status=0, fail_msg=None, tx_hash=None, random_number=None):
+    """Insert a new random record"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO random_records (uuid, status, fail_msg, tx_hash, random_number, created_at, updated_at)
+             VALUES (%s, %s, %s, %s, %s, NOW(), NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (uuid, status, fail_msg, tx_hash, random_number))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert_random_record error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_one_pending_random_record(network_id):
+    """Get one random record where status = 0"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM random_records WHERE status = 0 ORDER BY created_at ASC LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_one_pending_random_record error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_random_record(network_id, uuid, status=None, fail_msg=None, tx_hash=None, random_number=None):
+    """Update a random record by its uuid. Only non-None fields are updated."""
+    db_conn = get_db_connect(network_id)
+    fields = []
+    params = []
+    if status is not None:
+        fields.append("status = %s")
+        params.append(status)
+    if fail_msg is not None:
+        fields.append("fail_msg = %s")
+        params.append(fail_msg)
+    if tx_hash is not None:
+        fields.append("tx_hash = %s")
+        params.append(tx_hash)
+    if random_number is not None:
+        fields.append("random_number = %s")
+        params.append(random_number)
+
+    if not fields:
+        return
+
+    fields.append("updated_at = NOW()")
+    params.append(uuid)
+
+    sql = f"UPDATE random_records SET {', '.join(fields)} WHERE uuid = %s"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, tuple(params))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_random_record error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_pending_random_records_page(network_id, page=1, page_size=20):
+    """Get paginated random records where status = 0, ordered by created_at ASC"""
+    db_conn = get_db_connect(network_id)
+    offset = (page - 1) * page_size
+
+    count_sql = "SELECT COUNT(*) as total FROM random_records WHERE status = 0"
+    query_sql = "SELECT * FROM random_records WHERE status = 0 ORDER BY created_at ASC LIMIT %s OFFSET %s"
+
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(count_sql)
+        total = cursor.fetchone().get("total", 0)
+
+        cursor.execute(query_sql, (page_size, offset))
+        rows = cursor.fetchall()
+        return rows, total
+    except Exception as e:
+        print("get_pending_random_records_page error:", e)
+        return [], 0
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_random_record_by_uuid(network_id, uuid):
+    """Get a random record by its uuid"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM random_records WHERE uuid = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (uuid,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_random_record_by_uuid error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()

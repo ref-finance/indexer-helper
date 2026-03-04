@@ -32,7 +32,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, \
     query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data, zcash_get_public_key, \
     query_evm_mpc_call_cache, add_evm_mpc_call_cache, query_supported_chains, \
-    check_supported_chains_expired, refresh_supported_chains
+    check_supported_chains_expired, refresh_supported_chains, \
+    insert_random_record, get_one_pending_random_record, update_random_record, get_random_record_by_uuid, get_pending_random_records_page
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import datetime
@@ -2104,7 +2105,13 @@ def handle_get_chain_prices():
         ret["data"] = "request parameter error"
         return jsonify(ret)
     price_data = get_chain_tokens_with_prices(chain)
-    ret["data"] = price_data
+    # Filter out OKX platform tokens whose address does not start with 0x
+    filtered_data = {}
+    for address, token_info in price_data.items():
+        if isinstance(token_info, dict) and token_info.get("platform") == "okx" and not address.startswith("0x"):
+            continue
+        filtered_data[address] = token_info
+    ret["data"] = filtered_data
     return jsonify(ret)
 
 
@@ -2590,6 +2597,159 @@ def api_swap_supported_routers():
     except Exception as e:
         logger.error(f"api_swap_supported_routers error: {e}")
         return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+# ============================================================
+# Random Records API
+# ============================================================
+
+@app.route('/api/add-random-record', methods=['POST'])
+def api_insert_random_record():
+    """Insert a new random record"""
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        uuid = body.get("uuid")
+        if not uuid:
+            return jsonify({"code": -1, "msg": "uuid is required", "data": None})
+
+        status = body.get("status", 0)
+        fail_msg = body.get("failMsg")
+        tx_hash = body.get("txHash")
+        random_number = body.get("randomNumber")
+
+        insert_random_record(
+            network_id=Cfg.NETWORK_ID,
+            uuid=uuid,
+            status=status,
+            fail_msg=fail_msg,
+            tx_hash=tx_hash,
+            random_number=random_number,
+        )
+        return jsonify({"code": 0, "msg": "success", "data": {"uuid": uuid}})
+    except Exception as e:
+        logger.error(f"api_insert_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/random-record/pending', methods=['GET'])
+def api_get_pending_random_record():
+    """Get one random record where status = 0"""
+    try:
+        record = get_one_pending_random_record(Cfg.NETWORK_ID)
+        if not record:
+            return jsonify({"code": 0, "msg": "success", "data": None})
+
+        return jsonify({"code": 0, "msg": "success", "data": _format_random_record(record)})
+    except Exception as e:
+        logger.error(f"api_get_pending_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/random-record/pending/list', methods=['GET'])
+def api_get_pending_random_records_page():
+    """Get paginated random records where status = 0"""
+    try:
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("pageSize", default=20, type=int)
+
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 20
+
+        records, total = get_pending_random_records_page(Cfg.NETWORK_ID, page, page_size)
+        total_pages = (total + page_size - 1) // page_size
+
+        return jsonify({
+            "code": 0,
+            "msg": "success",
+            "data": {
+                "list": [_format_random_record(r) for r in records],
+                "pagination": {
+                    "page": page,
+                    "pageSize": page_size,
+                    "total": total,
+                    "totalPages": total_pages,
+                }
+            }
+        })
+    except Exception as e:
+        logger.error(f"api_get_pending_random_records_page error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/random-record/<uuid>', methods=['POST', 'PUT'])
+def api_update_random_record(uuid):
+    """Update a random record by uuid"""
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        # Check if record exists
+        existing = get_random_record_by_uuid(Cfg.NETWORK_ID, uuid)
+        if not existing:
+            return jsonify({"code": -1, "msg": f"Record not found: {uuid}", "data": None})
+
+        status = body.get("status")
+        fail_msg = body.get("failMsg")
+        tx_hash = body.get("txHash")
+        random_number = body.get("randomNumber")
+
+        update_random_record(
+            network_id=Cfg.NETWORK_ID,
+            uuid=uuid,
+            status=status,
+            fail_msg=fail_msg,
+            tx_hash=tx_hash,
+            random_number=random_number,
+        )
+
+        # Return updated record
+        updated = get_random_record_by_uuid(Cfg.NETWORK_ID, uuid)
+        return jsonify({"code": 0, "msg": "success", "data": _format_random_record(updated)})
+    except Exception as e:
+        logger.error(f"api_update_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/random-record/<uuid>', methods=['GET'])
+def api_get_random_record(uuid):
+    """Get a random record by uuid"""
+    try:
+        record = get_random_record_by_uuid(Cfg.NETWORK_ID, uuid)
+        if not record:
+            return jsonify({"code": 0, "msg": "success", "data": None})
+
+        return jsonify({"code": 0, "msg": "success", "data": _format_random_record(record)})
+    except Exception as e:
+        logger.error(f"api_get_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+def _format_random_record(record):
+    """Format DB random_records row to API response"""
+    if not record:
+        return None
+    return {
+        "id": record.get("id"),
+        "uuid": record.get("uuid"),
+        "status": record.get("status"),
+        "failMsg": record.get("fail_msg"),
+        "txHash": record.get("tx_hash"),
+        "randomNumber": record.get("random_number"),
+        "createdAt": str(record.get("created_at", "")),
+        "updatedAt": str(record.get("updated_at", "")),
+    }
 
 
 # ============================================================
