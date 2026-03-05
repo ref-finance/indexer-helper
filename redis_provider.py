@@ -572,6 +572,40 @@ def get_multichain_token_price(chain: str, address: str, max_age_seconds: int = 
     return price
 
 
+def get_chain_tokens_with_prices(chain: str, max_age_seconds: int = None) -> Dict[str, Dict]:
+    redis_provider = RedisProvider()
+    price_key = f"{Cfg.REDIS_TOKEN_PRICE_PREFIX}:{chain}"
+    info_key = f"{Cfg.REDIS_TOKEN_PRICE_PREFIX}:{chain}:info"
+    timestamp_key = f"{Cfg.REDIS_TOKEN_PRICE_PREFIX}:{chain}:timestamp"
+
+    timestamp_str = redis_provider.r.get(timestamp_key)
+    timestamp = int(timestamp_str) if timestamp_str else None
+
+    if max_age_seconds is not None and timestamp:
+        current_time = int(time.time())
+        if current_time - timestamp > max_age_seconds:
+            pass
+
+    token_infos = redis_provider.r.hgetall(info_key)
+    prices = redis_provider.r.hgetall(price_key) if timestamp_str else {}
+
+    redis_provider.close()
+
+    result = {}
+    for address, info_json in token_infos.items():
+        try:
+            token_info = json.loads(info_json)
+            price = prices.get(address, "")
+            token_info["price"] = price
+            token_info["updated_at"] = timestamp
+
+            result[address] = token_info
+        except json.JSONDecodeError:
+            continue
+
+    return result
+
+
 class RedisProvider(object):
 
     def __init__(self):
