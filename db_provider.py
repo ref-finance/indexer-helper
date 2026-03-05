@@ -1172,7 +1172,7 @@ def query_dcl_bin_points(network_id, pool_id, bin_point_number):
         return point_data, point_data_24h, start_point, end_point
     except Exception as e:
         print("query dcl_pool_analysis to db error:", e)
-        return [], None
+        return [], None, 0, 0
     finally:
         cursor.close()
 
@@ -2155,3 +2155,272 @@ if __name__ == '__main__':
     # print(timestamp)
 
     add_redis_data("MAINNET", "test", "test6", "6")
+
+
+# ============================================================
+# TRXX Order & Webhook Database Operations
+# ============================================================
+
+def create_trxx_order(network_id, order_id, out_trade_no, serial, receive_address, period, energy_amount, status="pending", price_sun=None):
+    """Insert a new TRXX order into database"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO trxx_orders (id, out_trade_no, serial, receive_address, period, energy_amount, status, price_sun, created_at, updated_at)
+             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (order_id, out_trade_no, serial, receive_address, period, energy_amount, status, price_sun))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("create_trxx_order error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_trxx_order_by_id(network_id, order_id):
+    """Get a TRXX order by its UUID id"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM trxx_orders WHERE id = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (order_id,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_trxx_order_by_id error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_trxx_order_by_serial(network_id, serial):
+    """Get a TRXX order by its TRXX serial number"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM trxx_orders WHERE serial = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (serial,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_trxx_order_by_serial error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_trxx_order_status(network_id, serial, status, trxx_status=None, txid=None, bandwidth_hash=None, active_hash=None):
+    """Update a TRXX order's status by serial"""
+    db_conn = get_db_connect(network_id)
+    sql = """UPDATE trxx_orders
+             SET status = %s, trxx_status = %s, txid = %s, bandwidth_hash = %s, active_hash = %s, updated_at = NOW()
+             WHERE serial = %s"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (status, trxx_status, txid, bandwidth_hash, active_hash, serial))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_trxx_order_status error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_trxx_order_serial(network_id, order_id, serial):
+    """Update a TRXX order's serial (after TRXX API returns it)"""
+    db_conn = get_db_connect(network_id)
+    sql = "UPDATE trxx_orders SET serial = %s, updated_at = NOW() WHERE id = %s"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (serial, order_id))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_trxx_order_serial error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_pending_trxx_orders(network_id, older_than_seconds=120):
+    """Get pending TRXX orders older than threshold (for cron polling)"""
+    db_conn = get_db_connect(network_id)
+    sql = """SELECT * FROM trxx_orders
+             WHERE status = 'pending' AND created_at < DATE_SUB(NOW(), INTERVAL %s SECOND)
+             ORDER BY created_at ASC LIMIT 100"""
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (older_than_seconds,))
+        return cursor.fetchall()
+    except Exception as e:
+        print("get_pending_trxx_orders error:", e)
+        return []
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def trxx_webhook_event_exists(network_id, serial):
+    """Check if a webhook event for this serial already exists (idempotency)"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT id FROM trxx_webhook_events WHERE serial = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (serial,))
+        return cursor.fetchone() is not None
+    except Exception as e:
+        print("trxx_webhook_event_exists error:", e)
+        return False
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def create_trxx_webhook_event(network_id, event_id, serial, signature, timestamp_val, payload_json):
+    """Insert a new webhook event record"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO trxx_webhook_events (id, serial, signature, timestamp, payload_json, processed, created_at)
+             VALUES (%s, %s, %s, %s, %s, 0, NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (event_id, serial, signature, timestamp_val, payload_json))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("create_trxx_webhook_event error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+# ============================================================
+# Random Records Database Operations
+# ============================================================
+
+def insert_random_record(network_id, request_id, status=0, fail_msg=None, tx_hash=None, request_data=None,
+                         random_number_raw=None, random_number_uint=None):
+    """Insert a new random record"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO random_records (request_id, status, fail_msg, tx_hash, request_data,
+             random_number_raw, random_number_uint, created_at, updated_at)
+             VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        request_data_str = json.dumps(request_data, ensure_ascii=False) if request_data is not None else None
+        cursor.execute(sql, (request_id, status, fail_msg, tx_hash, request_data_str,
+                             random_number_raw, random_number_uint))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert_random_record error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_one_pending_random_record(network_id):
+    """Get one random record where status = 0"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM random_records WHERE status = 0 ORDER BY created_at ASC LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_one_pending_random_record error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_random_record(network_id, request_id, status=None, fail_msg=None, tx_hash=None, request_data=None,
+                         random_number_raw=None, random_number_uint=None):
+    """Update a random record by its request_id. Only non-None fields are updated."""
+    db_conn = get_db_connect(network_id)
+    fields = []
+    params = []
+    if status is not None:
+        fields.append("status = %s")
+        params.append(status)
+    if fail_msg is not None:
+        fields.append("fail_msg = %s")
+        params.append(fail_msg)
+    if tx_hash is not None:
+        fields.append("tx_hash = %s")
+        params.append(tx_hash)
+    if request_data is not None:
+        fields.append("request_data = %s")
+        params.append(json.dumps(request_data, ensure_ascii=False))
+    if random_number_raw is not None:
+        fields.append("random_number_raw = %s")
+        params.append(random_number_raw)
+    if random_number_uint is not None:
+        fields.append("random_number_uint = %s")
+        params.append(random_number_uint)
+
+    if not fields:
+        return
+
+    fields.append("updated_at = NOW()")
+    params.append(request_id)
+
+    sql = f"UPDATE random_records SET {', '.join(fields)} WHERE request_id = %s"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, tuple(params))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_random_record error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_pending_random_records_page(network_id, page=1, page_size=20):
+    """Get paginated random records where status = 0, ordered by created_at ASC"""
+    db_conn = get_db_connect(network_id)
+    offset = (page - 1) * page_size
+
+    count_sql = "SELECT COUNT(*) as total FROM random_records WHERE status = 0"
+    query_sql = "SELECT * FROM random_records WHERE status = 0 ORDER BY created_at ASC LIMIT %s OFFSET %s"
+
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(count_sql)
+        total = cursor.fetchone().get("total", 0)
+
+        cursor.execute(query_sql, (page_size, offset))
+        rows = cursor.fetchall()
+        return rows, total
+    except Exception as e:
+        print("get_pending_random_records_page error:", e)
+        return [], 0
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_random_record_by_request_id(network_id, request_id):
+    """Get a random record by its request_id"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM random_records WHERE request_id = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (request_id,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_random_record_by_request_id error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()

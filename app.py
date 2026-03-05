@@ -17,7 +17,7 @@ from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, 
     get_burrow_total_revenue, get_nbtc_total_supply, list_burrow_asset_token_metadata, get_whitelist_tokens, \
     get_rnear_apy, add_rnear_apy, get_dcl_point_data, add_dcl_point_data, set_dcl_point_ttl, add_dcl_bin_point_data, \
     get_dcl_bin_point_data, get_multichain_lending_tokens_data, get_multichain_lending_token_icon, get_lst_total_fee_24h, \
-    get_lst_total_revenue_24h, get_cross_chain_total_fee_24h, get_cross_chain_total_revenue_24h, get_cross_chain_total_volume_24h, get_chain_prices
+    get_lst_total_revenue_24h, get_cross_chain_total_fee_24h, get_cross_chain_total_revenue_24h, get_cross_chain_total_volume_24h, get_chain_tokens_with_prices
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
 from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
@@ -32,7 +32,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_multichain_lending_history, add_multichain_lending_report, query_dcl_bin_points, \
     query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data, zcash_get_public_key, \
     query_evm_mpc_call_cache, add_evm_mpc_call_cache, query_supported_chains, \
-    check_supported_chains_expired, refresh_supported_chains
+    check_supported_chains_expired, refresh_supported_chains, \
+    insert_random_record, get_one_pending_random_record, update_random_record, get_random_record_by_request_id, get_pending_random_records_page
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import datetime
@@ -46,8 +47,18 @@ from s3_client import AwsS3Config, download_and_upload_image_to_s3
 from zcash_utils import get_deposit_address, verify_add_zcash, ZcashRPC, call_evm_mpc_contract
 from bitget_utils import proxy_bitget_request, proxy_okx_request
 from proxy_api_utils import proxy_api_request
+from swap_utils import aggregate_quote, build_swap_tx, build_approve_tx, get_supported_routers
+from trxx_utils import (
+    trxx_create_order, trxx_query_order, trxx_estimate_price, trxx_get_index_data,
+    trxx_reclaim_order, trxx_transfer_activate, verify_trxx_webhook_signature,
+    verify_frontend_signature, VALID_PERIODS, PERIOD_MAP, start_trxx_scheduler,
+    _notify_third_party,
+)
+from db_provider import create_trxx_order, get_trxx_order_by_id, get_trxx_order_by_serial, \
+    update_trxx_order_status as db_update_trxx_order_status, get_pending_trxx_orders, \
+    trxx_webhook_event_exists, create_trxx_webhook_event
 
-service_version = "20260202.01"
+service_version = "20260205.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -780,23 +791,35 @@ def handle_dcl_bin_points():
 @app.route('/get-dcl-points', methods=['GET'])
 def handle_dcl_points():
     pool_id = request.args.get("pool_id")
-
-    dcl_point_data = get_dcl_point_data(pool_id)
-    if dcl_point_data is None or dcl_point_data["ttl"] < 600:
-        if dcl_point_data is None:
-            ret_data = {"point_data": [], "top_bin_fee_data": {"total_fee": 0, "total_liquidity": 0}}
-        else:
-            ret_data = json.loads(dcl_point_data["value"])
-
-        add_dcl_point_data(pool_id, json.dumps(ret_data))
-        import threading
-        thread = threading.Thread(
-            target=handle_dcl_points_data,
-            args=(pool_id,)
-        )
-        thread.start()
+    slot_number = request.args.get("slot_number", type=int, default=50)
+    if pool_id is None:
+        return "null"
+    ret_data = get_dcl_bin_point_data(pool_id + str(slot_number))
+    if ret_data is None:
+        pool_id_s = pool_id.split("|")
+        token_x = pool_id_s[0]
+        token_y = pool_id_s[1]
+        fee_tier = pool_id_s[-1]
+        fee_tier_delta = {"100": 1, "400": 8, "2000": 40, "10000": 200}
+        point_delta_number = fee_tier_delta.get(fee_tier, 40)
+        bin_point_number = point_delta_number * slot_number
+        token_list = [token_x, token_y]
+        token_price = list_token_price_by_id_list(Cfg.NETWORK_ID, token_list)
+        all_point_data, all_point_data_24h, start_point, end_point = query_dcl_bin_points(Cfg.NETWORK_ID, pool_id,
+                                                                                          bin_point_number)
+        point_data = all_point_data
+        point_data_24h = handle_point_data(all_point_data_24h, int(start_point), int(end_point))
+        ret_point_data = handle_dcl_point_bin(pool_id, point_data, int(slot_number), int(start_point), int(end_point),
+                                              point_data_24h, token_price)
+        ret_data = {}
+        top_bin_fee_data = handle_top_bin_fee(ret_point_data)
+        ret_data["point_data"] = ret_point_data
+        ret_data["top_bin_fee_data"] = top_bin_fee_data
+        add_dcl_bin_point_data(pool_id + str(slot_number), json.dumps(ret_data))
+        top_bin_data = {"point_data": [], "top_bin_fee_data": top_bin_fee_data}
+        add_dcl_point_data(pool_id, json.dumps(top_bin_data))
     else:
-        ret_data = json.loads(dcl_point_data["value"])
+        ret_data = json.loads(ret_data)
     return compress_response_content(ret_data)
 
 
@@ -1781,6 +1804,7 @@ def handel_multichain_lending_tokens_data():
                         response = requests.get(
                             "https://pro-api.coingecko.com/api/v3/onchain/networks/" + blockchain + "/tokens/" + contract_address,
                             headers=headers)
+                        print("coingecko request:", blockchain + ":" + contract_address)
                         coingecko_ret_data = response.text
                         coingecko_token_data = json.loads(coingecko_ret_data)
                         token_icon = coingecko_token_data["data"]["attributes"]["image_url"]
@@ -1797,7 +1821,7 @@ def handel_multichain_lending_tokens_data():
                         conn.add_multichain_lending_token_icon(contract_address, token_icon)
                     except Exception as e:
                         print("coingecko err:", e.args)
-                
+                        conn.add_multichain_lending_token_icon(contract_address, "")
                 # is_s3_url = token_icon and (f"{Cfg.Bucket}.s3.amazonaws.com" in token_icon or f"s3.amazonaws.com/{Cfg.Bucket}" in token_icon)
                 # if token_icon and token_icon.startswith("http") and not is_s3_url:
                 #     try:
@@ -2080,8 +2104,14 @@ def handle_get_chain_prices():
         ret["msg"] = "error"
         ret["data"] = "request parameter error"
         return jsonify(ret)
-    price_data = get_chain_prices(chain)
-    ret["data"] = price_data
+    price_data = get_chain_tokens_with_prices(chain)
+    # Filter out OKX platform tokens whose address does not start with 0x
+    filtered_data = {}
+    for address, token_info in price_data.items():
+        if isinstance(token_info, dict) and token_info.get("platform") == "okx" and not address.startswith("0x"):
+            continue
+        filtered_data[address] = token_info
+    ret["data"] = filtered_data
     return jsonify(ret)
 
 
@@ -2202,6 +2232,7 @@ def handle_proxy_api():
             })
 
         authorization = request.headers.get("Authorization", "")
+        start_time = time.time()
         response = proxy_api_request(
             base_url=Cfg.PROXY_API_URL,
             api_path=api_path,
@@ -2210,7 +2241,9 @@ def handle_proxy_api():
             query=query,
             authorization=authorization,
         )
-
+        logger.info("proxy_api_request api_path:{}", api_path)
+        end_time = int(time.time())
+        logger.info("proxy_api_request consuming time:{}", start_time - end_time)
         if response.status_code >= 400:
             message = response.text
             try:
@@ -2342,9 +2375,802 @@ def handle_get_supported_chains():
     return jsonify(ret)
 
 
+# ============================================================
+# EVM DEX Aggregation API (Quote + Build-TX for frontend wallet signing)
+# ============================================================
+
+@app.route('/api/swap/quote', methods=['POST'])
+def api_swap_quote():
+    """
+    Aggregated DEX quote from Bitget/OKX.
+    Queries multiple DEX routers in parallel and returns the best quote.
+
+    Request body:
+    {
+        "chainId": 1,
+        "tokenIn": {"address": "0x...", "symbol": "USDT", "decimals": 6},
+        "tokenOut": {"address": "0x...", "symbol": "USDC", "decimals": 6},
+        "amountIn": "1000000",
+        "slippage": 0.5,
+        "sender": "0x...",
+        "recipient": "0x..."  // optional, defaults to sender
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        chain_id = body.get("chainId")
+        token_in = body.get("tokenIn")
+        token_out = body.get("tokenOut")
+        amount_in = body.get("amountIn")
+        slippage = body.get("slippage", 0.5)
+        sender = body.get("sender")
+        recipient = body.get("recipient")
+
+        # Validate required fields
+        if not chain_id or not isinstance(chain_id, int):
+            return jsonify({"code": -1, "msg": "chainId is required and must be an integer", "data": None})
+        if not token_in or not isinstance(token_in, dict):
+            return jsonify({"code": -1, "msg": "tokenIn is required and must be a JSON object", "data": None})
+        if not token_out or not isinstance(token_out, dict):
+            return jsonify({"code": -1, "msg": "tokenOut is required and must be a JSON object", "data": None})
+        if not amount_in:
+            return jsonify({"code": -1, "msg": "amountIn is required", "data": None})
+        if not sender:
+            return jsonify({"code": -1, "msg": "sender address is required", "data": None})
+
+        result = aggregate_quote(
+            chain_id=chain_id,
+            token_in=token_in,
+            token_out=token_out,
+            amount_in=str(amount_in),
+            slippage=float(slippage),
+            sender=sender,
+            recipient=recipient,
+        )
+
+        if result.get("success"):
+            return jsonify({"code": 0, "msg": "success", "data": result})
+        else:
+            return jsonify({"code": -1, "msg": result.get("error", "Quote failed"), "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_quote error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/swap/build-tx', methods=['POST'])
+def api_swap_build_tx():
+    """
+    Build swap transaction parameters for wallet signing.
+    Frontend calls this after getting a quote, then sends the tx via wallet.
+
+    Request body:
+    {
+        "chainId": 1,
+        "router": "bitget",
+        "tokenIn": {"address": "0x...", "symbol": "USDT", "decimals": 6},
+        "tokenOut": {"address": "0x...", "symbol": "USDC", "decimals": 6},
+        "amountIn": "1000000",
+        "slippage": 0.5,
+        "sender": "0x...",
+        "recipient": "0x...",
+        "market": "..."  // required for Bitget (from quote response)
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        chain_id = body.get("chainId")
+        router = body.get("router")
+        token_in = body.get("tokenIn")
+        token_out = body.get("tokenOut")
+        amount_in = body.get("amountIn")
+        slippage = body.get("slippage", 0.5)
+        sender = body.get("sender")
+        recipient = body.get("recipient")
+        market = body.get("market")
+
+        # Validate required fields
+        if not chain_id or not isinstance(chain_id, int):
+            return jsonify({"code": -1, "msg": "chainId is required and must be an integer", "data": None})
+        if not router or router not in ("bitget", "okx"):
+            return jsonify({"code": -1, "msg": "router is required and must be 'bitget' or 'okx'", "data": None})
+        if not token_in or not isinstance(token_in, dict):
+            return jsonify({"code": -1, "msg": "tokenIn is required and must be a JSON object", "data": None})
+        if not token_out or not isinstance(token_out, dict):
+            return jsonify({"code": -1, "msg": "tokenOut is required and must be a JSON object", "data": None})
+        if not amount_in:
+            return jsonify({"code": -1, "msg": "amountIn is required", "data": None})
+        if not sender:
+            return jsonify({"code": -1, "msg": "sender address is required", "data": None})
+        if not recipient:
+            recipient = sender
+
+        result = build_swap_tx(
+            chain_id=chain_id,
+            router=router,
+            token_in=token_in,
+            token_out=token_out,
+            amount_in=str(amount_in),
+            slippage=float(slippage),
+            sender=sender,
+            recipient=recipient,
+            market=market,
+        )
+
+        if result.get("success"):
+            return jsonify({"code": 0, "msg": "success", "data": result})
+        else:
+            return jsonify({"code": -1, "msg": result.get("error", "Build transaction failed"), "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_build_tx error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/swap/approve-tx', methods=['POST'])
+def api_swap_approve_tx():
+    """
+    Build ERC20 approve transaction for wallet signing.
+    Required before swap if token allowance is insufficient.
+
+    Request body:
+    {
+        "chainId": 1,
+        "router": "okx",
+        "tokenAddress": "0x...",
+        "approveAmount": "1000000",  // or "max" for unlimited
+        "spender": "0x..."  // required for Bitget (from build-tx 'approveSpender')
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        chain_id = body.get("chainId")
+        router = body.get("router")
+        token_address = body.get("tokenAddress")
+        approve_amount = body.get("approveAmount", "max")
+        spender = body.get("spender")
+
+        # Validate required fields
+        if not chain_id or not isinstance(chain_id, int):
+            return jsonify({"code": -1, "msg": "chainId is required and must be an integer", "data": None})
+        if not router or router not in ("bitget", "okx"):
+            return jsonify({"code": -1, "msg": "router is required and must be 'bitget' or 'okx'", "data": None})
+        if not token_address:
+            return jsonify({"code": -1, "msg": "tokenAddress is required", "data": None})
+
+        # Convert "max"/"unlimited" to a large number for OKX API
+        if approve_amount in ("max", "unlimited"):
+            # Use a very large number (2^255) for OKX API; for Bitget we use MaxUint256 directly
+            if router == "okx":
+                approve_amount = str(2 ** 255)
+        else:
+            approve_amount = str(approve_amount)
+
+        result = build_approve_tx(
+            chain_id=chain_id,
+            router=router,
+            token_address=token_address,
+            approve_amount=approve_amount,
+            spender=spender,
+        )
+
+        if result.get("success"):
+            return jsonify({"code": 0, "msg": "success", "data": result})
+        else:
+            return jsonify({"code": -1, "msg": result.get("error", "Build approve transaction failed"), "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_approve_tx error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/swap/supported-routers', methods=['GET'])
+def api_swap_supported_routers():
+    """
+    Get supported DEX routers and chain information.
+
+    Query params:
+        chainId (optional): specific chain ID to query
+    """
+    try:
+        chain_id_str = request.args.get("chainId")
+        chain_id = int(chain_id_str) if chain_id_str else None
+
+        result = get_supported_routers(chain_id=chain_id)
+
+        return jsonify({"code": 0, "msg": "success", "data": result})
+    except Exception as e:
+        logger.error(f"api_swap_supported_routers error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+# ============================================================
+# Random Records API
+# ============================================================
+
+@app.route('/api/add-random-record', methods=['POST'])
+def api_insert_random_record():
+    """Insert a new random record"""
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        request_id = body.get("requestId")
+        if not request_id:
+            return jsonify({"code": -1, "msg": "requestId is required", "data": None})
+
+        status = body.get("status", 0)
+        fail_msg = body.get("failMsg")
+        tx_hash = body.get("txHash")
+        request_data = body.get("requestData")
+
+        insert_random_record(
+            network_id=Cfg.NETWORK_ID,
+            request_id=request_id,
+            status=status,
+            fail_msg=fail_msg,
+            tx_hash=tx_hash,
+            request_data=request_data,
+        )
+        return jsonify({"code": 0, "msg": "success", "data": {"requestId": request_id}})
+    except Exception as e:
+        logger.error(f"api_insert_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/random-record/pending', methods=['GET'])
+def api_get_pending_random_record():
+    """Get one random record where status = 0"""
+    try:
+        record = get_one_pending_random_record(Cfg.NETWORK_ID)
+        if not record:
+            return jsonify({"code": 0, "msg": "success", "data": None})
+
+        return jsonify({"code": 0, "msg": "success", "data": _format_random_record(record)})
+    except Exception as e:
+        logger.error(f"api_get_pending_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/random-record/pending/list', methods=['GET'])
+def api_get_pending_random_records_page():
+    """Get paginated random records where status = 0"""
+    try:
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("pageSize", default=20, type=int)
+
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 20
+
+        records, total = get_pending_random_records_page(Cfg.NETWORK_ID, page, page_size)
+        total_pages = (total + page_size - 1) // page_size
+
+        return jsonify({
+            "code": 0,
+            "msg": "success",
+            "data": {
+                "list": [_format_random_record(r) for r in records],
+                "pagination": {
+                    "page": page,
+                    "pageSize": page_size,
+                    "total": total,
+                    "totalPages": total_pages,
+                }
+            }
+        })
+    except Exception as e:
+        logger.error(f"api_get_pending_random_records_page error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+def _query_near_tx_randomness(tx_hash):
+    """
+    Query NEAR transaction by hash and extract randomness_generated event log.
+    Returns (random_number_raw, random_number_uint) or (None, None) if not found.
+    """
+    rpc_urls = Cfg.NETWORK[Cfg.NETWORK_ID]["NEAR_RPC_URL"]
+    last_error = None
+
+    for rpc_url in rpc_urls:
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": "dontcare",
+                "method": "EXPERIMENTAL_tx_status",
+                "params": {
+                    "tx_hash": tx_hash,
+                    "sender_account_id": "system",
+                    "wait_until": "NONE"
+                }
+            }
+            resp = requests.post(rpc_url, json=payload, timeout=15)
+            resp.raise_for_status()
+            result = resp.json()
+
+            if "error" in result:
+                last_error = result["error"]
+                logger.warning(f"NEAR RPC error from {rpc_url}: {result['error']}")
+                continue
+
+            tx_result = result.get("result", {})
+            # Search through all receipt outcomes for randomness_generated event
+            receipts_outcome = tx_result.get("receipts_outcome", [])
+            for receipt in receipts_outcome:
+                outcome = receipt.get("outcome", {})
+                logs = outcome.get("logs", [])
+                for log_str in logs:
+                    random_raw, random_uint = _parse_randomness_log(log_str)
+                    if random_raw is not None:
+                        return random_raw, random_uint
+
+            logger.warning(f"No randomness_generated event found in tx {tx_hash}")
+            return None, None
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"Failed to query NEAR tx from {rpc_url}: {e}")
+            continue
+
+    logger.error(f"All NEAR RPC nodes failed for tx {tx_hash}, last error: {last_error}")
+    return None, None
+
+
+def _parse_randomness_log(log_str):
+    """
+    Parse a NEAR contract log string for randomness_generated event.
+    Handles both raw JSON and EVENT_JSON: prefixed formats.
+    Returns (random_number_raw, random_number_uint) or (None, None).
+    """
+    try:
+        json_str = log_str
+        if log_str.startswith("EVENT_JSON:"):
+            json_str = log_str[len("EVENT_JSON:"):]
+
+        log_obj = json.loads(json_str)
+
+        event = log_obj.get("event", "")
+        if event != "randomness_generated":
+            return None, None
+
+        data = log_obj.get("data", {})
+        random_number_hex = data.get("random_number")
+        if not random_number_hex:
+            return None, None
+
+        # raw = original hex string
+        random_number_raw = random_number_hex
+        # uint = hex converted to decimal integer string
+        random_number_uint = str(int(random_number_hex, 16))
+
+        return random_number_raw, random_number_uint
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return None, None
+
+
+@app.route('/api/random-record/<request_id>', methods=['POST', 'PUT'])
+def api_update_random_record(request_id):
+    """Update a random record by request_id"""
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
+
+        # Check if record exists
+        existing = get_random_record_by_request_id(Cfg.NETWORK_ID, request_id)
+        if not existing:
+            return jsonify({"code": -1, "msg": f"Record not found: {request_id}", "data": None})
+
+        status = body.get("status")
+        fail_msg = body.get("failMsg")
+        tx_hash = body.get("txHash")
+        request_data = body.get("requestData")
+        random_number_raw = None
+        random_number_uint = None
+
+        # If txHash is provided, query NEAR tx for randomness_generated event
+        if tx_hash:
+            try:
+                random_number_raw, random_number_uint = _query_near_tx_randomness(tx_hash)
+                if random_number_raw:
+                    status = 1
+                    logger.info(f"Extracted randomness from tx {tx_hash}: raw={random_number_raw}, uint={random_number_uint}")
+                else:
+                    logger.warning(f"No randomness found in tx {tx_hash}")
+            except Exception as e:
+                logger.error(f"Failed to query randomness from tx {tx_hash}: {e}")
+
+        update_random_record(
+            network_id=Cfg.NETWORK_ID,
+            request_id=request_id,
+            status=status,
+            fail_msg=fail_msg,
+            tx_hash=tx_hash,
+            request_data=request_data,
+            random_number_raw=random_number_raw,
+            random_number_uint=random_number_uint,
+        )
+
+        # Return updated record
+        updated = get_random_record_by_request_id(Cfg.NETWORK_ID, request_id)
+        return jsonify({"code": 0, "msg": "success", "data": _format_random_record(updated)})
+    except Exception as e:
+        logger.error(f"api_update_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/random-record/<request_id>', methods=['GET'])
+def api_get_random_record(request_id):
+    """Get a random record by request_id"""
+    try:
+        record = get_random_record_by_request_id(Cfg.NETWORK_ID, request_id)
+        if not record:
+            return jsonify({"code": 0, "msg": "success", "data": None})
+
+        return jsonify({"code": 0, "msg": "success", "data": _format_random_record(record)})
+    except Exception as e:
+        logger.error(f"api_get_random_record error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+def _format_random_record(record):
+    """Format DB random_records row to API response"""
+    if not record:
+        return None
+    request_data = record.get("request_data")
+    if isinstance(request_data, str):
+        try:
+            request_data = json.loads(request_data)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return {
+        "id": record.get("id"),
+        "requestId": record.get("request_id"),
+        "status": record.get("status"),
+        "failMsg": record.get("fail_msg"),
+        "txHash": record.get("tx_hash"),
+        "requestData": request_data,
+        "randomNumberRaw": record.get("random_number_raw"),
+        "randomNumberUint": record.get("random_number_uint"),
+        "createdAt": str(record.get("created_at", "")),
+        "updatedAt": str(record.get("updated_at", "")),
+    }
+
+# ============================================================
+# TRXX Energy Rental API (matching TypeScript project routes)
+# ============================================================
+
+@app.route('/api/orders', methods=['POST'])
+def api_create_order():
+    """Create a TRXX energy rental order"""
+    try:
+        if not request.is_json:
+            return jsonify({"errno": -1, "message": "Request must be JSON"}), 400
+
+        body = request.get_json()
+        if not body or not isinstance(body, dict):
+            return jsonify({"errno": -1, "message": "Request body must be a non-empty JSON object"}), 400
+
+        # Verify frontend signature if FRONTEND_API_SECRET is configured
+        if Cfg.FRONTEND_API_SECRET:
+            ts = request.headers.get("TIMESTAMP", "")
+            sig = request.headers.get("SIGNATURE", "")
+            if not ts or not sig:
+                return jsonify({"errno": -1, "message": "Missing TIMESTAMP or SIGNATURE headers"}), 401
+            valid, err = verify_frontend_signature(ts, body, sig)
+            if not valid:
+                return jsonify({"errno": -1, "message": f"Signature verification failed: {err}"}), 401
+
+        # Validate required fields
+        receive_address = body.get("receiveAddress") or body.get("receive_address")
+        period = body.get("period")
+        energy_amount = body.get("energyAmount") or body.get("energy_amount")
+
+        if not receive_address:
+            return jsonify({"errno": -1, "message": "receiveAddress is required"}), 400
+        if not period:
+            return jsonify({"errno": -1, "message": "period is required"}), 400
+        if not energy_amount:
+            return jsonify({"errno": -1, "message": "energyAmount is required"}), 400
+
+        try:
+            energy_amount = int(energy_amount)
+        except (ValueError, TypeError):
+            return jsonify({"errno": -1, "message": "energyAmount must be an integer"}), 400
+
+        if period not in VALID_PERIODS:
+            return jsonify({"errno": -1, "message": f"Invalid period. Valid: {VALID_PERIODS}"}), 400
+
+        # Map period & generate order ID
+        import uuid as _uuid
+        order_id = str(_uuid.uuid4())
+        out_trade_no = order_id[:32]
+        trxx_period = PERIOD_MAP.get(period, period)
+
+        # Call TRXX API to create order
+        trxx_params = {
+            "receive_address": receive_address,
+            "period": trxx_period,
+            "energy_amount": energy_amount,
+            "out_trade_no": out_trade_no,
+        }
+        trxx_result = trxx_create_order(trxx_params)
+
+        trxx_data = trxx_result.get("data", {})
+        if trxx_result.get("errno") != 0:
+            return jsonify({
+                "errno": -1,
+                "message": trxx_result.get("message") or "TRXX API error",
+                "data": trxx_data,
+            }), 502
+
+        serial = trxx_data.get("serial") if isinstance(trxx_data, dict) else None
+        price_sun = trxx_data.get("amount") if isinstance(trxx_data, dict) else None
+
+        # Persist order to database
+        try:
+            create_trxx_order(
+                Cfg.NETWORK_ID, order_id, out_trade_no, serial,
+                receive_address, period, energy_amount,
+                status="pending", price_sun=price_sun,
+            )
+        except Exception as db_err:
+            logger.error(f"api_create_order DB error (order still created at TRXX): {db_err}")
+
+        return jsonify({
+            "errno": 0,
+            "data": {
+                "orderId": order_id,
+                "serial": serial,
+                "receiveAddress": receive_address,
+                "period": period,
+                "energyAmount": energy_amount,
+                "priceSun": price_sun,
+                "status": "pending",
+                "trxx": trxx_data,
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"api_create_order error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/orders/<order_id>', methods=['GET'])
+def api_get_order(order_id):
+    """Get order details by ID, with optional live sync from TRXX"""
+    try:
+        order = get_trxx_order_by_id(Cfg.NETWORK_ID, order_id)
+        if not order:
+            return jsonify({"errno": -1, "message": "Order not found"}), 404
+
+        # If still pending and has serial, attempt to sync from TRXX
+        if order.get("status") == "pending" and order.get("serial"):
+            try:
+                trxx_result = trxx_query_order(order["serial"])
+                if trxx_result.get("errno") == 0:
+                    trxx_data = trxx_result.get("data", {})
+                    if isinstance(trxx_data, dict):
+                        trxx_status = int(trxx_data.get("status", 0))
+                        if trxx_status == 40:
+                            new_status = "delegated"
+                        elif trxx_status == 41:
+                            new_status = "failed"
+                        else:
+                            new_status = "pending"
+
+                        if new_status != "pending":
+                            db_update_trxx_order_status(
+                                Cfg.NETWORK_ID, order["serial"], new_status,
+                                trxx_status=trxx_status,
+                                txid=trxx_data.get("txid"),
+                                bandwidth_hash=trxx_data.get("bandwidth_hash"),
+                                active_hash=trxx_data.get("active_hash"),
+                            )
+                            order["status"] = new_status
+                            order["trxx_status"] = trxx_status
+                            order["txid"] = trxx_data.get("txid")
+                            order["bandwidth_hash"] = trxx_data.get("bandwidth_hash")
+                            order["active_hash"] = trxx_data.get("active_hash")
+            except Exception as sync_err:
+                logger.warning(f"api_get_order sync error: {sync_err}")
+
+        return jsonify({
+            "errno": 0,
+            "data": _format_order_response(order),
+        })
+
+    except Exception as e:
+        logger.error(f"api_get_order error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/orders/<order_id>/reclaim', methods=['POST'])
+def api_reclaim_order(order_id):
+    """Reclaim (return early) an order"""
+    try:
+        order = get_trxx_order_by_id(Cfg.NETWORK_ID, order_id)
+        if not order:
+            return jsonify({"errno": -1, "message": "Order not found"}), 404
+        if not order.get("serial"):
+            return jsonify({"errno": -1, "message": "Order has no serial, cannot reclaim"}), 400
+        if order.get("status") != "delegated":
+            return jsonify({"errno": -1, "message": "Only delegated orders can be reclaimed"}), 400
+
+        result = trxx_reclaim_order(order["serial"])
+        if result.get("errno") == 0:
+            db_update_trxx_order_status(
+                Cfg.NETWORK_ID, order["serial"], "reclaimed",
+            )
+
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"api_reclaim_order error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/price', methods=['GET'])
+def api_price():
+    """Estimate price for energy rental"""
+    try:
+        period = request.args.get('period')
+        energy_amount = request.args.get('energy_amount') or request.args.get('energyAmount')
+
+        if not period or not energy_amount:
+            return jsonify({"errno": -1, "message": "period and energy_amount are required"}), 400
+
+        try:
+            energy_amount_int = int(energy_amount)
+        except (ValueError, TypeError):
+            return jsonify({"errno": -1, "message": "energy_amount must be an integer"}), 400
+
+        result = trxx_estimate_price(period, energy_amount_int)
+        return jsonify(result)
+
+    except Exception as e:
+        logger.error(f"api_price error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/api/index-data', methods=['GET'])
+def api_index_data():
+    """Get TRXX public index data / pricing tiers"""
+    try:
+        result = trxx_get_index_data()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"api_index_data error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+@app.route('/webhook/trxx', methods=['POST'])
+def webhook_trxx():
+    """TRXX callback webhook for order status updates"""
+    try:
+        ts = request.headers.get("TIMESTAMP", "")
+        sig = request.headers.get("SIGNATURE", "")
+        body = request.get_json(silent=True)
+
+        if not body:
+            return jsonify({"errno": -1, "message": "Empty body"}), 400
+
+        # Verify signature
+        valid, err = verify_trxx_webhook_signature(ts, body, sig)
+        if not valid:
+            logger.warning(f"webhook_trxx signature invalid: {err}")
+            return jsonify({"errno": -1, "message": f"Signature verification failed: {err}"}), 401
+
+        serial = body.get("serial") or body.get("data", {}).get("serial")
+        if not serial:
+            return jsonify({"errno": -1, "message": "Missing serial in webhook payload"}), 400
+
+        # Idempotency check
+        if trxx_webhook_event_exists(Cfg.NETWORK_ID, serial):
+            return jsonify({"errno": 0, "message": "Already processed"})
+
+        # Persist webhook event
+        import uuid as _uuid
+        event_id = str(_uuid.uuid4())
+        try:
+            create_trxx_webhook_event(
+                Cfg.NETWORK_ID, event_id, serial, sig, ts,
+                json.dumps(body, ensure_ascii=False),
+            )
+        except Exception as ev_err:
+            logger.error(f"webhook_trxx save event error: {ev_err}")
+
+        # Extract status from webhook payload
+        webhook_data = body if "status" in body else body.get("data", {})
+        trxx_status = int(webhook_data.get("status", 0))
+
+        if trxx_status == 40:
+            new_status = "delegated"
+        elif trxx_status == 41:
+            new_status = "failed"
+        else:
+            new_status = "pending"
+
+        # Update order in DB
+        try:
+            db_update_trxx_order_status(
+                Cfg.NETWORK_ID, serial, new_status,
+                trxx_status=trxx_status,
+                txid=webhook_data.get("txid"),
+                bandwidth_hash=webhook_data.get("bandwidth_hash"),
+                active_hash=webhook_data.get("active_hash"),
+            )
+            logger.info(f"webhook_trxx updated order serial={serial} to status={new_status}")
+        except Exception as up_err:
+            logger.error(f"webhook_trxx update error: {up_err}")
+
+        # Notify third party if delegated
+        if new_status == "delegated" and Cfg.THIRDPARTY_WEBHOOK_URL:
+            order = get_trxx_order_by_serial(Cfg.NETWORK_ID, serial)
+            if order:
+                _notify_third_party(order, serial, webhook_data, source="webhook")
+
+        return jsonify({"errno": 0, "message": "ok"})
+
+    except Exception as e:
+        logger.error(f"webhook_trxx error: {e}")
+        return jsonify({"errno": -1, "message": str(e)}), 500
+
+
+def _format_order_response(order):
+    """Format DB order row to API response"""
+    if not order:
+        return None
+    return {
+        "orderId": order.get("id"),
+        "outTradeNo": order.get("out_trade_no"),
+        "serial": order.get("serial"),
+        "receiveAddress": order.get("receive_address"),
+        "period": order.get("period"),
+        "energyAmount": order.get("energy_amount"),
+        "status": order.get("status"),
+        "trxxStatus": order.get("trxx_status"),
+        "txid": order.get("txid"),
+        "bandwidthHash": order.get("bandwidth_hash"),
+        "activeHash": order.get("active_hash"),
+        "priceSun": order.get("price_sun"),
+        "createdAt": str(order.get("created_at", "")),
+        "updatedAt": str(order.get("updated_at", "")),
+    }
+
+
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 log_file = "app-%s.log" % current_date
 logger.add(log_file)
+
+# Start TRXX pending order polling scheduler
+try:
+    start_trxx_scheduler()
+except Exception as sched_err:
+    logger.warning(f"Failed to start TRXX scheduler: {sched_err}")
+
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
     app.logger.info(Welcome)

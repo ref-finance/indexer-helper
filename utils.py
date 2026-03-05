@@ -272,6 +272,8 @@ def combine_dcl_pool_log(ret):
 
 
 def handle_point_data(all_point_data, start_point, end_point):
+    if not all_point_data:
+        return []
     # 优化：使用列表推导式，性能更好
     return [point_data for point_data in all_point_data if start_point <= point_data["point"] <= end_point]
 
