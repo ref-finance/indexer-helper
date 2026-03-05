@@ -33,7 +33,7 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data, zcash_get_public_key, \
     query_evm_mpc_call_cache, add_evm_mpc_call_cache, query_supported_chains, \
     check_supported_chains_expired, refresh_supported_chains, \
-    insert_random_record, get_one_pending_random_record, update_random_record, get_random_record_by_uuid, get_pending_random_records_page
+    insert_random_record, get_one_pending_random_record, update_random_record, get_random_record_by_request_id, get_pending_random_records_page
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import datetime
@@ -58,7 +58,7 @@ from db_provider import create_trxx_order, get_trxx_order_by_id, get_trxx_order_
     update_trxx_order_status as db_update_trxx_order_status, get_pending_trxx_orders, \
     trxx_webhook_event_exists, create_trxx_webhook_event
 
-service_version = "20260202.01"
+service_version = "20260205.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -2614,24 +2614,24 @@ def api_insert_random_record():
         if not body or not isinstance(body, dict):
             return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
 
-        uuid = body.get("uuid")
-        if not uuid:
-            return jsonify({"code": -1, "msg": "uuid is required", "data": None})
+        request_id = body.get("requestId")
+        if not request_id:
+            return jsonify({"code": -1, "msg": "requestId is required", "data": None})
 
         status = body.get("status", 0)
         fail_msg = body.get("failMsg")
         tx_hash = body.get("txHash")
-        random_number = body.get("randomNumber")
+        request_data = body.get("requestData")
 
         insert_random_record(
             network_id=Cfg.NETWORK_ID,
-            uuid=uuid,
+            request_id=request_id,
             status=status,
             fail_msg=fail_msg,
             tx_hash=tx_hash,
-            random_number=random_number,
+            request_data=request_data,
         )
-        return jsonify({"code": 0, "msg": "success", "data": {"uuid": uuid}})
+        return jsonify({"code": 0, "msg": "success", "data": {"requestId": request_id}})
     except Exception as e:
         logger.error(f"api_insert_random_record error: {e}")
         return jsonify({"code": -1, "msg": str(e), "data": None})
@@ -2684,9 +2684,92 @@ def api_get_pending_random_records_page():
         return jsonify({"code": -1, "msg": str(e), "data": None})
 
 
-@app.route('/api/random-record/<uuid>', methods=['POST', 'PUT'])
-def api_update_random_record(uuid):
-    """Update a random record by uuid"""
+def _query_near_tx_randomness(tx_hash):
+    """
+    Query NEAR transaction by hash and extract randomness_generated event log.
+    Returns (random_number_raw, random_number_uint) or (None, None) if not found.
+    """
+    rpc_urls = Cfg.NETWORK[Cfg.NETWORK_ID]["NEAR_RPC_URL"]
+    last_error = None
+
+    for rpc_url in rpc_urls:
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": "dontcare",
+                "method": "EXPERIMENTAL_tx_status",
+                "params": {
+                    "tx_hash": tx_hash,
+                    "sender_account_id": "system",
+                    "wait_until": "NONE"
+                }
+            }
+            resp = requests.post(rpc_url, json=payload, timeout=15)
+            resp.raise_for_status()
+            result = resp.json()
+
+            if "error" in result:
+                last_error = result["error"]
+                logger.warning(f"NEAR RPC error from {rpc_url}: {result['error']}")
+                continue
+
+            tx_result = result.get("result", {})
+            # Search through all receipt outcomes for randomness_generated event
+            receipts_outcome = tx_result.get("receipts_outcome", [])
+            for receipt in receipts_outcome:
+                outcome = receipt.get("outcome", {})
+                logs = outcome.get("logs", [])
+                for log_str in logs:
+                    random_raw, random_uint = _parse_randomness_log(log_str)
+                    if random_raw is not None:
+                        return random_raw, random_uint
+
+            logger.warning(f"No randomness_generated event found in tx {tx_hash}")
+            return None, None
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"Failed to query NEAR tx from {rpc_url}: {e}")
+            continue
+
+    logger.error(f"All NEAR RPC nodes failed for tx {tx_hash}, last error: {last_error}")
+    return None, None
+
+
+def _parse_randomness_log(log_str):
+    """
+    Parse a NEAR contract log string for randomness_generated event.
+    Handles both raw JSON and EVENT_JSON: prefixed formats.
+    Returns (random_number_raw, random_number_uint) or (None, None).
+    """
+    try:
+        json_str = log_str
+        if log_str.startswith("EVENT_JSON:"):
+            json_str = log_str[len("EVENT_JSON:"):]
+
+        log_obj = json.loads(json_str)
+
+        event = log_obj.get("event", "")
+        if event != "randomness_generated":
+            return None, None
+
+        data = log_obj.get("data", {})
+        random_number_hex = data.get("random_number")
+        if not random_number_hex:
+            return None, None
+
+        # raw = original hex string
+        random_number_raw = random_number_hex
+        # uint = hex converted to decimal integer string
+        random_number_uint = str(int(random_number_hex, 16))
+
+        return random_number_raw, random_number_uint
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return None, None
+
+
+@app.route('/api/random-record/<request_id>', methods=['POST', 'PUT'])
+def api_update_random_record(request_id):
+    """Update a random record by request_id"""
     try:
         if not request.is_json:
             return jsonify({"code": -1, "msg": "Request must be JSON format", "data": None})
@@ -2696,37 +2779,53 @@ def api_update_random_record(uuid):
             return jsonify({"code": -1, "msg": "Request body must be a non-empty JSON object", "data": None})
 
         # Check if record exists
-        existing = get_random_record_by_uuid(Cfg.NETWORK_ID, uuid)
+        existing = get_random_record_by_request_id(Cfg.NETWORK_ID, request_id)
         if not existing:
-            return jsonify({"code": -1, "msg": f"Record not found: {uuid}", "data": None})
+            return jsonify({"code": -1, "msg": f"Record not found: {request_id}", "data": None})
 
         status = body.get("status")
         fail_msg = body.get("failMsg")
         tx_hash = body.get("txHash")
-        random_number = body.get("randomNumber")
+        request_data = body.get("requestData")
+        random_number_raw = None
+        random_number_uint = None
+
+        # If txHash is provided, query NEAR tx for randomness_generated event
+        if tx_hash:
+            try:
+                random_number_raw, random_number_uint = _query_near_tx_randomness(tx_hash)
+                if random_number_raw:
+                    status = 1
+                    logger.info(f"Extracted randomness from tx {tx_hash}: raw={random_number_raw}, uint={random_number_uint}")
+                else:
+                    logger.warning(f"No randomness found in tx {tx_hash}")
+            except Exception as e:
+                logger.error(f"Failed to query randomness from tx {tx_hash}: {e}")
 
         update_random_record(
             network_id=Cfg.NETWORK_ID,
-            uuid=uuid,
+            request_id=request_id,
             status=status,
             fail_msg=fail_msg,
             tx_hash=tx_hash,
-            random_number=random_number,
+            request_data=request_data,
+            random_number_raw=random_number_raw,
+            random_number_uint=random_number_uint,
         )
 
         # Return updated record
-        updated = get_random_record_by_uuid(Cfg.NETWORK_ID, uuid)
+        updated = get_random_record_by_request_id(Cfg.NETWORK_ID, request_id)
         return jsonify({"code": 0, "msg": "success", "data": _format_random_record(updated)})
     except Exception as e:
         logger.error(f"api_update_random_record error: {e}")
         return jsonify({"code": -1, "msg": str(e), "data": None})
 
 
-@app.route('/api/random-record/<uuid>', methods=['GET'])
-def api_get_random_record(uuid):
-    """Get a random record by uuid"""
+@app.route('/api/random-record/<request_id>', methods=['GET'])
+def api_get_random_record(request_id):
+    """Get a random record by request_id"""
     try:
-        record = get_random_record_by_uuid(Cfg.NETWORK_ID, uuid)
+        record = get_random_record_by_request_id(Cfg.NETWORK_ID, request_id)
         if not record:
             return jsonify({"code": 0, "msg": "success", "data": None})
 
@@ -2740,17 +2839,24 @@ def _format_random_record(record):
     """Format DB random_records row to API response"""
     if not record:
         return None
+    request_data = record.get("request_data")
+    if isinstance(request_data, str):
+        try:
+            request_data = json.loads(request_data)
+        except (json.JSONDecodeError, TypeError):
+            pass
     return {
         "id": record.get("id"),
-        "uuid": record.get("uuid"),
+        "requestId": record.get("request_id"),
         "status": record.get("status"),
         "failMsg": record.get("fail_msg"),
         "txHash": record.get("tx_hash"),
-        "randomNumber": record.get("random_number"),
+        "requestData": request_data,
+        "randomNumberRaw": record.get("random_number_raw"),
+        "randomNumberUint": record.get("random_number_uint"),
         "createdAt": str(record.get("created_at", "")),
         "updatedAt": str(record.get("updated_at", "")),
     }
-
 
 # ============================================================
 # TRXX Energy Rental API (matching TypeScript project routes)

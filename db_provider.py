@@ -2303,14 +2303,18 @@ def create_trxx_webhook_event(network_id, event_id, serial, signature, timestamp
 # Random Records Database Operations
 # ============================================================
 
-def insert_random_record(network_id, uuid, status=0, fail_msg=None, tx_hash=None, random_number=None):
+def insert_random_record(network_id, request_id, status=0, fail_msg=None, tx_hash=None, request_data=None,
+                         random_number_raw=None, random_number_uint=None):
     """Insert a new random record"""
     db_conn = get_db_connect(network_id)
-    sql = """INSERT INTO random_records (uuid, status, fail_msg, tx_hash, random_number, created_at, updated_at)
-             VALUES (%s, %s, %s, %s, %s, NOW(), NOW())"""
+    sql = """INSERT INTO random_records (request_id, status, fail_msg, tx_hash, request_data,
+             random_number_raw, random_number_uint, created_at, updated_at)
+             VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())"""
     cursor = db_conn.cursor()
     try:
-        cursor.execute(sql, (uuid, status, fail_msg, tx_hash, random_number))
+        request_data_str = json.dumps(request_data, ensure_ascii=False) if request_data is not None else None
+        cursor.execute(sql, (request_id, status, fail_msg, tx_hash, request_data_str,
+                             random_number_raw, random_number_uint))
         db_conn.commit()
     except Exception as e:
         db_conn.rollback()
@@ -2337,8 +2341,9 @@ def get_one_pending_random_record(network_id):
         db_conn.close()
 
 
-def update_random_record(network_id, uuid, status=None, fail_msg=None, tx_hash=None, random_number=None):
-    """Update a random record by its uuid. Only non-None fields are updated."""
+def update_random_record(network_id, request_id, status=None, fail_msg=None, tx_hash=None, request_data=None,
+                         random_number_raw=None, random_number_uint=None):
+    """Update a random record by its request_id. Only non-None fields are updated."""
     db_conn = get_db_connect(network_id)
     fields = []
     params = []
@@ -2351,17 +2356,23 @@ def update_random_record(network_id, uuid, status=None, fail_msg=None, tx_hash=N
     if tx_hash is not None:
         fields.append("tx_hash = %s")
         params.append(tx_hash)
-    if random_number is not None:
-        fields.append("random_number = %s")
-        params.append(random_number)
+    if request_data is not None:
+        fields.append("request_data = %s")
+        params.append(json.dumps(request_data, ensure_ascii=False))
+    if random_number_raw is not None:
+        fields.append("random_number_raw = %s")
+        params.append(random_number_raw)
+    if random_number_uint is not None:
+        fields.append("random_number_uint = %s")
+        params.append(random_number_uint)
 
     if not fields:
         return
 
     fields.append("updated_at = NOW()")
-    params.append(uuid)
+    params.append(request_id)
 
-    sql = f"UPDATE random_records SET {', '.join(fields)} WHERE uuid = %s"
+    sql = f"UPDATE random_records SET {', '.join(fields)} WHERE request_id = %s"
     cursor = db_conn.cursor()
     try:
         cursor.execute(sql, tuple(params))
@@ -2399,16 +2410,16 @@ def get_pending_random_records_page(network_id, page=1, page_size=20):
         db_conn.close()
 
 
-def get_random_record_by_uuid(network_id, uuid):
-    """Get a random record by its uuid"""
+def get_random_record_by_request_id(network_id, request_id):
+    """Get a random record by its request_id"""
     db_conn = get_db_connect(network_id)
-    sql = "SELECT * FROM random_records WHERE uuid = %s LIMIT 1"
+    sql = "SELECT * FROM random_records WHERE request_id = %s LIMIT 1"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql, (uuid,))
+        cursor.execute(sql, (request_id,))
         return cursor.fetchone()
     except Exception as e:
-        print("get_random_record_by_uuid error:", e)
+        print("get_random_record_by_request_id error:", e)
         return None
     finally:
         cursor.close()
