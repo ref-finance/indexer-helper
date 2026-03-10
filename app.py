@@ -2108,7 +2108,7 @@ def handle_get_chain_prices():
     # Filter out OKX platform tokens whose address does not start with 0x
     filtered_data = {}
     for address, token_info in price_data.items():
-        if isinstance(token_info, dict) and token_info.get("platform") == "okx" and not address.startswith("0x"):
+        if isinstance(token_info, dict) and token_info.get("platform") == "okx" and token_info.get("chainId") not in Cfg.EVM_CHAIN_LIST and not address.startswith("0x"):
             continue
         filtered_data[address] = token_info
     ret["data"] = filtered_data
