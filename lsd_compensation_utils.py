@@ -21,6 +21,7 @@ import base64
 import requests
 from loguru import logger
 from config import Cfg
+from web3 import Web3
 
 
 # ============================================================
@@ -192,10 +193,6 @@ def send_lsd_token_bsc(to_address, amount_str):
     Returns:
         tx_hash: string, transaction hash on BSC
     """
-    try:
-        from web3 import Web3
-    except ImportError:
-        raise ImportError("web3 package is required. Install with: pip install web3")
 
     rpc_url = Cfg.BSC_RPC_URL
     private_key = Cfg.BSC_WALLET_PRIVATE_KEY
