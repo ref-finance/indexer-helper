@@ -2424,3 +2424,134 @@ def get_random_record_by_request_id(network_id, request_id):
     finally:
         cursor.close()
         db_conn.close()
+
+
+# ============================================================
+# LSD Bridge Fee Compensation Database Operations
+# ============================================================
+
+def insert_lsd_compensation(network_id, deposit_address):
+    """Insert a new LSD bridge fee compensation record"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO lsd_bridge_fee_compensation (deposit_address, status, created_at, updated_at)
+             VALUES (%s, 0, NOW(), NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (deposit_address,))
+        db_conn.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        db_conn.rollback()
+        print("insert_lsd_compensation error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_pending_lsd_compensations(network_id):
+    """Get all pending LSD compensation records (status=0, within 24 hours)"""
+    db_conn = get_db_connect(network_id)
+    sql = """SELECT * FROM lsd_bridge_fee_compensation
+             WHERE status = 0 AND created_at >= NOW() - INTERVAL 24 HOUR
+             ORDER BY created_at ASC"""
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        return cursor.fetchall()
+    except Exception as e:
+        print("get_pending_lsd_compensations error:", e)
+        return []
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_lsd_compensation(network_id, record_id, **kwargs):
+    """Update a LSD compensation record by id. Only non-None kwargs are updated."""
+    allowed_fields = [
+        "deposit_address", "user_address", "oneclick_status",
+        "amount_in", "amount_out", "fee_difference",
+        "lsd_amount", "lsd_tx_hash", "status",
+        "retry_count", "error_msg", "status_response"
+    ]
+    fields = []
+    params = []
+    for key, value in kwargs.items():
+        if key in allowed_fields and value is not None:
+            if key == "status_response" and isinstance(value, (dict, list)):
+                value = json.dumps(value, ensure_ascii=False)
+            fields.append(f"`{key}` = %s")
+            params.append(value)
+
+    if not fields:
+        return
+
+    fields.append("updated_at = NOW()")
+    params.append(record_id)
+
+    sql = f"UPDATE lsd_bridge_fee_compensation SET {', '.join(fields)} WHERE id = %s"
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, tuple(params))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_lsd_compensation error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_lsd_compensation_by_deposit_address(network_id, deposit_address):
+    """Get a LSD compensation record by deposit_address"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM lsd_bridge_fee_compensation WHERE deposit_address = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (deposit_address,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_lsd_compensation_by_deposit_address error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_lsd_compensation_by_id(network_id, record_id):
+    """Get a LSD compensation record by id"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM lsd_bridge_fee_compensation WHERE id = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (record_id,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_lsd_compensation_by_id error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def expire_old_lsd_compensations(network_id):
+    """Mark records older than 24 hours with status=0 as expired (status=-2)"""
+    db_conn = get_db_connect(network_id)
+    sql = """UPDATE lsd_bridge_fee_compensation
+             SET status = -2, error_msg = 'Expired: no SUCCESS within 24 hours', updated_at = NOW()
+             WHERE status = 0 AND created_at < NOW() - INTERVAL 24 HOUR"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+        return cursor.rowcount
+    except Exception as e:
+        db_conn.rollback()
+        print("expire_old_lsd_compensations error:", e)
+        return 0
+    finally:
+        cursor.close()
+        db_conn.close()

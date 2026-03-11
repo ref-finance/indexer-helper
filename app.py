@@ -56,7 +56,9 @@ from trxx_utils import (
 )
 from db_provider import create_trxx_order, get_trxx_order_by_id, get_trxx_order_by_serial, \
     update_trxx_order_status as db_update_trxx_order_status, get_pending_trxx_orders, \
-    trxx_webhook_event_exists, create_trxx_webhook_event
+    trxx_webhook_event_exists, create_trxx_webhook_event, \
+    insert_lsd_compensation, get_lsd_compensation_by_deposit_address, get_lsd_compensation_by_id
+from lsd_compensation_utils import start_lsd_compensation_scheduler
 
 service_version = "20260205.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
@@ -2859,6 +2861,85 @@ def _format_random_record(record):
     }
 
 # ============================================================
+# LSD Bridge Fee Compensation API
+# ============================================================
+
+@app.route('/api/lsd-compensation', methods=['POST'])
+def api_add_lsd_compensation():
+    """Add a new LSD bridge fee compensation record"""
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON", "data": None})
+
+        body = request.get_json()
+        deposit_address = body.get("depositAddress", "").strip() if body else ""
+
+        if not deposit_address:
+            return jsonify({"code": -1, "msg": "depositAddress is required", "data": None})
+
+        # Check duplicate
+        existing = get_lsd_compensation_by_deposit_address(Cfg.NETWORK_ID, deposit_address)
+        if existing:
+            return jsonify({
+                "code": 0,
+                "msg": "success",
+                "data": _format_lsd_compensation(existing)
+            })
+
+        record_id = insert_lsd_compensation(Cfg.NETWORK_ID, deposit_address)
+        record = get_lsd_compensation_by_id(Cfg.NETWORK_ID, record_id)
+        return jsonify({
+            "code": 0,
+            "msg": "success",
+            "data": _format_lsd_compensation(record)
+        })
+    except Exception as e:
+        logger.error(f"api_add_lsd_compensation error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/lsd-compensation/<deposit_address>', methods=['GET'])
+def api_get_lsd_compensation(deposit_address):
+    """Get a LSD compensation record by deposit_address"""
+    try:
+        record = get_lsd_compensation_by_deposit_address(Cfg.NETWORK_ID, deposit_address)
+        if not record:
+            return jsonify({"code": 0, "msg": "success", "data": None})
+        return jsonify({"code": 0, "msg": "success", "data": _format_lsd_compensation(record)})
+    except Exception as e:
+        logger.error(f"api_get_lsd_compensation error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+def _format_lsd_compensation(record):
+    """Format DB lsd_bridge_fee_compensation row to API response"""
+    if not record:
+        return None
+    status_response = record.get("status_response")
+    if isinstance(status_response, str):
+        try:
+            status_response = json.loads(status_response)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return {
+        "id": record.get("id"),
+        "depositAddress": record.get("deposit_address"),
+        "userAddress": record.get("user_address"),
+        "oneclickStatus": record.get("oneclick_status"),
+        "amountIn": record.get("amount_in"),
+        "amountOut": record.get("amount_out"),
+        "feeDifference": record.get("fee_difference"),
+        "lsdAmount": record.get("lsd_amount"),
+        "lsdTxHash": record.get("lsd_tx_hash"),
+        "status": record.get("status"),
+        "retryCount": record.get("retry_count"),
+        "errorMsg": record.get("error_msg"),
+        "createdAt": str(record.get("created_at", "")),
+        "updatedAt": str(record.get("updated_at", "")),
+    }
+
+
+# ============================================================
 # TRXX Energy Rental API (matching TypeScript project routes)
 # ============================================================
 
@@ -3170,6 +3251,12 @@ try:
     start_trxx_scheduler()
 except Exception as sched_err:
     logger.warning(f"Failed to start TRXX scheduler: {sched_err}")
+
+# Start LSD bridge fee compensation scheduler
+try:
+    start_lsd_compensation_scheduler()
+except Exception as sched_err:
+    logger.warning(f"Failed to start LSD compensation scheduler: {sched_err}")
 
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)
