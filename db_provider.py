@@ -4,7 +4,8 @@ import json
 from datetime import datetime, timedelta
 from config import Cfg
 import time
-from redis_provider import RedisProvider, list_history_token_price, list_token_price, get_account_pool_assets, get_pool_point_24h_by_pool_id
+import requests
+from redis_provider import RedisProvider, list_history_token_price, list_token_price, list_token_metadata, get_account_pool_assets, get_pool_point_24h_by_pool_id
 from data_utils import add_redis_data
 
 
@@ -2555,3 +2556,157 @@ def expire_old_lsd_compensations(network_id):
     finally:
         cursor.close()
         db_conn.close()
+
+
+def _normalize_ts_to_ns(ts: int) -> int:
+    """
+    Normalize timestamp to nanoseconds.
+
+    Accepts:
+    - seconds: ~1e9..1e10
+    - milliseconds: ~1e12..1e13
+    - nanoseconds: ~1e18
+    """
+    ts = int(ts)
+    if ts < 0:
+        return ts
+    # seconds (10 digits) -> ns
+    if ts < 10**11:
+        return ts * 1_000_000_000
+    # milliseconds (13 digits) -> ns
+    if ts < 10**15:
+        return ts * 1_000_000
+    return ts
+
+
+def get_burrow_fee_data_by_time(network_id, start_time, end_time):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from burrow_fee_log where `timestamp` >= %s and `timestamp` <= %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (start_time, end_time))
+        return cursor.fetchall()
+    except Exception as e:
+        print("get_burrow_fee_data_by_time error:", e)
+        return []
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_burrow_total_revenue_by_time_range(network_id, startTimestamp, endTimestamp):
+    """
+    Calculate burrow_total_revenue between [startTimestamp, endTimestamp].
+    startTimestamp/endTimestamp can be seconds/ms/ns.
+    """
+    start_ns = _normalize_ts_to_ns(startTimestamp)
+    end_ns = _normalize_ts_to_ns(endTimestamp)
+    if start_ns > end_ns:
+        start_ns, end_ns = end_ns, start_ns
+    config_url = "https://api.burrow.finance/get_assets_paged_detailed"
+    prices = list_token_price(network_id)
+    token_metadata = list_token_metadata(network_id)
+    cfg_token_decimals = {t["NEAR_ID"]: int(t["DECIMAL"]) for t in Cfg.TOKENS.get(network_id, [])}
+
+    try:
+        token_config_ret = requests.get(config_url, timeout=20).json()
+    except Exception as e:
+        print("get_burrow_total_revenue_by_time_range token config error:", e)
+        return 0.0
+
+    if not isinstance(token_config_ret, dict) or token_config_ret.get("code") != "0":
+        print("get_burrow_total_revenue_by_time_range token_config_ret invalid:", token_config_ret)
+        return 0.0
+
+    token_config_data = {}
+    for token_config in token_config_ret.get("data", []):
+        try:
+            token_id = token_config["token_id"]
+            token_config_data[token_id] = int(token_config["config"]["extra_decimals"])
+        except Exception:
+            continue
+
+    burrow_fee_log_list = get_burrow_fee_data_by_time(network_id, start_ns, end_ns)
+    burrow_total_revenue = 0.0
+    for burrow_fee_log in burrow_fee_log_list:
+        token_id = burrow_fee_log.get("token_id")
+        if token_id not in prices:
+            continue
+        if token_id not in token_config_data:
+            continue
+        try:
+            token_decimals = token_metadata.get(token_id, {}).get("decimals")
+            if token_decimals is None:
+                token_decimals = cfg_token_decimals.get(token_id)
+            if token_decimals is None:
+                continue
+
+            usd_token_decimal = int(token_decimals) + int(token_config_data[token_id])
+            denom = 10 ** usd_token_decimal
+            price = float(prices[token_id])
+            prot_fee = int(burrow_fee_log.get("prot_fee", 0))
+            reserved = int(burrow_fee_log.get("reserved", 0))
+            burrow_total_revenue += ((prot_fee + reserved) / denom) * price
+        except Exception:
+            continue
+
+    return burrow_total_revenue
+
+
+def get_burrow_total_fee_by_time_range(network_id, startTimestamp, endTimestamp):
+    """
+    Calculate burrow_total_fee between [startTimestamp, endTimestamp].
+    startTimestamp/endTimestamp can be seconds/ms/ns.
+    """
+    start_ns = _normalize_ts_to_ns(startTimestamp)
+    end_ns = _normalize_ts_to_ns(endTimestamp)
+    if start_ns > end_ns:
+        start_ns, end_ns = end_ns, start_ns
+
+    config_url = "https://api.burrow.finance/get_assets_paged_detailed"
+    prices = list_token_price(network_id)
+    token_metadata = list_token_metadata(network_id)
+    cfg_token_decimals = {t["NEAR_ID"]: int(t["DECIMAL"]) for t in Cfg.TOKENS.get(network_id, [])}
+
+    try:
+        token_config_ret = requests.get(config_url, timeout=20).json()
+    except Exception as e:
+        print("get_burrow_total_fee_by_time_range token config error:", e)
+        return 0.0
+
+    if not isinstance(token_config_ret, dict) or token_config_ret.get("code") != "0":
+        print("get_burrow_total_fee_by_time_range token_config_ret invalid:", token_config_ret)
+        return 0.0
+
+    token_config_data = {}
+    for token_config in token_config_ret.get("data", []):
+        try:
+            token_id = token_config["token_id"]
+            token_config_data[token_id] = int(token_config["config"]["extra_decimals"])
+        except Exception:
+            continue
+
+    burrow_fee_log_list = get_burrow_fee_data_by_time(network_id, start_ns, end_ns)
+    burrow_total_fee = 0.0
+    for burrow_fee_log in burrow_fee_log_list:
+        token_id = burrow_fee_log.get("token_id")
+        if token_id not in prices:
+            continue
+        if token_id not in token_config_data:
+            continue
+        try:
+            token_decimals = token_metadata.get(token_id, {}).get("decimals")
+            if token_decimals is None:
+                token_decimals = cfg_token_decimals.get(token_id)
+            if token_decimals is None:
+                continue
+
+            usd_token_decimal = int(token_decimals) + int(token_config_data[token_id])
+            denom = 10 ** usd_token_decimal
+            price = float(prices[token_id])
+            interest = int(burrow_fee_log.get("interest", 0))
+            burrow_total_fee += (interest / denom) * price
+        except Exception:
+            continue
+
+    return burrow_total_fee
