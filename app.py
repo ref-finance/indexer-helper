@@ -1470,7 +1470,7 @@ def handle_whitelisted_token_list():
 @app.route('/conversion-token-record', methods=['GET'])
 def handel_conversion_token_record():
     account_id = request.args.get("account_id", type=str, default='')
-    contract_id = request.args.get("contract_id", type=str, default='')
+    contract_id = request.args.get("contract_id", type=str, default='conversion.rhealab.near')
     page_number = request.args.get("page_number", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=10)
     if page_size == 0:
