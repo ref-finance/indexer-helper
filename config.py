@@ -101,6 +101,13 @@ except ImportError:
     THIRDPARTY_WEBHOOK_URL = ""
     EVM_CHAIN_LIST = []
 
+try:
+    from db_info import BSC_LSD_TOKEN_ADDRESS, BSC_WALLET_PRIVATE_KEY, BSC_RPC_URL
+except ImportError:
+    BSC_LSD_TOKEN_ADDRESS = ""      # LSD token ERC20 contract address on BSC (0x...)
+    BSC_WALLET_PRIVATE_KEY = ""     # BSC wallet private key for sending LSD
+    BSC_RPC_URL = "https://bsc-dataseed.binance.org"
+
 
 class Cfg:
     NETWORK_ID = "MAINNET"
@@ -132,6 +139,9 @@ class Cfg:
     FRONTEND_API_SECRET = FRONTEND_API_SECRET
     THIRDPARTY_WEBHOOK_URL = THIRDPARTY_WEBHOOK_URL
     EVM_CHAIN_LIST = EVM_CHAIN_LIST
+    BSC_LSD_TOKEN_ADDRESS = BSC_LSD_TOKEN_ADDRESS
+    BSC_WALLET_PRIVATE_KEY = BSC_WALLET_PRIVATE_KEY
+    BSC_RPC_URL = BSC_RPC_URL
     NETWORK = {
         "DEVNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
