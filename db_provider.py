@@ -1600,15 +1600,15 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
               "conversion_token_log WHERE `event` = 'claim_succeeded' " \
               "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
               "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
-              "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
+              "AND ctl.`event` = 'create_conversion' AND receiver_id = %s ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
         sql_count = "select count(*) as total_number from conversion_token_log " \
-                    "where account_id = %s and `event` = 'create_conversion'"
+                    "where account_id = %s and `event` = 'create_conversion' and receiver_id = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         now_time = int(time.time()) * 1000
-        cursor.execute(sql, (account_id, start_number, page_size))
+        cursor.execute(sql, (account_id, contract_id, start_number, page_size))
         conversion_token_log = cursor.fetchall()
-        cursor.execute(sql_count, account_id)
+        cursor.execute(sql_count, (account_id, contract_id))
         conversion_token_log_count = cursor.fetchone()
         for conversion_token_data in conversion_token_log:
             # status(0:锁定状态，1:可领取，2：已领取)
