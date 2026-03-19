@@ -20,7 +20,7 @@ from redis_provider import get_dcl_pools_volume_list, get_24h_pool_volume_list, 
     get_lst_total_revenue_24h, get_cross_chain_total_fee_24h, get_cross_chain_total_revenue_24h, get_cross_chain_total_volume_24h, get_chain_tokens_with_prices
 from utils import combine_pools_info, compress_response_content, get_ip_address, pools_filter, is_base64, combine_dcl_pool_log, handle_dcl_point_bin, handle_point_data, handle_top_bin_fee, handle_dcl_point_bin_by_account, get_circulating_supply, get_lp_lock_info, get_rnear_price
 from config import Cfg
-from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log
+from db_provider import get_history_token_price, query_limit_order_log, query_limit_order_swap, get_liquidity_pools, get_actions, query_dcl_pool_log, query_burrow_liquidate_log, update_burrow_liquidate_log, get_burrow_total_revenue_by_time_range, get_burrow_total_fee_by_time_range
 from db_provider import query_recent_transaction_swap, query_recent_transaction_dcl_swap, \
     query_recent_transaction_liquidity, query_recent_transaction_dcl_liquidity, query_recent_transaction_limit_order, query_dcl_points, query_dcl_points_by_account, \
     query_dcl_user_unclaimed_fee, query_dcl_user_claimed_fee, query_dcl_user_unclaimed_fee_24h, query_dcl_user_claimed_fee_24h, \
@@ -56,9 +56,11 @@ from trxx_utils import (
 )
 from db_provider import create_trxx_order, get_trxx_order_by_id, get_trxx_order_by_serial, \
     update_trxx_order_status as db_update_trxx_order_status, get_pending_trxx_orders, \
-    trxx_webhook_event_exists, create_trxx_webhook_event
+    trxx_webhook_event_exists, create_trxx_webhook_event, \
+    insert_lsd_compensation, get_lsd_compensation_by_deposit_address, get_lsd_compensation_by_id
+from lsd_compensation_utils import start_lsd_compensation_scheduler
 
-service_version = "20260205.01"
+service_version = "20260318.01"
 Welcome = 'Welcome to ref datacenter API server, version ' + service_version + ', indexer %s' % \
           Cfg.NETWORK[Cfg.NETWORK_ID]["INDEXER_HOST"][-3:]
 # Instantiation, which can be regarded as fixed format
@@ -1283,6 +1285,44 @@ def handel_get_burrow_total_revenue():
         "data": {"total_revenue": total_revenue}
     }
     return jsonify(ret_data)
+
+
+@app.route('/get-total-revenue-by-time', methods=['GET'])
+def handel_get_total_revenue_by_time():
+    try:
+        start_ts = request.args.get("startTimestamp")
+        end_ts = request.args.get("endTimestamp")
+        if start_ts is None or end_ts is None or str(start_ts).strip() == "" or str(end_ts).strip() == "":
+            return jsonify({"code": -1, "msg": "error", "data": "startTimestamp and endTimestamp are required"})
+
+        total_revenue = get_burrow_total_revenue_by_time_range(Cfg.NETWORK_ID, int(start_ts), int(end_ts))
+        return jsonify({
+            "code": 0,
+            "msg": "success",
+            "data": {"total_revenue": str(total_revenue)}
+        })
+    except Exception as e:
+        logger.info("handel_get_burrow_total_revenue_by_time error:{}", e.args)
+        return jsonify({"code": -1, "msg": "error", "data": e.args})
+
+
+@app.route('/get-total-fee-by-time', methods=['GET'])
+def handel_get_total_fee_by_time():
+    try:
+        start_ts = request.args.get("startTimestamp")
+        end_ts = request.args.get("endTimestamp")
+        if start_ts is None or end_ts is None or str(start_ts).strip() == "" or str(end_ts).strip() == "":
+            return jsonify({"code": -1, "msg": "error", "data": "startTimestamp and endTimestamp are required"})
+
+        total_fee = get_burrow_total_fee_by_time_range(Cfg.NETWORK_ID, int(start_ts), int(end_ts))
+        return jsonify({
+            "code": 0,
+            "msg": "success",
+            "data": {"total_fee": str(total_fee)}
+        })
+    except Exception as e:
+        logger.info("handel_get_total_fee_by_time error:{}", e.args)
+        return jsonify({"code": -1, "msg": "error", "data": e.args})
 
 
 @app.route('/nbtc_total_supply', methods=['GET'])
@@ -2859,6 +2899,85 @@ def _format_random_record(record):
     }
 
 # ============================================================
+# LSD Bridge Fee Compensation API
+# ============================================================
+
+@app.route('/api/lsd-compensation', methods=['POST'])
+def api_add_lsd_compensation():
+    """Add a new LSD bridge fee compensation record"""
+    try:
+        if not request.is_json:
+            return jsonify({"code": -1, "msg": "Request must be JSON", "data": None})
+
+        body = request.get_json()
+        deposit_address = body.get("depositAddress", "").strip() if body else ""
+
+        if not deposit_address:
+            return jsonify({"code": -1, "msg": "depositAddress is required", "data": None})
+
+        # Check duplicate
+        existing = get_lsd_compensation_by_deposit_address(Cfg.NETWORK_ID, deposit_address)
+        if existing:
+            return jsonify({
+                "code": 0,
+                "msg": "success",
+                "data": _format_lsd_compensation(existing)
+            })
+
+        record_id = insert_lsd_compensation(Cfg.NETWORK_ID, deposit_address)
+        record = get_lsd_compensation_by_id(Cfg.NETWORK_ID, record_id)
+        return jsonify({
+            "code": 0,
+            "msg": "success",
+            "data": _format_lsd_compensation(record)
+        })
+    except Exception as e:
+        logger.error(f"api_add_lsd_compensation error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+@app.route('/api/lsd-compensation/<deposit_address>', methods=['GET'])
+def api_get_lsd_compensation(deposit_address):
+    """Get a LSD compensation record by deposit_address"""
+    try:
+        record = get_lsd_compensation_by_deposit_address(Cfg.NETWORK_ID, deposit_address)
+        if not record:
+            return jsonify({"code": 0, "msg": "success", "data": None})
+        return jsonify({"code": 0, "msg": "success", "data": _format_lsd_compensation(record)})
+    except Exception as e:
+        logger.error(f"api_get_lsd_compensation error: {e}")
+        return jsonify({"code": -1, "msg": str(e), "data": None})
+
+
+def _format_lsd_compensation(record):
+    """Format DB lsd_bridge_fee_compensation row to API response"""
+    if not record:
+        return None
+    status_response = record.get("status_response")
+    if isinstance(status_response, str):
+        try:
+            status_response = json.loads(status_response)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return {
+        "id": record.get("id"),
+        "depositAddress": record.get("deposit_address"),
+        "userAddress": record.get("user_address"),
+        "oneclickStatus": record.get("oneclick_status"),
+        "amountIn": record.get("amount_in"),
+        "amountOut": record.get("amount_out"),
+        "feeDifference": record.get("fee_difference"),
+        "lsdAmount": record.get("lsd_amount"),
+        "lsdTxHash": record.get("lsd_tx_hash"),
+        "status": record.get("status"),
+        "retryCount": record.get("retry_count"),
+        "errorMsg": record.get("error_msg"),
+        "createdAt": str(record.get("created_at", "")),
+        "updatedAt": str(record.get("updated_at", "")),
+    }
+
+
+# ============================================================
 # TRXX Energy Rental API (matching TypeScript project routes)
 # ============================================================
 
@@ -3170,6 +3289,12 @@ try:
     start_trxx_scheduler()
 except Exception as sched_err:
     logger.warning(f"Failed to start TRXX scheduler: {sched_err}")
+
+# Start LSD bridge fee compensation scheduler
+try:
+    start_lsd_compensation_scheduler()
+except Exception as sched_err:
+    logger.warning(f"Failed to start LSD compensation scheduler: {sched_err}")
 
 if __name__ == '__main__':
     app.logger.setLevel(logging.INFO)

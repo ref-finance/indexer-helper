@@ -4,7 +4,8 @@ import json
 from datetime import datetime, timedelta
 from config import Cfg
 import time
-from redis_provider import RedisProvider, list_history_token_price, list_token_price, get_account_pool_assets, get_pool_point_24h_by_pool_id
+import requests
+from redis_provider import RedisProvider, list_history_token_price, list_token_price, list_token_metadata, get_account_pool_assets, get_pool_point_24h_by_pool_id
 from data_utils import add_redis_data
 
 
@@ -1599,15 +1600,15 @@ def query_conversion_token_record(network_id, account_id, page_number, page_size
               "conversion_token_log WHERE `event` = 'claim_succeeded' " \
               "GROUP BY conversion_id, account_id) claims ON claims.conversion_id = ctl.conversion_id " \
               "AND claims.account_id = ctl.account_id WHERE ctl.account_id = %s " \
-              "AND ctl.`event` = 'create_conversion' ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
+              "AND ctl.`event` = 'create_conversion' AND receiver_id = %s ORDER BY ctl.`timestamp` DESC LIMIT %s, %s"
         sql_count = "select count(*) as total_number from conversion_token_log " \
-                    "where account_id = %s and `event` = 'create_conversion'"
+                    "where account_id = %s and `event` = 'create_conversion' and receiver_id = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
         now_time = int(time.time()) * 1000
-        cursor.execute(sql, (account_id, start_number, page_size))
+        cursor.execute(sql, (account_id, contract_id, start_number, page_size))
         conversion_token_log = cursor.fetchall()
-        cursor.execute(sql_count, account_id)
+        cursor.execute(sql_count, (account_id, contract_id))
         conversion_token_log_count = cursor.fetchone()
         for conversion_token_data in conversion_token_log:
             # status(0:锁定状态，1:可领取，2：已领取)
@@ -2424,3 +2425,288 @@ def get_random_record_by_request_id(network_id, request_id):
     finally:
         cursor.close()
         db_conn.close()
+
+
+# ============================================================
+# LSD Bridge Fee Compensation Database Operations
+# ============================================================
+
+def insert_lsd_compensation(network_id, deposit_address):
+    """Insert a new LSD bridge fee compensation record"""
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO lsd_bridge_fee_compensation (deposit_address, status, created_at, updated_at)
+             VALUES (%s, 0, NOW(), NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (deposit_address,))
+        db_conn.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        db_conn.rollback()
+        print("insert_lsd_compensation error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_pending_lsd_compensations(network_id):
+    """Get all pending LSD compensation records (status=0, within 24 hours)"""
+    db_conn = get_db_connect(network_id)
+    sql = """SELECT * FROM lsd_bridge_fee_compensation
+             WHERE status = 0 AND created_at >= NOW() - INTERVAL 24 HOUR
+             ORDER BY created_at ASC"""
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        return cursor.fetchall()
+    except Exception as e:
+        print("get_pending_lsd_compensations error:", e)
+        return []
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_lsd_compensation(network_id, record_id, **kwargs):
+    """Update a LSD compensation record by id. Only non-None kwargs are updated."""
+    allowed_fields = [
+        "deposit_address", "user_address", "oneclick_status",
+        "amount_in", "amount_out", "fee_difference",
+        "lsd_amount", "lsd_tx_hash", "status",
+        "retry_count", "error_msg", "status_response"
+    ]
+    fields = []
+    params = []
+    for key, value in kwargs.items():
+        if key in allowed_fields and value is not None:
+            if key == "status_response" and isinstance(value, (dict, list)):
+                value = json.dumps(value, ensure_ascii=False)
+            fields.append(f"`{key}` = %s")
+            params.append(value)
+
+    if not fields:
+        return
+
+    fields.append("updated_at = NOW()")
+    params.append(record_id)
+
+    sql = f"UPDATE lsd_bridge_fee_compensation SET {', '.join(fields)} WHERE id = %s"
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, tuple(params))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_lsd_compensation error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_lsd_compensation_by_deposit_address(network_id, deposit_address):
+    """Get a LSD compensation record by deposit_address"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM lsd_bridge_fee_compensation WHERE deposit_address = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (deposit_address,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_lsd_compensation_by_deposit_address error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_lsd_compensation_by_id(network_id, record_id):
+    """Get a LSD compensation record by id"""
+    db_conn = get_db_connect(network_id)
+    sql = "SELECT * FROM lsd_bridge_fee_compensation WHERE id = %s LIMIT 1"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql, (record_id,))
+        return cursor.fetchone()
+    except Exception as e:
+        print("get_lsd_compensation_by_id error:", e)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def expire_old_lsd_compensations(network_id):
+    """Mark records older than 24 hours with status=0 as expired (status=-2)"""
+    db_conn = get_db_connect(network_id)
+    sql = """UPDATE lsd_bridge_fee_compensation
+             SET status = -2, error_msg = 'Expired: no SUCCESS within 24 hours', updated_at = NOW()
+             WHERE status = 0 AND created_at < NOW() - INTERVAL 24 HOUR"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql)
+        db_conn.commit()
+        return cursor.rowcount
+    except Exception as e:
+        db_conn.rollback()
+        print("expire_old_lsd_compensations error:", e)
+        return 0
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def _normalize_ts_to_ns(ts: int) -> int:
+    """
+    Normalize timestamp to nanoseconds.
+
+    Accepts:
+    - seconds: ~1e9..1e10
+    - milliseconds: ~1e12..1e13
+    - nanoseconds: ~1e18
+    """
+    ts = int(ts)
+    if ts < 0:
+        return ts
+    # seconds (10 digits) -> ns
+    if ts < 10**11:
+        return ts * 1_000_000_000
+    # milliseconds (13 digits) -> ns
+    if ts < 10**15:
+        return ts * 1_000_000
+    return ts
+
+
+def get_burrow_fee_data_by_time(network_id, start_time, end_time):
+    db_conn = get_db_connect(network_id)
+    query_sql = "select * from burrow_fee_log where `timestamp` >= %s and `timestamp` <= %s"
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (start_time, end_time))
+        return cursor.fetchall()
+    except Exception as e:
+        print("get_burrow_fee_data_by_time error:", e)
+        return []
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_burrow_total_revenue_by_time_range(network_id, startTimestamp, endTimestamp):
+    """
+    Calculate burrow_total_revenue between [startTimestamp, endTimestamp].
+    startTimestamp/endTimestamp can be seconds/ms/ns.
+    """
+    start_ns = _normalize_ts_to_ns(startTimestamp)
+    end_ns = _normalize_ts_to_ns(endTimestamp)
+    if start_ns > end_ns:
+        start_ns, end_ns = end_ns, start_ns
+    config_url = "https://api.burrow.finance/get_assets_paged_detailed"
+    prices = list_token_price(network_id)
+    token_metadata = list_token_metadata(network_id)
+    cfg_token_decimals = {t["NEAR_ID"]: int(t["DECIMAL"]) for t in Cfg.TOKENS.get(network_id, [])}
+
+    try:
+        token_config_ret = requests.get(config_url, timeout=20).json()
+    except Exception as e:
+        print("get_burrow_total_revenue_by_time_range token config error:", e)
+        return 0.0
+
+    if not isinstance(token_config_ret, dict) or token_config_ret.get("code") != "0":
+        print("get_burrow_total_revenue_by_time_range token_config_ret invalid:", token_config_ret)
+        return 0.0
+
+    token_config_data = {}
+    for token_config in token_config_ret.get("data", []):
+        try:
+            token_id = token_config["token_id"]
+            token_config_data[token_id] = int(token_config["config"]["extra_decimals"])
+        except Exception:
+            continue
+
+    burrow_fee_log_list = get_burrow_fee_data_by_time(network_id, start_ns, end_ns)
+    burrow_total_revenue = 0.0
+    for burrow_fee_log in burrow_fee_log_list:
+        token_id = burrow_fee_log.get("token_id")
+        if token_id not in prices:
+            continue
+        if token_id not in token_config_data:
+            continue
+        try:
+            token_decimals = token_metadata.get(token_id, {}).get("decimals")
+            if token_decimals is None:
+                token_decimals = cfg_token_decimals.get(token_id)
+            if token_decimals is None:
+                continue
+
+            usd_token_decimal = int(token_decimals) + int(token_config_data[token_id])
+            denom = 10 ** usd_token_decimal
+            price = float(prices[token_id])
+            prot_fee = int(burrow_fee_log.get("prot_fee", 0))
+            reserved = int(burrow_fee_log.get("reserved", 0))
+            burrow_total_revenue += ((prot_fee + reserved) / denom) * price
+        except Exception:
+            continue
+
+    return burrow_total_revenue
+
+
+def get_burrow_total_fee_by_time_range(network_id, startTimestamp, endTimestamp):
+    """
+    Calculate burrow_total_fee between [startTimestamp, endTimestamp].
+    startTimestamp/endTimestamp can be seconds/ms/ns.
+    """
+    start_ns = _normalize_ts_to_ns(startTimestamp)
+    end_ns = _normalize_ts_to_ns(endTimestamp)
+    if start_ns > end_ns:
+        start_ns, end_ns = end_ns, start_ns
+
+    config_url = "https://api.burrow.finance/get_assets_paged_detailed"
+    prices = list_token_price(network_id)
+    token_metadata = list_token_metadata(network_id)
+    cfg_token_decimals = {t["NEAR_ID"]: int(t["DECIMAL"]) for t in Cfg.TOKENS.get(network_id, [])}
+
+    try:
+        token_config_ret = requests.get(config_url, timeout=20).json()
+    except Exception as e:
+        print("get_burrow_total_fee_by_time_range token config error:", e)
+        return 0.0
+
+    if not isinstance(token_config_ret, dict) or token_config_ret.get("code") != "0":
+        print("get_burrow_total_fee_by_time_range token_config_ret invalid:", token_config_ret)
+        return 0.0
+
+    token_config_data = {}
+    for token_config in token_config_ret.get("data", []):
+        try:
+            token_id = token_config["token_id"]
+            token_config_data[token_id] = int(token_config["config"]["extra_decimals"])
+        except Exception:
+            continue
+
+    burrow_fee_log_list = get_burrow_fee_data_by_time(network_id, start_ns, end_ns)
+    burrow_total_fee = 0.0
+    for burrow_fee_log in burrow_fee_log_list:
+        token_id = burrow_fee_log.get("token_id")
+        if token_id not in prices:
+            continue
+        if token_id not in token_config_data:
+            continue
+        try:
+            token_decimals = token_metadata.get(token_id, {}).get("decimals")
+            if token_decimals is None:
+                token_decimals = cfg_token_decimals.get(token_id)
+            if token_decimals is None:
+                continue
+
+            usd_token_decimal = int(token_decimals) + int(token_config_data[token_id])
+            denom = 10 ** usd_token_decimal
+            price = float(prices[token_id])
+            interest = int(burrow_fee_log.get("interest", 0))
+            burrow_total_fee += (interest / denom) * price
+        except Exception:
+            continue
+
+    return burrow_total_fee
