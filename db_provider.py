@@ -887,6 +887,60 @@ def get_history_token_price_by_token(ids, data_time):
         cursor.close()
 
 
+def get_history_token_price_avg_by_contract_addresses(network_id, contract_addresses, start_ns, end_ns):
+    """
+    Query historical avg token prices from mk_history_token_price.
+
+    Notes:
+    - mk_history_token_price.`timestamp` is stored as unix seconds (varchar).
+    - This function normalizes ns -> seconds and uses the (contract_address, timestamp) index.
+    """
+    contract_addresses = list({a for a in contract_addresses if a})
+    if not contract_addresses:
+        return {}
+
+    start_ns = int(start_ns)
+    end_ns = int(end_ns)
+    if start_ns > end_ns:
+        start_ns, end_ns = end_ns, start_ns
+
+    start_sec = start_ns // 1_000_000_000
+    # ceil to include the last partially covered second
+    end_sec = (end_ns + 1_000_000_000 - 1) // 1_000_000_000
+
+    placeholders = ",".join(["%s"] * len(contract_addresses))
+    sql = (
+        "SELECT contract_address, AVG(price) AS avg_price, MAX(`decimal`) AS `decimal` "
+        "FROM mk_history_token_price "
+        f"WHERE contract_address IN ({placeholders}) AND `timestamp` >= %s AND `timestamp` <= %s "
+        "GROUP BY contract_address"
+    )
+
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        params = contract_addresses + [str(start_sec), str(end_sec)]
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+        ret = {}
+        for row in rows:
+            if row is None:
+                continue
+            contract_address = row.get("contract_address")
+            avg_price = row.get("avg_price")
+            dec = row.get("decimal")
+            if not contract_address or avg_price is None or dec is None:
+                continue
+            ret[contract_address] = {"price": float(avg_price), "decimal": int(dec)}
+        return ret
+    except Exception as e:
+        print("get_history_token_price_avg_by_contract_addresses error:", e)
+        return {}
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
 def query_dcl_pool_log(network_id, start_block_id, end_block_id):
     db_conn = get_db_connect(network_id)
     sql = "select * from (select tla.event_method, tla.pool_id, '' as order_id, tla.lpt_id, '' as swapper, " \
@@ -2604,9 +2658,6 @@ def get_burrow_total_revenue_by_time_range(network_id, startTimestamp, endTimest
     if start_ns > end_ns:
         start_ns, end_ns = end_ns, start_ns
     config_url = "https://api.burrow.finance/get_assets_paged_detailed"
-    prices = list_token_price(network_id)
-    token_metadata = list_token_metadata(network_id)
-    cfg_token_decimals = {t["NEAR_ID"]: int(t["DECIMAL"]) for t in Cfg.TOKENS.get(network_id, [])}
 
     try:
         token_config_ret = requests.get(config_url, timeout=20).json()
@@ -2627,23 +2678,35 @@ def get_burrow_total_revenue_by_time_range(network_id, startTimestamp, endTimest
             continue
 
     burrow_fee_log_list = get_burrow_fee_data_by_time(network_id, start_ns, end_ns)
+
+    token_ids_in_range = {
+        str(burrow_fee_log.get("token_id"))
+        for burrow_fee_log in burrow_fee_log_list
+        if burrow_fee_log.get("token_id")
+    }
+    token_ids_in_range &= {str(k) for k in token_config_data.keys()}
+    prices = get_history_token_price_avg_by_contract_addresses(
+        network_id=network_id,
+        contract_addresses=list(token_ids_in_range),
+        start_ns=start_ns,
+        end_ns=end_ns,
+    )
+
     burrow_total_revenue = 0.0
     for burrow_fee_log in burrow_fee_log_list:
         token_id = burrow_fee_log.get("token_id")
+        if not token_id:
+            continue
+        token_id = str(token_id)
         if token_id not in prices:
             continue
         if token_id not in token_config_data:
             continue
         try:
-            token_decimals = token_metadata.get(token_id, {}).get("decimals")
-            if token_decimals is None:
-                token_decimals = cfg_token_decimals.get(token_id)
-            if token_decimals is None:
-                continue
-
-            usd_token_decimal = int(token_decimals) + int(token_config_data[token_id])
+            token_price_decimal = int(prices[token_id]["decimal"])
+            usd_token_decimal = token_price_decimal + int(token_config_data[token_id])
             denom = 10 ** usd_token_decimal
-            price = float(prices[token_id])
+            price = float(prices[token_id]["price"])
             prot_fee = int(burrow_fee_log.get("prot_fee", 0))
             reserved = int(burrow_fee_log.get("reserved", 0))
             burrow_total_revenue += ((prot_fee + reserved) / denom) * price
@@ -2664,9 +2727,6 @@ def get_burrow_total_fee_by_time_range(network_id, startTimestamp, endTimestamp)
         start_ns, end_ns = end_ns, start_ns
 
     config_url = "https://api.burrow.finance/get_assets_paged_detailed"
-    prices = list_token_price(network_id)
-    token_metadata = list_token_metadata(network_id)
-    cfg_token_decimals = {t["NEAR_ID"]: int(t["DECIMAL"]) for t in Cfg.TOKENS.get(network_id, [])}
 
     try:
         token_config_ret = requests.get(config_url, timeout=20).json()
@@ -2687,26 +2747,37 @@ def get_burrow_total_fee_by_time_range(network_id, startTimestamp, endTimestamp)
             continue
 
     burrow_fee_log_list = get_burrow_fee_data_by_time(network_id, start_ns, end_ns)
+
+    token_ids_in_range = {
+        str(burrow_fee_log.get("token_id"))
+        for burrow_fee_log in burrow_fee_log_list
+        if burrow_fee_log.get("token_id")
+    }
+    token_ids_in_range &= {str(k) for k in token_config_data.keys()}
+    prices = get_history_token_price_avg_by_contract_addresses(
+        network_id=network_id,
+        contract_addresses=list(token_ids_in_range),
+        start_ns=start_ns,
+        end_ns=end_ns,
+    )
+
     burrow_total_fee = 0.0
     for burrow_fee_log in burrow_fee_log_list:
         token_id = burrow_fee_log.get("token_id")
+        if not token_id:
+            continue
+        token_id = str(token_id)
         if token_id not in prices:
             continue
         if token_id not in token_config_data:
             continue
         try:
-            token_decimals = token_metadata.get(token_id, {}).get("decimals")
-            if token_decimals is None:
-                token_decimals = cfg_token_decimals.get(token_id)
-            if token_decimals is None:
-                continue
-
-            usd_token_decimal = int(token_decimals) + int(token_config_data[token_id])
+            token_price_decimal = int(prices[token_id]["decimal"])
+            usd_token_decimal = token_price_decimal + int(token_config_data[token_id])
             denom = 10 ** usd_token_decimal
-            price = float(prices[token_id])
+            price = float(prices[token_id]["price"])
             interest = int(burrow_fee_log.get("interest", 0))
             burrow_total_fee += (interest / denom) * price
         except Exception:
             continue
-
     return burrow_total_fee
