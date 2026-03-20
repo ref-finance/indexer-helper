@@ -1287,8 +1287,8 @@ def handel_get_burrow_total_revenue():
     return jsonify(ret_data)
 
 
-@app.route('/get-total-revenue-by-time', methods=['GET'])
-def handel_get_total_revenue_by_time():
+@app.route('/get-total-lend-revenue-by-time', methods=['GET'])
+def handel_get_total_lend_revenue_by_time():
     try:
         start_ts = request.args.get("startTimestamp")
         end_ts = request.args.get("endTimestamp")
@@ -1306,8 +1306,8 @@ def handel_get_total_revenue_by_time():
         return jsonify({"code": -1, "msg": "error", "data": e.args})
 
 
-@app.route('/get-total-fee-by-time', methods=['GET'])
-def handel_get_total_fee_by_time():
+@app.route('/get-total-lend-fee-by-time', methods=['GET'])
+def handel_get_total_lend_fee_by_time():
     try:
         start_ts = request.args.get("startTimestamp")
         end_ts = request.args.get("endTimestamp")
