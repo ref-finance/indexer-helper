@@ -33,7 +33,8 @@ from db_provider import query_recent_transaction_swap, query_recent_transaction_
     query_multichain_lending_account, add_multichain_lending_whitelist, query_multichain_lending_zcash_data, zcash_get_public_key, \
     query_evm_mpc_call_cache, add_evm_mpc_call_cache, query_supported_chains, \
     check_supported_chains_expired, refresh_supported_chains, \
-    insert_random_record, get_one_pending_random_record, update_random_record, get_random_record_by_request_id, get_pending_random_records_page
+    insert_random_record, get_one_pending_random_record, update_random_record, get_random_record_by_request_id, \
+    get_pending_random_records_page, add_multichain_lending_report_lsd, query_multichain_lending_history_lsd
 from loguru import logger
 from analysis_v2_pool_data_s3 import analysis_v2_pool_data_to_s3, analysis_v2_pool_account_data_to_s3
 import datetime
@@ -1686,7 +1687,27 @@ def handel_multichain_lending_report():
             "data": batch_id
         }
     except Exception as e:
-        logger.error("handel_user_wallet error:{}", e)
+        logger.error("handel_multichain_lending_report error:{}", e)
+        ret = {
+            "code": -1,
+            "msg": "error",
+            "data": e.args
+        }
+    return ret
+
+
+@app.route('/multichain_lending_report_lsd', methods=['POST', 'PUT'])
+def handel_multichain_lending_report_lsd():
+    try:
+        multichain_lending_data = request.json
+        batch_id = add_multichain_lending_report_lsd(Cfg.NETWORK_ID, multichain_lending_data["account"], multichain_lending_data["wallet"], multichain_lending_data["request_hash"], multichain_lending_data["page_display_data"])
+        ret = {
+            "code": 0,
+            "msg": "success",
+            "data": batch_id
+        }
+    except Exception as e:
+        logger.error("handel_multichain_lending_report_lsd error:{}", e)
         ret = {
             "code": -1,
             "msg": "error",
@@ -1713,6 +1734,87 @@ def handel_multichain_lending_history():
     if page_size == 0:
         return ""
     data_list, count_number = query_multichain_lending_history(Cfg.NETWORK_ID, mca_id, page_number, page_size)
+
+    # 将时间字段转换为UTC+0时区格式（数据库现在存储的是UTC时间）
+    from datetime import timezone
+    for record in data_list:
+        # 处理created_at字段
+        if 'created_at' in record and record['created_at']:
+            dt = record['created_at']
+            if isinstance(dt, datetime.datetime):
+                # datetime对象：如果没有时区信息，假设是UTC（因为数据库存储的是UTC）
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    # 如果有时区信息，转换为UTC+0
+                    dt = dt.astimezone(timezone.utc)
+                # 格式化为字符串（UTC+0）
+                record['created_at'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(dt, str):
+                # 字符串格式：数据库存储的是UTC时间，直接返回（假设格式正确）
+                # 如果需要确保格式统一，可以尝试解析和格式化
+                try:
+                    # 尝试解析多种可能的格式
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                        try:
+                            dt_obj = datetime.datetime.strptime(dt, fmt)
+                            record['created_at'] = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                            break
+                        except ValueError:
+                            continue
+                except (ValueError, TypeError):
+                    # 如果解析失败，保持原样
+                    pass
+
+        # 处理updated_at字段
+        if 'updated_at' in record and record['updated_at']:
+            dt = record['updated_at']
+            if isinstance(dt, datetime.datetime):
+                # datetime对象：如果没有时区信息，假设是UTC（因为数据库存储的是UTC）
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                else:
+                    # 如果有时区信息，转换为UTC+0
+                    dt = dt.astimezone(timezone.utc)
+                # 格式化为字符串（UTC+0）
+                record['updated_at'] = dt.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(dt, str):
+                # 字符串格式：数据库存储的是UTC时间，直接返回（假设格式正确）
+                try:
+                    # 尝试解析多种可能的格式
+                    for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                        try:
+                            dt_obj = datetime.datetime.strptime(dt, fmt)
+                            record['updated_at'] = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                            break
+                        except ValueError:
+                            continue
+                except (ValueError, TypeError):
+                    # 如果解析失败，保持原样
+                    pass
+
+    if count_number % page_size == 0:
+        total_page = int(count_number / page_size)
+    else:
+        total_page = int(count_number / page_size) + 1
+    res = {
+        "record_list": data_list,
+        "page_number": page_number,
+        "page_size": page_size,
+        "total_page": total_page,
+        "total_size": count_number,
+    }
+    return compress_response_content(res)
+
+
+@app.route('/get_multichain_lending_history_lsd', methods=['GET'])
+def handel_multichain_lending_history_lsd():
+    account = request.args.get("account", type=str, default='')
+    page_number = request.args.get("page_number", type=int, default=1)
+    page_size = request.args.get("page_size", type=int, default=100)
+    if page_size == 0:
+        return ""
+    data_list, count_number = query_multichain_lending_history_lsd(Cfg.NETWORK_ID, account, page_number, page_size)
 
     # 将时间字段转换为UTC+0时区格式（数据库现在存储的是UTC时间）
     from datetime import timezone
