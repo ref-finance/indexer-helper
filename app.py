@@ -1181,18 +1181,30 @@ def handel_user_wallet():
 def handel_get_total_fee():
     total_fee = 0
     not_pool_id_list = ""
+    whitelist = Cfg.POOL_FEE_TOKEN_WHITELIST
     try:
         pool_volume_data = get_pools_volume_24h(Cfg.NETWORK_ID)
         pool_list = list_pools(Cfg.NETWORK_ID)
         pool_data = {}
+        pool_tokens = {}
         for pool in pool_list:
             pool_data[pool["id"]] = pool["total_fee"] / 10000
+            pool_tokens[pool["id"]] = pool.get("token_account_ids", [])
         for pool_volume in pool_volume_data:
-            if pool_volume["pool_id"] in pool_data:
-                pool_fee = float(pool_volume["volume_24h"]) * pool_data[pool_volume["pool_id"]]
+            pool_id = pool_volume["pool_id"]
+            if pool_id in pool_data:
+                tokens = pool_tokens.get(pool_id, [])
+                if not any(t in whitelist for t in tokens):
+                    continue
+                pool_fee = float(pool_volume["volume_24h"]) * pool_data[pool_id]
                 total_fee += pool_fee
             else:
-                not_pool_id_list = not_pool_id_list + "," + pool_volume["pool_id"]
+                parts = pool_id.split("|")
+                if len(parts) >= 2:
+                    dcl_tokens = parts[:-1]
+                    if not any(t in whitelist for t in dcl_tokens):
+                        continue
+                not_pool_id_list = not_pool_id_list + "," + pool_id
         if not_pool_id_list != "":
             url = Cfg.REF_GO_API + "/pool/search?pool_id_list=" + not_pool_id_list
             search_pool_json = requests.get(url).text
