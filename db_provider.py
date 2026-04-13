@@ -1912,16 +1912,22 @@ def query_multichain_lending_config(network_id):
         cursor.close()
 
 
-def query_multichain_lending_history(network_id, mca_id, page_number, page_size):
+def query_multichain_lending_history(network_id, mca_id, page_number, page_size, action_type=''):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_db_connect(network_id)
-    query_sql = "select * from multichain_lending_report_data where mca_id = %s ORDER BY id DESC LIMIT %s, %s"
-    sql_count = "select count(*) as total_number from multichain_lending_report_data where mca_id = %s"
+    where_clause = "where mca_id = %s"
+    params_query = [mca_id]
+    params_count = [mca_id]
+    if action_type == 'earn':
+        where_clause += " AND JSON_UNQUOTE(JSON_EXTRACT(page_display_data, '$.action')) IN ('Withdraw', 'Supply')"
+    query_sql = "select * from multichain_lending_report_data " + where_clause + " ORDER BY id DESC LIMIT %s, %s"
+    sql_count = "select count(*) as total_number from multichain_lending_report_data " + where_clause
+    params_query.extend([start_number, page_size])
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(query_sql, (mca_id, start_number, page_size))
+        cursor.execute(query_sql, params_query)
         data_list = cursor.fetchall()
-        cursor.execute(sql_count, mca_id)
+        cursor.execute(sql_count, params_count)
         total_number_data = cursor.fetchone()
         return data_list, total_number_data["total_number"]
     except Exception as e:

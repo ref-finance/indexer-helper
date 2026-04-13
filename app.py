@@ -1743,9 +1743,10 @@ def handel_multichain_lending_history():
     mca_id = request.args.get("mca_id", type=str, default='')
     page_number = request.args.get("page_number", type=int, default=1)
     page_size = request.args.get("page_size", type=int, default=100)
+    action_type = request.args.get("type", type=str, default='')
     if page_size == 0:
         return ""
-    data_list, count_number = query_multichain_lending_history(Cfg.NETWORK_ID, mca_id, page_number, page_size)
+    data_list, count_number = query_multichain_lending_history(Cfg.NETWORK_ID, mca_id, page_number, page_size, action_type)
 
     # 将时间字段转换为UTC+0时区格式（数据库现在存储的是UTC时间）
     from datetime import timezone
