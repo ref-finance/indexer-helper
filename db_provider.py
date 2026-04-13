@@ -1879,6 +1879,25 @@ def add_multichain_lending_report(network_id, mca_id, wallet, request_hash, page
     return request_hash
 
 
+def add_multichain_lending_report_lsd(network_id, account, wallet, request_hash, page_display_data):
+    db_conn = get_db_connect(network_id)
+    # 使用UTC+0时区的时间
+    utc_now = datetime.utcnow()
+    sql = "insert into multichain_lending_report_data(`type`, mca_id, `wallet`, request_hash, page_display_data" \
+          ", `created_at`, `updated_at`) values(%s,%s,%s,%s,%s,%s,%s)"
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (3, account, wallet, request_hash, page_display_data, utc_now, utc_now))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("insert multichain_lending_report_data to db error:", e)
+        raise e
+    finally:
+        cursor.close()
+    return request_hash
+
+
 def query_multichain_lending_config(network_id):
     db_conn = get_db_connect(network_id)
     sql = "select `key`,`value` from multichain_lending_config"
@@ -1893,16 +1912,41 @@ def query_multichain_lending_config(network_id):
         cursor.close()
 
 
-def query_multichain_lending_history(network_id, mca_id, page_number, page_size):
+def query_multichain_lending_history(network_id, mca_id, page_number, page_size, action_type=''):
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_db_connect(network_id)
+    where_clause = "where mca_id = %s"
+    params_query = [mca_id]
+    params_count = [mca_id]
+    if action_type == 'earn':
+        where_clause += " AND JSON_UNQUOTE(JSON_EXTRACT(page_display_data, '$.action')) IN ('Withdraw', 'Supply')"
+    query_sql = "select * from multichain_lending_report_data " + where_clause + " ORDER BY id DESC LIMIT %s, %s"
+    sql_count = "select count(*) as total_number from multichain_lending_report_data " + where_clause
+    params_query.extend([start_number, page_size])
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, params_query)
+        data_list = cursor.fetchall()
+        cursor.execute(sql_count, params_count)
+        total_number_data = cursor.fetchone()
+        return data_list, total_number_data["total_number"]
+    except Exception as e:
+        print("query_multichain_lending_data to db error:", e)
+    finally:
+        cursor.close()
+    return
+
+
+def query_multichain_lending_history_lsd(network_id, account, page_number, page_size):
     start_number = handel_page_number(page_number, page_size)
     db_conn = get_db_connect(network_id)
     query_sql = "select * from multichain_lending_report_data where mca_id = %s ORDER BY id DESC LIMIT %s, %s"
     sql_count = "select count(*) as total_number from multichain_lending_report_data where mca_id = %s"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(query_sql, (mca_id, start_number, page_size))
+        cursor.execute(query_sql, (account, start_number, page_size))
         data_list = cursor.fetchall()
-        cursor.execute(sql_count, mca_id)
+        cursor.execute(sql_count, account)
         total_number_data = cursor.fetchone()
         return data_list, total_number_data["total_number"]
     except Exception as e:
@@ -2050,7 +2094,7 @@ def add_multichain_lending_whitelist(network_id, account_address):
             db_conn.commit()
     except Exception as e:
         db_conn.rollback()
-        print("insert multichain_lending_report_data to db error:", e)
+        print("insert multichain_lending_whitelist to db error:", e)
         raise e
     finally:
         cursor.close()

@@ -547,6 +547,30 @@ class Cfg:
     AwsAccessKeyID = AwsAccessKeyID
     AwsSecretAccessKey = AwsSecretAccessKey
 
+    # updated on April 9, 2026
+    POOL_FEE_TOKEN_WHITELIST = {
+        "6b175474e89094c44da98b954eedeac495271d0f.factory.bridge.near",  # DAI
+        "dac17f958d2ee523a2206206994597c13d831ec7.factory.bridge.near",  # USDT.e
+        "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.factory.bridge.near",  # USDC.e
+        "usdt.tether-token.near",  # USDT
+        "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",  # USDC
+        "853d955acef822db058eb8505911ed77f175b99e.factory.bridge.near",  # FRAX
+        "wrap.near",  # wNEAR
+        "meta-pool.near",  # stNEAR
+        "linear-protocol.near",  # liNEAR
+        "lst.rhealab.near",  # rNEAR
+        "2260fac5e5542a773aa44fbcfedf7c193bc2c599.factory.bridge.near",  # wBTC
+        "nbtc.bridge.near",  # nBTC
+        "eth.bridge.near",  # ETH
+        "22.contract.portalbridge.near",  # SOL
+        "zec.omft.near",  # ZEC
+        "aaaaaa20d9e0e2461697782ef11675f668207961.factory.bridge.near",  # aurora
+        "xtoken.rhealab.near",  # xRhea
+        "token.rhealab.near",  # Rhea
+        "token.publicailab.near",  # PublicAI
+        "token.sweat",  # sweat
+    }
+
 
 if __name__ == '__main__':
     print(type(Cfg))
