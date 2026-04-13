@@ -1919,7 +1919,8 @@ def query_multichain_lending_history(network_id, mca_id, page_number, page_size,
     params_query = [mca_id]
     params_count = [mca_id]
     if action_type == 'earn':
-        where_clause += " AND JSON_UNQUOTE(JSON_EXTRACT(page_display_data, '$.action')) IN ('Withdraw', 'Supply')"
+        where_clause += " AND JSON_UNQUOTE(JSON_EXTRACT(page_display_data, '$.action')) IN ('Withdraw', 'Supply')" \
+                        " AND JSON_UNQUOTE(JSON_EXTRACT(page_display_data, '$.symbol')) IN ('USDC', 'USDT')"
     query_sql = "select * from multichain_lending_report_data " + where_clause + " ORDER BY id DESC LIMIT %s, %s"
     sql_count = "select count(*) as total_number from multichain_lending_report_data " + where_clause
     params_query.extend([start_number, page_size])
