@@ -7,6 +7,7 @@ from flask import request
 from flask import jsonify
 from flask import Response
 import json
+import math
 import logging
 from indexer_provider import get_proposal_id_hash
 from redis_provider import list_farms, list_top_pools, list_pools, list_token_price, list_whitelist, get_token_price, list_base_token_price
@@ -58,7 +59,8 @@ from trxx_utils import (
 from db_provider import create_trxx_order, get_trxx_order_by_id, get_trxx_order_by_serial, \
     update_trxx_order_status as db_update_trxx_order_status, get_pending_trxx_orders, \
     trxx_webhook_event_exists, create_trxx_webhook_event, \
-    insert_lsd_compensation, get_lsd_compensation_by_deposit_address, get_lsd_compensation_by_id
+    insert_lsd_compensation, get_lsd_compensation_by_deposit_address, get_lsd_compensation_by_id, \
+    ensure_oneclick_orders_table, insert_oneclick_order, query_oneclick_orders
 from lsd_compensation_utils import start_lsd_compensation_scheduler
 
 service_version = "20260318.01"
@@ -3393,6 +3395,148 @@ def _format_order_response(order):
         "createdAt": str(order.get("created_at", "")),
         "updatedAt": str(order.get("updated_at", "")),
     }
+
+
+# ============================================================
+# 1Click Swap Order API
+# ============================================================
+
+try:
+    ensure_oneclick_orders_table(Cfg.NETWORK_ID)
+except Exception as _e:
+    logger.warning(f"Failed to ensure oneclick_orders table: {_e}")
+
+
+@app.route('/api/1click/create-order', methods=['POST'])
+def handle_1click_create_order():
+    try:
+        body = request.get_json(force=True)
+        if not body:
+            return jsonify({"error": "Request body is required"}), 400
+
+        required_fields = ["originAsset", "destinationAsset", "amount", "refundTo", "recipient"]
+        for field in required_fields:
+            if not body.get(field):
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        oneclick_payload = {
+            "dry": False,
+            "swapType": body.get("swapType", "EXACT_INPUT"),
+            "slippageTolerance": body.get("slippageTolerance", 100),
+            "originAsset": body["originAsset"],
+            "depositType": body.get("depositType", "ORIGIN_CHAIN"),
+            "destinationAsset": body["destinationAsset"],
+            "amount": body["amount"],
+            "recipient": body["recipient"],
+            "recipientType": body.get("recipientType", "DESTINATION_CHAIN"),
+            "refundTo": body["refundTo"],
+            "refundType": body.get("refundType", "ORIGIN_CHAIN"),
+        }
+        if body.get("deadline"):
+            oneclick_payload["deadline"] = body["deadline"]
+        if body.get("referral"):
+            oneclick_payload["referral"] = body["referral"]
+        for extra_key in ("customRecipientMsg", "appFees", "depositMode",
+                          "virtualChainRecipient", "virtualChainRefundRecipient"):
+            if body.get(extra_key) is not None:
+                oneclick_payload[extra_key] = body[extra_key]
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+        if Cfg.ONECLICK_JWT_TOKEN:
+            headers["Authorization"] = Cfg.ONECLICK_JWT_TOKEN
+
+        resp = requests.post(
+            f"{Cfg.ONECLICK_BASE_URL}/v0/quote",
+            json=oneclick_payload,
+            headers=headers,
+            timeout=30
+        )
+
+        if resp.status_code >= 300:
+            return jsonify({
+                "error": "1Click API error",
+                "status_code": resp.status_code,
+                "detail": resp.text
+            }), resp.status_code
+
+        quote_data = resp.json()
+        deposit_address = None
+        quote_obj = quote_data.get("quote") or {}
+        deposit_address = quote_obj.get("depositAddress")
+
+        insert_oneclick_order(
+            network_id=Cfg.NETWORK_ID,
+            origin_asset=body["originAsset"],
+            destination_asset=body["destinationAsset"],
+            amount=body["amount"],
+            refund_to=body["refundTo"],
+            recipient=body["recipient"],
+            swap_type=oneclick_payload["swapType"],
+            slippage_tolerance=oneclick_payload["slippageTolerance"],
+            deposit_type=oneclick_payload["depositType"],
+            recipient_type=oneclick_payload["recipientType"],
+            refund_type=oneclick_payload["refundType"],
+            deadline=oneclick_payload.get("deadline"),
+            referral=oneclick_payload.get("referral"),
+            deposit_address=deposit_address,
+            request_body=json.dumps(oneclick_payload),
+            quote_response=json.dumps(quote_data)
+        )
+
+        return jsonify(quote_data)
+
+    except Exception as e:
+        logger.error(f"handle_1click_create_order error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/1click/orders', methods=['GET'])
+def handle_1click_orders():
+    try:
+        refund_to = request.args.get("refund_to", "").strip()
+        if not refund_to:
+            return jsonify({"error": "Missing required parameter: refund_to"}), 400
+
+        page_number = int(request.args.get("page_number", 1))
+        page_size = int(request.args.get("page_size", 10))
+        if page_number < 1:
+            page_number = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 10
+
+        data_list, total_number = query_oneclick_orders(
+            Cfg.NETWORK_ID, refund_to, page_number, page_size
+        )
+
+        record_list = []
+        for row in (data_list or []):
+            item = dict(row)
+            for dt_key in ("created_at", "updated_at"):
+                if item.get(dt_key):
+                    item[dt_key] = str(item[dt_key])
+            for json_key in ("quote_response", "status_response"):
+                if item.get(json_key):
+                    try:
+                        item[json_key] = json.loads(item[json_key])
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+            record_list.append(item)
+
+        total_page = math.ceil(total_number / page_size) if total_number > 0 else 0
+
+        return jsonify({
+            "record_list": record_list,
+            "page_number": page_number,
+            "page_size": page_size,
+            "total_page": total_page,
+            "total_size": total_number
+        })
+
+    except Exception as e:
+        logger.error(f"handle_1click_orders error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
