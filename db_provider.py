@@ -2826,3 +2826,138 @@ def get_burrow_total_fee_by_time_range(network_id, startTimestamp, endTimestamp)
         except Exception:
             continue
     return burrow_total_fee
+
+
+# ============================================================
+# 1Click Swap Orders
+# ============================================================
+
+ONECLICK_ORDERS_CREATE_SQL = """
+CREATE TABLE IF NOT EXISTS oneclick_orders (
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    deposit_address   VARCHAR(128) DEFAULT NULL,
+    status            VARCHAR(32)  DEFAULT 'PENDING',
+    origin_asset      VARCHAR(256) NOT NULL,
+    destination_asset VARCHAR(256) NOT NULL,
+    amount            VARCHAR(64)  NOT NULL,
+    refund_to         VARCHAR(256) NOT NULL,
+    recipient         VARCHAR(256) NOT NULL,
+    swap_type         VARCHAR(32)  DEFAULT 'EXACT_INPUT',
+    slippage_tolerance INT         DEFAULT 100,
+    deposit_type      VARCHAR(32)  DEFAULT 'ORIGIN_CHAIN',
+    recipient_type    VARCHAR(32)  DEFAULT 'DESTINATION_CHAIN',
+    refund_type       VARCHAR(32)  DEFAULT 'ORIGIN_CHAIN',
+    deadline          VARCHAR(64)  DEFAULT NULL,
+    referral          VARCHAR(64)  DEFAULT NULL,
+    request_body      TEXT,
+    quote_response    TEXT,
+    status_response   TEXT,
+    created_at        DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_refund_to (refund_to),
+    INDEX idx_deposit_address (deposit_address),
+    INDEX idx_status_created (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+"""
+
+
+def ensure_oneclick_orders_table(network_id):
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(ONECLICK_ORDERS_CREATE_SQL)
+        db_conn.commit()
+    except Exception as e:
+        print("ensure_oneclick_orders_table error:", e)
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def insert_oneclick_order(network_id, origin_asset, destination_asset, amount,
+                          refund_to, recipient, swap_type, slippage_tolerance,
+                          deposit_type, recipient_type, refund_type, deadline,
+                          referral, deposit_address, request_body, quote_response):
+    db_conn = get_db_connect(network_id)
+    sql = """INSERT INTO oneclick_orders
+             (origin_asset, destination_asset, amount, refund_to, recipient,
+              swap_type, slippage_tolerance, deposit_type, recipient_type, refund_type,
+              deadline, referral, deposit_address, status, request_body, quote_response,
+              created_at, updated_at)
+             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'PENDING',%s,%s,NOW(),NOW())"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (
+            origin_asset, destination_asset, amount, refund_to, recipient,
+            swap_type, slippage_tolerance, deposit_type, recipient_type, refund_type,
+            deadline, referral, deposit_address, request_body, quote_response
+        ))
+        db_conn.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        db_conn.rollback()
+        print("insert_oneclick_order error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def query_oneclick_orders(network_id, refund_to, page_number, page_size):
+    start_number = handel_page_number(page_number, page_size)
+    db_conn = get_db_connect(network_id)
+    query_sql = """SELECT * FROM oneclick_orders
+                   WHERE refund_to = %s ORDER BY id DESC LIMIT %s, %s"""
+    count_sql = """SELECT count(*) as total_number FROM oneclick_orders
+                   WHERE refund_to = %s"""
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(query_sql, (refund_to, start_number, page_size))
+        data_list = cursor.fetchall()
+        cursor.execute(count_sql, (refund_to,))
+        total_number_data = cursor.fetchone()
+        return data_list, total_number_data["total_number"]
+    except Exception as e:
+        print("query_oneclick_orders error:", e)
+        return [], 0
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def get_pending_oneclick_orders(network_id):
+    """Get orders that are not in a terminal state and were created within the last hour."""
+    db_conn = get_db_connect(network_id)
+    sql = """SELECT id, deposit_address, status FROM oneclick_orders
+             WHERE status NOT IN ('SUCCESS', 'REFUNDED', 'EXPIRED')
+               AND deposit_address IS NOT NULL
+               AND created_at >= NOW() - INTERVAL 1 HOUR
+             ORDER BY created_at ASC"""
+    cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    try:
+        cursor.execute(sql)
+        return cursor.fetchall()
+    except Exception as e:
+        print("get_pending_oneclick_orders error:", e)
+        return []
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def update_oneclick_order_status(network_id, order_id, status, status_response):
+    db_conn = get_db_connect(network_id)
+    sql = """UPDATE oneclick_orders
+             SET status = %s, status_response = %s, updated_at = NOW()
+             WHERE id = %s"""
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, (status, status_response, order_id))
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("update_oneclick_order_status error:", e)
+        raise e
+    finally:
+        cursor.close()
+        db_conn.close()

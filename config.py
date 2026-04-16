@@ -108,6 +108,8 @@ except ImportError:
     BSC_WALLET_PRIVATE_KEY = ""     # BSC wallet private key for sending LSD
     BSC_RPC_URL = "https://bsc-dataseed.binance.org"
 
+ONECLICK_BASE_URL = "https://1click.chaindefuser.com"
+
 
 class Cfg:
     NETWORK_ID = "MAINNET"
@@ -142,6 +144,7 @@ class Cfg:
     BSC_LSD_TOKEN_ADDRESS = BSC_LSD_TOKEN_ADDRESS
     BSC_WALLET_PRIVATE_KEY = BSC_WALLET_PRIVATE_KEY
     BSC_RPC_URL = BSC_RPC_URL
+    ONECLICK_BASE_URL = ONECLICK_BASE_URL
     NETWORK = {
         "DEVNET": {
             "NEAR_RPC_URL": TESTNET_RPC_URL,
