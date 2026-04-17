@@ -60,7 +60,8 @@ from db_provider import create_trxx_order, get_trxx_order_by_id, get_trxx_order_
     update_trxx_order_status as db_update_trxx_order_status, get_pending_trxx_orders, \
     trxx_webhook_event_exists, create_trxx_webhook_event, \
     insert_lsd_compensation, get_lsd_compensation_by_deposit_address, get_lsd_compensation_by_id, \
-    ensure_oneclick_orders_table, insert_oneclick_order, query_oneclick_orders
+    ensure_oneclick_orders_table, insert_oneclick_order, query_oneclick_orders, \
+    ensure_user_access_logs_table, insert_user_access_log
 from lsd_compensation_utils import start_lsd_compensation_scheduler
 
 service_version = "20260318.01"
@@ -3537,6 +3538,67 @@ def handle_1click_orders():
     except Exception as e:
         logger.error(f"handle_1click_orders error: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+# ============================================================
+# Frontend Beacon (analytics) — low-profile GET endpoint
+# ============================================================
+
+try:
+    ensure_user_access_logs_table(Cfg.NETWORK_ID)
+except Exception as _e:
+    logger.warning(f"Failed to ensure user_access_logs table: {_e}")
+
+
+@app.route('/api/beacon', methods=['GET'])
+def api_beacon():
+    """
+    Lightweight frontend tracking endpoint. Takes minimal metadata via query
+    string, auto-fills IP / User-Agent / timestamp on the server, and writes
+    a row to user_access_logs. Always returns 204 No Content so callers get
+    a tiny, cacheable-looking response.
+
+    Query params (all optional except on the collection side):
+      - path         : page path (e.g. "/swap")
+      - wallet       : wallet address
+      - wallet_type  : wallet kind (metamask / phantom / okx / near / ...)
+      - referrer     : document.referrer fallback
+      - ua_hint      : optional UA summary from navigator.userAgentData
+
+    Failures are swallowed — a beacon must never break the user's page.
+    """
+    try:
+        args = request.args
+        path = args.get("path") or args.get("p") or ""
+        wallet = args.get("wallet") or args.get("w") or ""
+        wallet_type = args.get("wallet_type") or args.get("wt") or ""
+        referrer = args.get("referrer") or args.get("r") or request.headers.get("Referer", "")
+        ua_hint = args.get("ua_hint") or args.get("uh") or ""
+
+        try:
+            ip = get_ip_address()
+        except Exception:
+            ip = request.remote_addr or ""
+
+        user_agent = request.headers.get("User-Agent", "")
+
+        insert_user_access_log(
+            Cfg.NETWORK_ID,
+            ip=ip,
+            path=path,
+            wallet=wallet,
+            wallet_type=wallet_type,
+            user_agent=user_agent,
+            referrer=referrer,
+            ua_hint=ua_hint,
+        )
+    except Exception as e:
+        logger.warning(f"api_beacon error: {e}")
+
+    resp = Response(status=204)
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
