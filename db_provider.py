@@ -2961,3 +2961,94 @@ def update_oneclick_order_status(network_id, order_id, status, status_response):
     finally:
         cursor.close()
         db_conn.close()
+
+
+# ============================================================
+# User access logs (frontend beacon tracking)
+# ============================================================
+
+USER_ACCESS_LOGS_CREATE_SQL = """
+CREATE TABLE IF NOT EXISTS user_access_logs (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ip           VARCHAR(64)  DEFAULT NULL,
+    path         VARCHAR(512) DEFAULT NULL,
+    wallet       VARCHAR(128) DEFAULT NULL,
+    wallet_type  VARCHAR(32)  DEFAULT NULL,
+    user_agent   VARCHAR(512) DEFAULT NULL,
+    referrer     VARCHAR(512) DEFAULT NULL,
+    ua_hint      VARCHAR(256) DEFAULT NULL,
+    created_at   DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_wallet_created (wallet, created_at),
+    INDEX idx_created (created_at),
+    INDEX idx_ip_created (ip, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+"""
+
+
+def ensure_user_access_logs_table(network_id):
+    """Create the user_access_logs table if it does not exist."""
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(USER_ACCESS_LOGS_CREATE_SQL)
+        db_conn.commit()
+    except Exception as e:
+        db_conn.rollback()
+        print("ensure_user_access_logs_table error: ", e.args)
+    finally:
+        cursor.close()
+        db_conn.close()
+
+
+def insert_user_access_log(
+    network_id,
+    ip=None,
+    path=None,
+    wallet=None,
+    wallet_type=None,
+    user_agent=None,
+    referrer=None,
+    ua_hint=None,
+):
+    """
+    Best-effort insert of a single beacon record. Truncates oversized string
+    fields to fit the column, and swallows exceptions (beacon failures must
+    not impact the user-facing request flow).
+    """
+    def _clip(value, max_len):
+        if value is None:
+            return None
+        s = str(value)
+        return s[:max_len] if len(s) > max_len else s
+
+    sql = (
+        "INSERT INTO user_access_logs "
+        "(ip, path, wallet, wallet_type, user_agent, referrer, ua_hint) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+    )
+    params = (
+        _clip(ip, 64),
+        _clip(path, 512),
+        _clip(wallet, 128),
+        _clip(wallet_type, 32),
+        _clip(user_agent, 512),
+        _clip(referrer, 512),
+        _clip(ua_hint, 256),
+    )
+
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        cursor.execute(sql, params)
+        db_conn.commit()
+        return cursor.lastrowid
+    except Exception as e:
+        try:
+            db_conn.rollback()
+        except Exception:
+            pass
+        print("insert_user_access_log error: ", e.args)
+        return None
+    finally:
+        cursor.close()
+        db_conn.close()
