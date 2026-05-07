@@ -1006,37 +1006,140 @@ def query_dcl_pool_log(network_id, start_block_id, end_block_id):
         cursor.close()
 
 
+# Max rows per executemany batch when writing into the new tables.
+# Keeps each round-trip well below MySQL's max_allowed_packet limit.
+_DCL_POOL_POINT_BATCH_SIZE = 2000
+
+# Retention window (in hours) for dcl_pool_point_24h.
+# We keep 25h instead of 24h so that the 24h aggregation never loses rows
+# around the boundary while the prune task runs.
+_DCL_POOL_POINT_24H_KEEP_HOURS = 25
+
+
 def add_v2_pool_data(data_list, network_id, pool_id_list):
+    """Ingest a full hourly pool snapshot.
+
+    The hot path performs only two pure writes (no SELECT):
+      1) REPLACE INTO dcl_pool_point_latest -- overwrite the latest snapshot
+      2) INSERT INTO dcl_pool_point_24h     -- append to rolling 24h history
+
+    After the commit succeeds, post-ingest tasks (refreshing the 24h
+    aggregation cache in Redis, pruning rows older than the keep window)
+    are dispatched asynchronously, so any failure there cannot affect
+    the ingest itself.
+    """
+    if not data_list:
+        return
+
     db_conn = get_db_connect(network_id)
 
-    sql = "insert into dcl_pool_analysis(pool_id, point, fee_x, fee_y, l, tvl_x_l, " \
-          "tvl_x_o, tvl_y_l, tvl_y_o, vol_x_in_l, vol_x_in_o, vol_x_out_l, vol_x_out_o, " \
-          "vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, p_fee_x, p_fee_y, p, cp, timestamp, create_time) " \
-          "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())"
+    sql_latest = (
+        "REPLACE INTO dcl_pool_point_latest("
+        "pool_id, point, fee_x, fee_y, l, tvl_x_l, tvl_x_o, tvl_y_l, tvl_y_o, "
+        "vol_x_in_l, vol_x_in_o, vol_x_out_l, vol_x_out_o, "
+        "vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, "
+        "p_fee_x, p_fee_y, p, cp, `timestamp`) "
+        "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    )
+    rows_latest = [
+        (d["pool_id"], d["point"], d["fee_x"], d["fee_y"], d["l"],
+         d["tvl_x_l"], d["tvl_x_o"], d["tvl_y_l"], d["tvl_y_o"],
+         d["vol_x_in_l"], d["vol_x_in_o"], d["vol_x_out_l"], d["vol_x_out_o"],
+         d["vol_y_in_l"], d["vol_y_in_o"], d["vol_y_out_l"], d["vol_y_out_o"],
+         d["p_fee_x"], d["p_fee_y"], d["p"], d["cp"], d["timestamp"])
+        for d in data_list
+    ]
 
-    insert_data = []
+    sql_24h = (
+        "INSERT INTO dcl_pool_point_24h("
+        "pool_id, point, fee_x, fee_y, tvl_x_l, tvl_y_l, `timestamp`) "
+        "VALUES(%s,%s,%s,%s,%s,%s,%s)"
+    )
+    rows_24h = [
+        (d["pool_id"], d["point"], d["fee_x"], d["fee_y"],
+         d["tvl_x_l"], d["tvl_y_l"], d["timestamp"])
+        for d in data_list
+    ]
+
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
+    insert_ok = False
     try:
-        for data in data_list:
-            insert_data.append((data["pool_id"], data["point"], data["fee_x"], data["fee_y"], data["l"],
-                                data["tvl_x_l"], data["tvl_x_o"], data["tvl_y_l"],
-                                data["tvl_y_o"], data["vol_x_in_l"], data["vol_x_in_o"],
-                                data["vol_x_out_l"], data["vol_x_out_o"], data["vol_y_in_l"], data["vol_y_in_o"],
-                                data["vol_y_out_l"], data["vol_y_out_o"], data["p_fee_x"],
-                                data["p_fee_y"], data["p"], data["cp"], data["timestamp"]))
-
-        cursor.executemany(sql, insert_data)
+        for i in range(0, len(rows_latest), _DCL_POOL_POINT_BATCH_SIZE):
+            cursor.executemany(sql_latest, rows_latest[i:i + _DCL_POOL_POINT_BATCH_SIZE])
+        for i in range(0, len(rows_24h), _DCL_POOL_POINT_BATCH_SIZE):
+            cursor.executemany(sql_24h, rows_24h[i:i + _DCL_POOL_POINT_BATCH_SIZE])
         db_conn.commit()
+        insert_ok = True
     except Exception as e:
-        # Rollback on error
         db_conn.rollback()
         print("insert v2 pool data to db error:", e)
     finally:
         cursor.close()
-    handle_pool_point_data_to_redis(network_id, pool_id_list)
+
+    if insert_ok:
+        _spawn_post_ingest_tasks(network_id, list(pool_id_list))
+
+
+def _spawn_post_ingest_tasks(network_id, pool_id_list):
+    """Run 24h Redis refresh + prune asynchronously so the caller is not blocked."""
+    if not pool_id_list:
+        return
+    import threading
+    t = threading.Thread(
+        target=_run_post_ingest_tasks,
+        args=(network_id, pool_id_list),
+        daemon=True,
+    )
+    t.start()
+
+
+def _run_post_ingest_tasks(network_id, pool_id_list):
+    try:
+        handle_pool_point_data_to_redis(network_id, pool_id_list)
+    except Exception as e:
+        print("post-ingest refresh_24h_redis error:", e)
+    try:
+        prune_dcl_pool_point_24h(network_id, keep_hours=_DCL_POOL_POINT_24H_KEEP_HOURS)
+    except Exception as e:
+        print("post-ingest prune_24h error:", e)
+
+
+def prune_dcl_pool_point_24h(network_id, keep_hours=_DCL_POOL_POINT_24H_KEEP_HOURS):
+    """Delete rows older than `keep_hours` from dcl_pool_point_24h.
+
+    - Uses the `idx_timestamp` index so only expired rows are touched
+      (no full table lock).
+    - Deletes in batches of 5000 to avoid a single large transaction.
+    """
+    cutoff = int(time.time()) - keep_hours * 3600
+    db_conn = get_db_connect(network_id)
+    cursor = db_conn.cursor()
+    try:
+        while True:
+            affected = cursor.execute(
+                "DELETE FROM dcl_pool_point_24h WHERE `timestamp` < %s LIMIT 5000",
+                (cutoff,),
+            )
+            db_conn.commit()
+            if affected < 5000:
+                break
+    except Exception as e:
+        db_conn.rollback()
+        print("prune_dcl_pool_point_24h error:", e)
+    finally:
+        cursor.close()
 
 
 def handle_pool_point_data_to_redis(network_id, pool_id_list):
+    """Compute the per-pool 24h aggregation from dcl_pool_point_24h and
+    write the result into Redis.
+
+    The SQL semantics are kept identical to the original implementation
+    (SUM + GROUP BY point + ORDER BY point); only the source table changes
+    from dcl_pool_analysis to dcl_pool_point_24h.
+    """
+    if not pool_id_list:
+        return
     now = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
     timestamp = now - (1 * 24 * 60 * 60)
     db_conn = get_db_connect(network_id)
@@ -1044,18 +1147,26 @@ def handle_pool_point_data_to_redis(network_id, pool_id_list):
     redis_conn = RedisProvider()
     redis_conn.begin_pipe()
     try:
+        sql_24h = (
+            "SELECT point, "
+            "       SUM(fee_x)   AS fee_x, "
+            "       SUM(fee_y)   AS fee_y, "
+            "       SUM(tvl_x_l) AS tvl_x_l, "
+            "       SUM(tvl_y_l) AS tvl_y_l "
+            "FROM dcl_pool_point_24h "
+            "WHERE pool_id = %s AND `timestamp` >= %s "
+            "GROUP BY point ORDER BY point"
+        )
         for pool_id in pool_id_list:
-            sql_24h = "select point,sum(fee_x) as fee_x,sum(fee_y) as fee_y,sum(tvl_x_l) as tvl_x_l," \
-                      "sum(tvl_y_l) as tvl_y_l from dcl_pool_analysis where pool_id = %s " \
-                      "and `timestamp` >= %s GROUP BY point order by point"
             cursor.execute(sql_24h, (pool_id, timestamp))
             point_data_24h = cursor.fetchall()
-            redis_conn.add_pool_point_24h_assets(network_id, pool_id, json.dumps(point_data_24h))
-            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id, json.dumps(point_data_24h))
+            payload = json.dumps(point_data_24h)
+            redis_conn.add_pool_point_24h_assets(network_id, pool_id, payload)
+            add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id, payload)
             redis_conn.add_pool_point_24h_assets(network_id, pool_id + "timestamp", now)
             add_redis_data(network_id, Cfg.NETWORK[network_id]["REDIS_POOL_POINT_24H_DATA_KEY"], pool_id + "timestamp", now)
     except Exception as e:
-        print("query dcl_pool_analysis to db error:", e)
+        print("query dcl_pool_point_24h to db error:", e)
     finally:
         cursor.close()
         redis_conn.end_pipe()
@@ -1198,64 +1309,92 @@ def query_recent_transaction_limit_order(network_id, pool_id):
         cursor.close()
 
 
+def _maybe_async_refresh_24h(network_id, pool_id):
+    """Stale-while-revalidate refresh of the 24h aggregation cache.
+
+    If the cached aggregation is missing or older than 1h, dispatch an
+    asynchronous refresh. The current request is never blocked, and a
+    refresh failure simply leaves the (possibly slightly stale) cache
+    in place for the next call.
+    """
+    point_data_timestamp = get_pool_point_24h_by_pool_id(network_id, pool_id + "timestamp")
+    now = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
+    if point_data_timestamp is None or now - int(point_data_timestamp) > 3600:
+        _spawn_post_ingest_tasks(network_id, [pool_id])
+
+
 def query_dcl_bin_points(network_id, pool_id, bin_point_number):
+    """Read the points in the cp-centered range from dcl_pool_point_latest.
+
+    - cp / timestamp: rows in the same batch share identical cp and
+      timestamp, so MAX(cp) / MAX(timestamp) returns the latest batch's
+      values and naturally skips stale `cp = 0` rows. This uses the
+      (pool_id, ...) prefix of the primary key, executing in milliseconds.
+    - point range: served via the primary key (pool_id, point), so any
+      slot_number scans only the rows it actually needs and is independent
+      of historical data volume.
+    - 24h aggregation: read from Redis; if stale we trigger an async
+      refresh so this request is never blocked (prevents thundering herd).
+    """
     db_conn = get_db_connect(network_id)
-    # 优化：使用 JOIN 替代子查询，性能更好
-    sql = "SELECT pool_id,point,fee_x,fee_y,l,tvl_x_l,tvl_x_o,tvl_y_l,tvl_y_o," \
-          "vol_x_in_l,vol_x_in_o,vol_x_out_l,vol_x_out_o,vol_y_in_l,vol_y_in_o," \
-          "vol_y_out_l,vol_y_out_o,p_fee_x,p_fee_y,p,cp,`timestamp` " \
-          "FROM dcl_pool_analysis WHERE pool_id = %s and `timestamp` = %s " \
-          "and `point` >= %s and `point` <= %s ORDER BY point"
-    sql1 = "select `cp`, `timestamp` from dcl_pool_analysis where pool_id = %s order by id desc limit 1"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql1, pool_id)
+        cursor.execute(
+            "SELECT MAX(cp) AS cp, MAX(`timestamp`) AS `timestamp` "
+            "FROM dcl_pool_point_latest WHERE pool_id = %s",
+            (pool_id,),
+        )
         cp_point_data = cursor.fetchone()
+        if not cp_point_data or cp_point_data.get("cp") is None:
+            return [], None, 0, 0
         cp_point = int(cp_point_data["cp"])
         start_point = cp_point - (bin_point_number * 10)
         end_point = cp_point + (bin_point_number * 10)
-        cp_timestamp = cp_point_data["timestamp"]
-        cursor.execute(sql, (pool_id, cp_timestamp, start_point, end_point))
+        cursor.execute(
+            "SELECT pool_id, point, fee_x, fee_y, l, tvl_x_l, tvl_x_o, tvl_y_l, tvl_y_o, "
+            "       vol_x_in_l, vol_x_in_o, vol_x_out_l, vol_x_out_o, "
+            "       vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, "
+            "       p_fee_x, p_fee_y, p, cp, `timestamp` "
+            "FROM dcl_pool_point_latest "
+            "WHERE pool_id = %s AND `point` BETWEEN %s AND %s "
+            "ORDER BY point",
+            (pool_id, start_point, end_point),
+        )
         point_data = cursor.fetchall()
-        pool_id_list = []
-        point_data_timestamp = get_pool_point_24h_by_pool_id(network_id, pool_id + "timestamp")
-        now = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
-        if point_data_timestamp is None or now - int(point_data_timestamp) > 3600:
-            pool_id_list.append(pool_id)
-            handle_pool_point_data_to_redis(network_id, pool_id_list)
+        _maybe_async_refresh_24h(network_id, pool_id)
         point_data_24h = get_pool_point_24h_by_pool_id(network_id, pool_id)
         return point_data, point_data_24h, start_point, end_point
     except Exception as e:
-        print("query dcl_pool_analysis to db error:", e)
+        print("query dcl_pool_point_latest to db error:", e)
         return [], None, 0, 0
     finally:
         cursor.close()
 
 
 def query_dcl_points(network_id, pool_id):
+    """Return every point of the given pool from the latest snapshot.
+
+    A single primary-key range scan over (pool_id, point) is enough; the
+    cost is independent of historical data volume.
+    """
     db_conn = get_db_connect(network_id)
-    # 优化：使用 JOIN 替代子查询，性能更好
-    sql = "SELECT t1.pool_id,t1.point,t1.fee_x,t1.fee_y,t1.l,t1.tvl_x_l,t1.tvl_x_o,t1.tvl_y_l,t1.tvl_y_o," \
-          "t1.vol_x_in_l,t1.vol_x_in_o,t1.vol_x_out_l,t1.vol_x_out_o,t1.vol_y_in_l,t1.vol_y_in_o," \
-          "t1.vol_y_out_l,t1.vol_y_out_o,t1.p_fee_x,t1.p_fee_y,t1.p,t1.cp,t1.`timestamp` " \
-          "FROM dcl_pool_analysis t1 " \
-          "INNER JOIN (SELECT pool_id, MAX(`timestamp`) as max_timestamp FROM dcl_pool_analysis WHERE pool_id = %s GROUP BY pool_id) t2 " \
-          "ON t1.pool_id = t2.pool_id AND t1.`timestamp` = t2.max_timestamp " \
-          "WHERE t1.pool_id = %s ORDER BY t1.point"
     cursor = db_conn.cursor(cursor=pymysql.cursors.DictCursor)
     try:
-        cursor.execute(sql, (pool_id, pool_id))
+        cursor.execute(
+            "SELECT pool_id, point, fee_x, fee_y, l, tvl_x_l, tvl_x_o, tvl_y_l, tvl_y_o, "
+            "       vol_x_in_l, vol_x_in_o, vol_x_out_l, vol_x_out_o, "
+            "       vol_y_in_l, vol_y_in_o, vol_y_out_l, vol_y_out_o, "
+            "       p_fee_x, p_fee_y, p, cp, `timestamp` "
+            "FROM dcl_pool_point_latest "
+            "WHERE pool_id = %s ORDER BY point",
+            (pool_id,),
+        )
         point_data = cursor.fetchall()
-        pool_id_list = []
-        point_data_timestamp = get_pool_point_24h_by_pool_id(network_id, pool_id + "timestamp")
-        now = int(datetime.now().replace(minute=0, second=0, microsecond=0).timestamp())
-        if point_data_timestamp is None or now - int(point_data_timestamp) > 3600:
-            pool_id_list.append(pool_id)
-            handle_pool_point_data_to_redis(network_id, pool_id_list)
+        _maybe_async_refresh_24h(network_id, pool_id)
         point_data_24h = get_pool_point_24h_by_pool_id(network_id, pool_id)
         return point_data, point_data_24h
     except Exception as e:
-        print("query dcl_pool_analysis to db error:", e)
+        print("query dcl_pool_point_latest to db error:", e)
         return [], None
     finally:
         cursor.close()
